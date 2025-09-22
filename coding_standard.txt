@@ -1,0 +1,25 @@
+* Cấu trúc:
+- Phân theo chức năng.
+  |- function
+    |- pojo
+    |- service
+    |- repository
+    |- controller
+    |- ...
+
+* Cách đặt tên: 
+- Lớp: viết theo chuẩn CamelCase, số ít. (VD: ElectricVehicle)
+- Table database: viết theo chuẩn snake_case, số nhiều. (VD: electric_vehicles)
+
+* Chuẩn API:
+- URL: /api/[version]/[object]/[id]
+- HTTP method:
+  + POST: dùng để gửi thông tin cần bảo mật (tạo user mới cần ẩn password)
+  (VD: POST/api/v1/user => tạo 1 user mới)
+  + GET: dùng để lấy thông tin
+  (VD: GET/api/v1/user   => lấy tất cả user
+       GET/api/v1/user/1 => lấy thông tin của user có id là 1)
+  + PUT: dùng để cập nhật / thay đổi thông tin (chức năng update)
+  (VD: PUT/api/v1/user/1 => cập nhật thông tin cho user có id là 1)
+  + DELETE: dùng để xóa thông tin (chức năng delete)
+  (VD: DELETE/api/v1/user/1 => xóa user có id là 1)

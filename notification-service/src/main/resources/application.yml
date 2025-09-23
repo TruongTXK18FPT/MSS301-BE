@@ -1,0 +1,34 @@
+server:
+  port: 8088
+  servlet:
+    context-path: /notification
+spring:
+  application:
+    name: notification-service
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/notification_db
+    username: postgres
+    password: 12345
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: skillverseexe@gmail.com
+    password: fgbx gygh iglz dcou
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 3000
+          writetimeout: 5000
+  cloud:
+    stream:
+      bindings:
+        notificationDelivery-in-0:
+          destination: notification-delivery
+      kafka:
+        binder:
+          brokers: localhost:9092

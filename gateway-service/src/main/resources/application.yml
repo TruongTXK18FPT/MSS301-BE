@@ -1,0 +1,86 @@
+server:
+  port: 8080
+  address: 0.0.0.0
+
+app:
+  api:
+    prefix: /api/v1
+  service-prefix:
+    auth: /authenticate
+    payment: /payment
+    premium: /premium
+    mindmap: /mindmap
+    content: /content
+    chatbot: /chatbot
+    profile: /profile
+
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: auth-service #8081
+              uri: lb://auth-service
+              predicates:
+                - Path=${app.api.prefix}${app.service-prefix.auth}/**
+              filters:
+                - RewritePath=${app.api.prefix}${app.service-prefix.auth}/(?<segment>.*), /${segment}
+
+            - id: payment-service #8082
+              uri: lb://payment-service
+              predicates:
+                - Path=${app.api.prefix}${app.service-prefix.payment}/**
+              filters:
+                - RewritePath=${app.api.prefix}${app.service-prefix.payment}/(?<segment>.*), /${segment}
+
+            - id: premium-service #8083
+              uri: lb://premium-service
+              predicates:
+                - Path=${app.api.prefix}${app.service-prefix.premium}/**
+              filters:
+                - RewritePath=${app.api.prefix}${app.service-prefix.premium}/(?<segment>.*), /${segment}
+
+            - id: mindmap-service #8084
+              uri: lb://mindmap-service
+              predicates:
+                - Path=${app.api.prefix}${app.service-prefix.mindmap}/**
+              filters:
+                - RewritePath=${app.api.prefix}${app.service-prefix.mindmap}/(?<segment>.*), /${segment}
+
+            - id: content-service #8085
+              uri: lb://content-service
+              predicates:
+                - Path=${app.api.prefix}${app.service-prefix.content}/**
+              filters:
+                - RewritePath=${app.api.prefix}${app.service-prefix.content}/(?<segment>.*), /${segment}
+
+            - id: chatbot-service #8086
+              uri: lb://chatbot-service
+              predicates:
+                - Path=${app.api.prefix}${app.service-prefix.chatbot}/**
+              filters:
+                - RewritePath=${app.api.prefix}${app.service-prefix.chatbot}/(?<segment>.*), /${segment}
+
+            - id: profile-service #8087
+              uri: lb://profile-service
+              predicates:
+                - Path=${app.api.prefix}${app.service-prefix.profile}/**
+              filters:
+                - RewritePath=${app.api.prefix}${app.service-prefix.profile}/(?<segment>.*), /${segment}
+
+            - id: notification-service #8088
+              uri: lb://notification-service
+              predicates:
+                - Path=${app.api.prefix}/notification/**
+              filters:
+                - StripPrefix=2
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true

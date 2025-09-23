@@ -1,0 +1,41 @@
+eureka:
+  client:
+    service-url:
+        defaultZone: http://localhost:8761/eureka
+
+spring:
+  application:
+    name: auth-service
+
+  main:
+    banner-mode: off
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/auth_db
+    username: postgres
+    password: 12345
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: true
+
+  cloud:
+    function:
+      definition: profileCreationFailed
+    stream:
+      bindings:
+        sendNotification-out-0:
+          destination: notification-delivery
+        sendUserCreated-out-0:
+          destination: user-created-topic
+        profileCreationFailed-in-0:
+          destination: profile-creation-failed-topic
+      kafka:
+        binder:
+          brokers: localhost:9092
+server:
+  port: 8081
+
+jwt:
+    signerKey: "1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij"

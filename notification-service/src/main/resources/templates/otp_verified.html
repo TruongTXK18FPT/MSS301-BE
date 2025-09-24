@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP Verification - MSS301</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            color: #4CAF50;
+        }
+        .otp-code {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2196F3;
+            text-align: center;
+            background-color: #f0f8ff;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            letter-spacing: 5px;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="header">MSS301 - Verification Code</h1>
+        
+        <div th:if="${PURPOSE == 'EMAIL_VERIFICATION'}">
+            <h2>Email Verification Required</h2>
+            <p>Thank you for signing up! Please use the verification code below to verify your email address:</p>
+        </div>
+        
+        <div th:if="${PURPOSE == 'PASSWORD_RESET'}">
+            <h2>Password Reset Request</h2>
+            <p>You have requested to reset your password. Please use the verification code below to proceed:</p>
+        </div>
+        
+        <div class="otp-code" th:text="${OTP}">123456</div>
+        
+        <p><strong>Important:</strong></p>
+        <ul>
+            <li>This code will expire in 10 minutes</li>
+            <li>For security reasons, do not share this code with anyone</li>
+            <li>If you didn't request this, please ignore this email</li>
+        </ul>
+        
+        <div class="footer">
+            <p>Best regards,<br>The MSS301 Team</p>
+            <hr>
+            <p>This is an automated message. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>

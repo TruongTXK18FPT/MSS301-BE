@@ -1,18 +1,17 @@
 package com.mss301.profileservice.service;
 
-import java.util.List;
-
-import com.mss301.profileservice.dto.request.StudentProfileRequest;
-import com.mss301.profileservice.dto.response.StudentProfileResponse;
-
-public interface ProfileService {
-    StudentProfileResponse createStudentProfile(String userId, StudentProfileRequest request);
-
-    StudentProfileResponse getStudentProfileByUserId(String userId);
-
-    StudentProfileResponse updateStudentProfile(String userId, StudentProfileRequest request);
-
-    void deleteStudentProfile(String userId);
-
-    List<StudentProfileResponse> getAllStudentProfiles();
+/**
+ * Main ProfileService interface that combines all profile-related services
+ * This interface extends all the focused service interfaces to maintain
+ * backward compatibility
+ * while providing a cleaner architecture
+ */
+public interface ProfileService extends UserProfileService, EventProfileService, ProfileManagementService {
+    // This interface inherits methods from:
+    // - UserProfileService: getCurrentUserProfile, updateCurrentUserProfile
+    // - EventProfileService: createProfileFromUserEvent, createTeacherProfile,
+    // createGuardianProfile
+    // - ProfileManagementService: createStudentProfile, getStudentProfileByUserId,
+    // updateStudentProfile,
+    // deleteStudentProfile, getAllStudentProfiles
 }

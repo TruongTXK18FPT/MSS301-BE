@@ -1,59 +1,66 @@
 package com.mss301.profileservice.controller;
 
-import java.util.List;
-
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 import com.mss301.profileservice.dto.request.StudentProfileRequest;
-import com.mss301.profileservice.dto.response.ApiResponse;
 import com.mss301.profileservice.dto.response.StudentProfileResponse;
 import com.mss301.profileservice.service.ProfileService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping("/api/profiles")
+@RequestMapping("/profile")
 @RequiredArgsConstructor
-@Slf4j
+@Tag(name = "Profile Management", description = "APIs for managing current user profile")
+@SecurityRequirement(name = "bearerAuth")
 public class ProfileController {
 
     private final ProfileService profileService;
 
-    @PostMapping("/student")
-    public ApiResponse<StudentProfileResponse> createStudentProfile(
-            @RequestHeader("X-User-Id") String userId, @RequestBody StudentProfileRequest request) {
-        log.info("Creating student profile for user: {}", userId);
-        StudentProfileResponse response = profileService.createStudentProfile(userId, request);
-        return ApiResponse.success("Student profile created successfully", response);
+    @GetMapping("/me")
+    @Operation(
+            summary = "Get Current User Profile",
+            description = "Get the profile of the currently authenticated user")
+    @ApiResponse(responseCode = "200", description = "Profile retrieved successfully")
+    @ApiResponse(responseCode = "404", description = "Profile not found")
+    public ResponseEntity<StudentProfileResponse> getCurrentUserProfile() {
+        String currentUserId = getCurrentUserId();
+        StudentProfileResponse response = profileService.getCurrentUserProfile(currentUserId);
+        return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/student")
-    public ApiResponse<StudentProfileResponse> getStudentProfile(@RequestHeader("X-User-Id") String userId) {
-        log.info("Getting student profile for user: {}", userId);
-        StudentProfileResponse response = profileService.getStudentProfileByUserId(userId);
-        return ApiResponse.success("Student profile retrieved successfully", response);
+    @PutMapping("/me")
+    @Operation(
+            summary = "Update Current User Profile",
+            description = "Update the profile of the currently authenticated user")
+    @ApiResponse(responseCode = "200", description = "Profile updated successfully")
+    @ApiResponse(responseCode = "404", description = "Profile not found")
+    public ResponseEntity<StudentProfileResponse> updateCurrentUserProfile(@RequestBody StudentProfileRequest request) {
+        String currentUserId = getCurrentUserId();
+        StudentProfileResponse response = profileService.updateCurrentUserProfile(currentUserId, request);
+        return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/student")
-    public ApiResponse<StudentProfileResponse> updateStudentProfile(
-            @RequestHeader("X-User-Id") String userId, @RequestBody StudentProfileRequest request) {
-        log.info("Updating student profile for user: {}", userId);
-        StudentProfileResponse response = profileService.updateStudentProfile(userId, request);
-        return ApiResponse.success("Student profile updated successfully", response);
-    }
+    /**
+     * Extract the current user ID from JWT authentication token
+     */
+    private String getCurrentUserId() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
 
-    @DeleteMapping("/student")
-    public ApiResponse<String> deleteStudentProfile(@RequestHeader("X-User-Id") String userId) {
-        log.info("Deleting student profile for user: {}", userId);
-        profileService.deleteStudentProfile(userId);
-        return ApiResponse.success("Student profile deleted successfully");
-    }
+        if (authentication instanceof JwtAuthenticationToken jwtToken) {
+            String userId = jwtToken.getToken().getSubject();
+            if (userId != null) {
+                return userId;
+            }
+        }
 
-    @GetMapping("/students")
-    public ApiResponse<List<StudentProfileResponse>> getAllStudentProfiles() {
-        log.info("Getting all student profiles");
-        List<StudentProfileResponse> responses = profileService.getAllStudentProfiles();
-        return ApiResponse.success("Student profiles retrieved successfully", responses);
+        throw new RuntimeException("Unable to determine current user ID");
     }
 }

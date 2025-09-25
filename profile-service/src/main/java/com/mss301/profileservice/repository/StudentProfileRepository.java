@@ -17,6 +17,4 @@ public interface StudentProfileRepository extends JpaRepository<StudentProfile, 
     List<StudentProfile> findBySchool(String school);
 
     boolean existsByUserId(Long userId);
-
-    void deleteByUserId(Long userId);
 }

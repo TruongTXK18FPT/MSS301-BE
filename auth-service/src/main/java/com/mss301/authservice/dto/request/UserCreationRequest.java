@@ -15,4 +15,11 @@ public class UserCreationRequest {
     String confirmPassword;
     String phone;
     Long tenantId;
+    String userType; // STUDENT, TEACHER, GUARDIAN
+
+    // Additional profile fields based on user type
+    String fullName;
+    String address;
+    Integer districtCode;
+    Integer provinceCode;
 }

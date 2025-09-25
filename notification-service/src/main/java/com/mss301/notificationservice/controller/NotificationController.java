@@ -1,48 +1,37 @@
 package com.mss301.notificationservice.controller;
 
-import org.springframework.web.bind.annotation.*;
+import java.util.function.Consumer;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 import com.mss301.notificationservice.dto.request.EmailRequest;
-import com.mss301.notificationservice.dto.response.ApiResponse;
-import com.mss301.notificationservice.dto.response.EmailResponse;
+import com.mss301.notificationservice.event.NotificationEvent;
 import com.mss301.notificationservice.service.EmailService;
 
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 
-@RestController
-@RequestMapping("/api/notifications")
-@RequiredArgsConstructor
 @Slf4j
+@Configuration
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class NotificationController {
 
-    private final EmailService emailService;
+    EmailService emailService;
 
-    @PostMapping("/email")
-    public ApiResponse<EmailResponse> sendEmail(@RequestBody EmailRequest request) {
-        log.info("Sending email to: {}", request.getTo());
-        EmailResponse response = emailService.sendEmail(request);
-        return ApiResponse.success("Email sent", response);
-    }
-
-    @PostMapping("/email/template")
-    public ApiResponse<EmailResponse> sendEmailWithTemplate(@RequestBody EmailRequest request) {
-        log.info("Sending template email to: {}", request.getTo());
-        EmailResponse response = emailService.sendEmailWithTemplate(request);
-        return ApiResponse.success("Template email sent", response);
-    }
-
-    @PostMapping("/email/verification")
-    public ApiResponse<EmailResponse> sendVerificationEmail(@RequestParam String email, @RequestParam String token) {
-        log.info("Sending verification email to: {}", email);
-        EmailResponse response = emailService.sendVerificationEmail(email, token);
-        return ApiResponse.success("Verification email sent", response);
-    }
-
-    @PostMapping("/email/password-reset")
-    public ApiResponse<EmailResponse> sendPasswordResetEmail(@RequestParam String email, @RequestParam String token) {
-        log.info("Sending password reset email to: {}", email);
-        EmailResponse response = emailService.sendPasswordResetEmail(email, token);
-        return ApiResponse.success("Password reset email sent", response);
+    @Bean
+    public Consumer<NotificationEvent> notificationDelivery() {
+        return event -> {
+            log.info("Received notification event: {}", event);
+            emailService.sendEmail(EmailRequest.builder()
+                    .to(event.getRecipient())
+                    .subject(event.getSubject())
+                    .templateName(event.getTemplateCode())
+                    .templateData(event.getParam())
+                    .build());
+        };
     }
 }

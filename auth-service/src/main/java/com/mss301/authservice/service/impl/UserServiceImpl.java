@@ -13,9 +13,11 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mss301.authservice.config.EventPublisher;
 import com.mss301.authservice.dto.request.*;
 import com.mss301.authservice.dto.response.UserResponse;
 import com.mss301.authservice.entity.UserAccount;
+import com.mss301.authservice.event.CreatedUserEvent;
 import com.mss301.authservice.repository.UserRepository;
 import com.mss301.authservice.service.AuthenticationService;
 import com.mss301.authservice.service.UserService;
@@ -32,6 +34,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationService authenticationService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final EventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -44,7 +47,9 @@ public class UserServiceImpl implements UserService {
         // Create new user
         UserAccount user = new UserAccount();
         user.setEmail(request.getEmail());
+        user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setPhone(request.getPhone());
         user.setEmailVerified(false);
         user.setStatus(UserAccount.UserStatus.ACTIVE);
         user.setCreatedAt(LocalDateTime.now());
@@ -60,7 +65,7 @@ public class UserServiceImpl implements UserService {
         authenticationService.sendEmailVerification(user.getEmail());
 
         // Publish user created event via Kafka
-        publishUserCreatedEvent(user);
+        publishUserCreatedEvent(user, request);
 
         return mapToUserResponse(user);
     }
@@ -175,27 +180,26 @@ public class UserServiceImpl implements UserService {
                 .build();
     }
 
-    private void publishUserCreatedEvent(UserAccount user) {
+    private void publishUserCreatedEvent(UserAccount user, UserCreationRequest request) {
         try {
-            // Create user profile creation request
-            var profileRequest = new Object() {
-                public String getId() {
-                    return user.getId().toString();
-                }
+            // Create CreatedUserEvent with complete user details
+            CreatedUserEvent event = CreatedUserEvent.builder()
+                    .id(user.getId().toString())
+                    .fullName(request.getFullName() != null ? request.getFullName() : request.getUsername())
+                    .userType(request.getUserType()) // STUDENT, TEACHER, GUARDIAN
+                    .phone(request.getPhone())
+                    .address(request.getAddress())
+                    .districtCode(request.getDistrictCode())
+                    .provinceCode(request.getProvinceCode())
+                    // birthDate can be added later if needed
+                    .build();
 
-                public String getEmail() {
-                    return user.getEmail();
-                }
-
-                public String getFullName() {
-                    return user.getEmail();
-                } // Default to email
-            };
-
-            kafkaTemplate.send("user-created", profileRequest);
-            log.info("Published user created event for user: {}", user.getEmail());
+            //
+            eventPublisher.publishCreatedUserEvent(event);
+            log.info("Published CreatedUserEvent for user: {}", user.getEmail());
+            //
         } catch (Exception e) {
-            log.error("Failed to publish user created event", e);
+            log.error("Failed to publish CreatedUserEvent for user: {}", user.getEmail(), e);
         }
     }
 }

@@ -28,6 +28,7 @@ public class UserRole {
     @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private UserAccount userAccount;
 
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", insertable = false, updatable = false)
     private Role role;
 }

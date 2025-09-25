@@ -1,7 +1,7 @@
 eureka:
   client:
     service-url:
-        defaultZone: http://localhost:8761/eureka
+      defaultZone: http://localhost:8761/eureka
 
 spring:
   application:
@@ -29,6 +29,8 @@ spring:
           destination: notification-delivery
         sendUserCreated-out-0:
           destination: user-created-topic
+        userCreated-out-0:
+          destination: user-created-topic
         profileCreationFailed-in-0:
           destination: profile-creation-failed-topic
       kafka:
@@ -38,4 +40,4 @@ server:
   port: 8081
 
 jwt:
-    signerKey: "1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij"
+  signerKey: "1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij"

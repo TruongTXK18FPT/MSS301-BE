@@ -18,26 +18,40 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private final CustomJwtDecoder customJwtDecoder;
+
+    public SecurityConfig(CustomJwtDecoder customJwtDecoder) {
+        this.customJwtDecoder = customJwtDecoder;
+    }
+
     private final String[] PUBLIC_ENDPOINTS = {
-        "/login",
+        "auth/login",
         "/register",
         "/introspect",
-        "/logout",
+        "auth/logout",
         "/refresh",
         "/verify-email",
         "/forgot-password",
         "/reset-password"
     };
 
+    private final String[] SWAGGER_ENDPOINTS = {
+        "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**"
+    };
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.authorizeHttpRequests(request -> request.requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS)
                 .permitAll()
+                .requestMatchers(SWAGGER_ENDPOINTS)
+                .permitAll()
                 .anyRequest()
                 .authenticated());
 
-        httpSecurity.oauth2ResourceServer(oauth2 ->
-                oauth2.jwt(jwtConfigurer -> jwtConfigurer.jwtAuthenticationConverter(jwtAuthenticationConverter())));
+        httpSecurity.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwtConfigurer -> jwtConfigurer
+                        .decoder(customJwtDecoder)
+                        .jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                .authenticationEntryPoint(new JwtAuthenticationEntryPoint()));
 
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
 

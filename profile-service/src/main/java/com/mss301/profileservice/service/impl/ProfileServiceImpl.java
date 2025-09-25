@@ -8,11 +8,18 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mss301.profileservice.config.EventPublisher;
 import com.mss301.profileservice.dto.request.StudentProfileRequest;
 import com.mss301.profileservice.dto.response.StudentProfileResponse;
+import com.mss301.profileservice.entity.GuardianProfile;
 import com.mss301.profileservice.entity.StudentProfile;
+import com.mss301.profileservice.entity.TeacherProfile;
 import com.mss301.profileservice.entity.UserProfile;
+import com.mss301.profileservice.event.CreatedUserEvent;
+import com.mss301.profileservice.event.UserProfileCreationFailedEvent;
+import com.mss301.profileservice.repository.GuardianProfileRepository;
 import com.mss301.profileservice.repository.StudentProfileRepository;
+import com.mss301.profileservice.repository.TeacherProfileRepository;
 import com.mss301.profileservice.repository.UserProfileRepository;
 import com.mss301.profileservice.service.ProfileService;
 
@@ -27,6 +34,26 @@ public class ProfileServiceImpl implements ProfileService {
 
     private final StudentProfileRepository studentProfileRepository;
     private final UserProfileRepository userProfileRepository;
+    private final TeacherProfileRepository teacherProfileRepository;
+    private final GuardianProfileRepository guardianProfileRepository;
+    private final EventPublisher eventPublisher;
+
+    // UserProfileService implementation - Current user operations
+    @Override
+    @Transactional(readOnly = true)
+    public StudentProfileResponse getCurrentUserProfile(String userId) {
+        log.info("Fetching current user profile for user: {}", userId);
+        return getStudentProfileByUserId(userId);
+    }
+
+    @Override
+    @Transactional
+    public StudentProfileResponse updateCurrentUserProfile(String userId, StudentProfileRequest request) {
+        log.info("Updating current user profile for user: {}", userId);
+        return updateStudentProfile(userId, request);
+    }
+
+    // ProfileManagementService implementation - Admin operations
 
     @Override
     @Transactional
@@ -137,25 +164,6 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     @Override
-    @Transactional
-    public void deleteStudentProfile(String userId) {
-        log.info("Deleting student profile for user: {}", userId);
-
-        try {
-            StudentProfile profile = studentProfileRepository
-                    .findByUserId(Long.valueOf(userId))
-                    .orElseThrow(() -> new RuntimeException("Student profile not found for user: " + userId));
-
-            studentProfileRepository.delete(profile);
-            log.info("Student profile deleted successfully for user: {}", userId);
-
-        } catch (Exception e) {
-            log.error("Failed to delete student profile for user: {}: {}", userId, e.getMessage(), e);
-            throw new RuntimeException("Failed to delete student profile: " + e.getMessage());
-        }
-    }
-
-    @Override
     @Transactional(readOnly = true)
     public List<StudentProfileResponse> getAllStudentProfiles() {
         log.info("Fetching all student profiles");
@@ -193,5 +201,112 @@ public class ProfileServiceImpl implements ProfileService {
         }
 
         return response;
+    }
+
+    @Override
+    @Transactional
+    public void createProfileFromUserEvent(CreatedUserEvent event) {
+        log.info("Creating profile from event for user ID: {} with type: {}", event.getId(), event.getUserType());
+
+        try {
+            Long userId = Long.valueOf(event.getId());
+
+            // Create base UserProfile first
+            createBaseUserProfile(userId, event);
+
+            // Create specific profile based on user type
+            if (event.getUserType() != null) {
+                switch (event.getUserType().toUpperCase()) {
+                    case "STUDENT":
+                        // StudentProfile will be created via separate StudentProfileRequest
+                        log.info("Student profile setup completed for user ID: {}", userId);
+                        break;
+                    case "TEACHER":
+                        createTeacherProfile(userId, event);
+                        break;
+                    case "GUARDIAN":
+                        createGuardianProfile(userId, event);
+                        break;
+                    default:
+                        log.warn("Unknown user type: {} for user ID: {}", event.getUserType(), userId);
+                }
+            }
+
+            log.info("Profile creation completed for user ID: {}", event.getId());
+
+        } catch (Exception e) {
+            log.error("Failed to create profile from event for user ID: {}: {}", event.getId(), e.getMessage(), e);
+
+            // Publish failure event
+            UserProfileCreationFailedEvent failureEvent = UserProfileCreationFailedEvent.builder()
+                    .userId(event.getId())
+                    .reason("Failed to create profile: " + e.getMessage())
+                    .build();
+
+            eventPublisher.publishUserProfileCreationFailedEvent(failureEvent);
+        }
+    }
+
+    private void createBaseUserProfile(Long userId, CreatedUserEvent event) {
+        // Check if user profile already exists
+        Optional<UserProfile> existingProfile = userProfileRepository.findByUserId(userId);
+        if (existingProfile.isPresent()) {
+            log.info("User profile already exists for user ID: {}", userId);
+            return;
+        }
+
+        // Create new UserProfile from event data
+        UserProfile userProfile = new UserProfile();
+        userProfile.setUserId(userId);
+        userProfile.setFullName(event.getFullName());
+        userProfile.setDob(event.getBirthDate());
+        userProfile.setPhoneNumber(event.getPhone());
+        userProfile.setAddress(event.getAddress());
+        userProfile.setCreatedAt(LocalDateTime.now());
+        userProfile.setUpdatedAt(LocalDateTime.now());
+
+        userProfileRepository.save(userProfile);
+        log.info("Base user profile created for user ID: {}", userId);
+    }
+
+    @Override
+    @Transactional
+    public void createTeacherProfile(Long userId, CreatedUserEvent event) {
+        log.info("Creating teacher profile for user ID: {}", userId);
+
+        // Check if teacher profile already exists
+        if (teacherProfileRepository.existsByUserId(userId)) {
+            log.info("Teacher profile already exists for user ID: {}", userId);
+            return;
+        }
+
+        TeacherProfile teacherProfile = new TeacherProfile();
+        teacherProfile.setUserId(userId);
+        // Set default values or fields from event if available
+        teacherProfile.setDepartment("General"); // Default department
+        // Additional teacher-specific fields can be set here
+
+        teacherProfileRepository.save(teacherProfile);
+        log.info("Teacher profile created for user ID: {}", userId);
+    }
+
+    @Override
+    @Transactional
+    public void createGuardianProfile(Long userId, CreatedUserEvent event) {
+        log.info("Creating guardian profile for user ID: {}", userId);
+
+        // Check if guardian profile already exists
+        if (guardianProfileRepository.existsByUserId(userId)) {
+            log.info("Guardian profile already exists for user ID: {}", userId);
+            return;
+        }
+
+        GuardianProfile guardianProfile = new GuardianProfile();
+        guardianProfile.setUserId(userId);
+        guardianProfile.setRelationship("Parent"); // Default relationship
+        guardianProfile.setPhoneAlt(event.getPhone()); // Use main phone as alternative
+
+        guardianProfileRepository.save(guardianProfile);
+        log.info("Guardian profile created for user ID: {}", userId);
     }
 }

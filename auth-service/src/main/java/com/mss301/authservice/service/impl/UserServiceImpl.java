@@ -128,6 +128,8 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
+    // ADDED: only admins can list users (aligned with external)
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @Override
     public Page<UserResponse> getUsers(Pageable pageable) {
         return userRepository.findAll(pageable).map(this::mapToUserResponse);
@@ -138,6 +140,8 @@ public class UserServiceImpl implements UserService {
         return userRepository.findAll().stream().map(this::mapToUserResponse).collect(Collectors.toList());
     }
 
+    // ADDED: only admins can change user status (aligned with external)
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @Override
     @Transactional
     public void updateUserStatus(Long id, UpdateUserStatusRequest request) {

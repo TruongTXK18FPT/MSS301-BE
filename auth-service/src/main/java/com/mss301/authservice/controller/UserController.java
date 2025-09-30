@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import com.mss301.authservice.dto.ApiResponse;
+import com.mss301.authservice.dto.request.UpdateUserStatusRequest;
 import com.mss301.authservice.dto.request.UserCreationRequest;
 import com.mss301.authservice.dto.request.UserUpdateRequest;
 import com.mss301.authservice.dto.response.UserResponse;
@@ -57,6 +58,31 @@ public class UserController {
         return ApiResponse.<UserResponse>builder()
                 .result(userService.getMyInfo())
                 .build();
+    }
+
+    // ADDED: alias endpoint mirroring external "me" pattern, reusing your existing
+    // service
+    @GetMapping("/me")
+    public ApiResponse<UserResponse> getMe() {
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.getMyInfo())
+                .build();
+    }
+
+    // ADDED: fetch by email (adapted from external) without duplicating service
+    // logic
+    @GetMapping("/by-email")
+    public ApiResponse<UserResponse> getByEmail(@RequestParam("email") String email) {
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.getUserByEmail(email))
+                .build();
+    }
+
+    // ADDED: admin-only status toggle/update adapted from external
+    @PatchMapping("/{id}/status")
+    public ApiResponse<Void> updateUserStatus(@PathVariable Long id, @RequestBody UpdateUserStatusRequest request) {
+        userService.updateUserStatus(id, request);
+        return ApiResponse.<Void>builder().build();
     }
 
     @PutMapping("/{userId}")

@@ -5,6 +5,8 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.Date;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -12,8 +14,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mss301.authservice.client.GoogleOAuthClient;
+import com.mss301.authservice.client.GoogleUserInfoClient;
+import com.mss301.authservice.config.EventPublisher;
 import com.mss301.authservice.dto.request.*;
 import com.mss301.authservice.dto.response.AuthenticationResponse;
+import com.mss301.authservice.dto.response.GoogleOAuthTokenResponse;
+import com.mss301.authservice.dto.response.GoogleUserInfoResponse;
 import com.mss301.authservice.dto.response.IntrospectResponse;
 import com.mss301.authservice.entity.*;
 import com.mss301.authservice.repository.*;
@@ -37,6 +44,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final InvalidatedTokenRepository invalidatedTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final GoogleOAuthClient googleOAuthClient;
+    private final GoogleUserInfoClient googleUserInfoClient;
+    private final EventPublisher eventPublisher;
 
     @Value("${jwt.signerKey:mySecretKey}")
     private String signerKey;
@@ -46,6 +56,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Value("${jwt.refreshable-duration:86400}")
     private long refreshableDuration;
+
+    @Value("${google.oauth.client-id:}")
+    private String googleClientId;
+
+    @Value("${google.oauth.client-secret:}")
+    private String googleClientSecret;
+
+    @Value("${google.oauth.redirect-uri:}")
+    private String googleRedirectUri;
 
     @Override
     @Transactional
@@ -322,5 +341,70 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         return signedJWT;
+    }
+
+    @Override
+    @Transactional
+    public AuthenticationResponse authenticateWithGoogle(String code) {
+        try {
+            log.info("Starting Google OAuth authentication with code: {}", code);
+
+            // Step 1: Exchange authorization code for access token
+            GoogleOAuthTokenResponse tokenResponse = googleOAuthClient.exchangeToken(
+                    code, googleClientId, googleClientSecret, googleRedirectUri, "authorization_code");
+
+            if (tokenResponse.getAccessToken() == null) {
+                throw new RuntimeException("Failed to exchange Google authorization code for access token");
+            }
+
+            // Step 2: Get user information from Google
+            GoogleUserInfoResponse userInfo = googleUserInfoClient.getUserInfo("json", tokenResponse.getAccessToken());
+
+            if (userInfo.getEmail() == null) {
+                throw new RuntimeException("Failed to retrieve user information from Google");
+            }
+
+            log.info("Retrieved Google user info for email: {}", userInfo.getEmail());
+
+            // Step 3: Check if user exists in our database
+            Optional<UserAccount> existingUser = userRepository.findByEmail(userInfo.getEmail());
+
+            if (existingUser.isEmpty()) {
+                // Do NOT auto-create. Ask FE to proceed to registration with prefilled Google
+                // data
+                log.info(
+                        "Google email not found in DB. Returning REGISTRATION_REQUIRED for email: {}",
+                        userInfo.getEmail());
+
+                return AuthenticationResponse.builder()
+                        .authenticated(false)
+                        .email(userInfo.getEmail())
+                        .name(userInfo.getName())
+                        .givenName(userInfo.getGivenName())
+                        .familyName(userInfo.getFamilyName())
+                        .picture(userInfo.getPicture())
+                        .build();
+            }
+
+            // Existing user: issue JWT
+            UserAccount user = existingUser.get();
+            log.info("Existing user logged in with Google: {}", user.getEmail());
+
+            String jwtToken = generateToken(user);
+            user.setLastLoginAt(LocalDateTime.now());
+            userRepository.save(user);
+
+            log.info("Google OAuth authentication successful for user: {}", user.getEmail());
+
+            return AuthenticationResponse.builder()
+                    .token(jwtToken)
+                    .expiryTime(Date.from(Instant.now().plus(validDuration, ChronoUnit.SECONDS)))
+                    .authenticated(true)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Google OAuth authentication failed: {}", e.getMessage(), e);
+            throw new RuntimeException("Google OAuth authentication failed: " + e.getMessage());
+        }
     }
 }

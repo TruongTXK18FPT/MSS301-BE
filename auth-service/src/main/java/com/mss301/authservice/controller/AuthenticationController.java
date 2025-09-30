@@ -79,4 +79,13 @@ public class AuthenticationController {
         authenticationService.sendPasswordResetOTP(email);
         return ApiResponse.<Void>builder().message("Password reset OTP sent").build();
     }
+
+    @PostMapping("/google")
+    public ApiResponse<AuthenticationResponse> authenticateWithGoogle(@RequestParam("code") String code) {
+        var result = authenticationService.authenticateWithGoogle(code);
+        return ApiResponse.<AuthenticationResponse>builder()
+                .result(result)
+                .message("Google authentication successful")
+                .build();
+    }
 }

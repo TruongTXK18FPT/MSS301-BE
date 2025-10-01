@@ -25,6 +25,9 @@ public class UserProfile {
     @Column(name = "user_id", nullable = false, unique = true)
     private Long userId;
 
+    @Column(name = "email", nullable = false, unique = true)
+    private String email;
+
     @Column(name = "full_name", nullable = false)
     private String fullName;
 

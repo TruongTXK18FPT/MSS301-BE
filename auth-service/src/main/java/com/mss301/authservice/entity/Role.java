@@ -31,7 +31,7 @@ public class Role {
 
     public enum RoleType {
         ADMIN("Administrator"),
-        USER("User"),
+        STUDENT("Student"),
         GUARDIAN("Guardian"),
         TEACHER("Teacher");
 

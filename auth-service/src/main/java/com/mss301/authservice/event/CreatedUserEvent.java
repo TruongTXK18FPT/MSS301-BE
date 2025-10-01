@@ -14,6 +14,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CreatedUserEvent {
     String id;
+    String email;
     String fullName;
     String userType; // STUDENT, TEACHER, GUARDIAN
 
@@ -24,4 +25,6 @@ public class CreatedUserEvent {
     String address;
     Integer districtCode;
     Integer provinceCode;
+    // For guardian registering: provide student's email to link
+    String guardianStudentEmail;
 }

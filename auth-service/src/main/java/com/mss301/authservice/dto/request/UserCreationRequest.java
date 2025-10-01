@@ -22,4 +22,6 @@ public class UserCreationRequest {
     String address;
     Integer districtCode;
     Integer provinceCode;
+    // If userType == GUARDIAN, required to link to a student by email
+    String guardianStudentEmail;
 }

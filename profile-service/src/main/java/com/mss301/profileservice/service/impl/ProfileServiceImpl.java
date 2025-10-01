@@ -18,6 +18,7 @@ import com.mss301.profileservice.entity.UserProfile;
 import com.mss301.profileservice.event.CreatedUserEvent;
 import com.mss301.profileservice.event.UserProfileCreationFailedEvent;
 import com.mss301.profileservice.repository.GuardianProfileRepository;
+import com.mss301.profileservice.repository.StudentGuardianRepository;
 import com.mss301.profileservice.repository.StudentProfileRepository;
 import com.mss301.profileservice.repository.TeacherProfileRepository;
 import com.mss301.profileservice.repository.UserProfileRepository;
@@ -36,7 +37,9 @@ public class ProfileServiceImpl implements ProfileService {
     private final UserProfileRepository userProfileRepository;
     private final TeacherProfileRepository teacherProfileRepository;
     private final GuardianProfileRepository guardianProfileRepository;
+    private final StudentGuardianRepository studentGuardianRepository;
     private final EventPublisher eventPublisher;
+    // Note: using repositories above to link guardian and student
 
     // UserProfileService implementation - Current user operations
     @Override
@@ -218,7 +221,8 @@ public class ProfileServiceImpl implements ProfileService {
             if (event.getUserType() != null) {
                 switch (event.getUserType().toUpperCase()) {
                     case "STUDENT":
-                        // StudentProfile will be created via separate StudentProfileRequest
+                        // Auto create empty StudentProfile for onboarding
+                        autoCreateStudentProfile(userId);
                         log.info("Student profile setup completed for user ID: {}", userId);
                         break;
                     case "TEACHER":
@@ -226,6 +230,8 @@ public class ProfileServiceImpl implements ProfileService {
                         break;
                     case "GUARDIAN":
                         createGuardianProfile(userId, event);
+                        // Try link guardian->student if student email provided
+                        tryLinkGuardianToStudent(event);
                         break;
                     default:
                         log.warn("Unknown user type: {} for user ID: {}", event.getUserType(), userId);
@@ -258,6 +264,7 @@ public class ProfileServiceImpl implements ProfileService {
         // Create new UserProfile from event data
         UserProfile userProfile = new UserProfile();
         userProfile.setUserId(userId);
+        userProfile.setEmail(event.getEmail());
         userProfile.setFullName(event.getFullName());
         userProfile.setDob(event.getBirthDate());
         userProfile.setPhoneNumber(event.getPhone());
@@ -267,6 +274,55 @@ public class ProfileServiceImpl implements ProfileService {
 
         userProfileRepository.save(userProfile);
         log.info("Base user profile created for user ID: {}", userId);
+    }
+
+    private void autoCreateStudentProfile(Long userId) {
+        if (studentProfileRepository.existsByUserId(userId)) {
+            return;
+        }
+        StudentProfile studentProfile = new StudentProfile();
+        studentProfile.setUserId(userId);
+        // link back to base user profile
+        userProfileRepository.findByUserId(userId).ifPresent(studentProfile::setUserProfile);
+        studentProfile.setCreatedAt(LocalDateTime.now());
+        studentProfile.setUpdatedAt(LocalDateTime.now());
+        studentProfileRepository.save(studentProfile);
+    }
+
+    private void tryLinkGuardianToStudent(CreatedUserEvent event) {
+        try {
+            if (event.getGuardianStudentEmail() == null
+                    || event.getGuardianStudentEmail().isBlank()) {
+                return;
+            }
+            var studentUserProfileOpt = userProfileRepository.findByEmail(event.getGuardianStudentEmail());
+            if (studentUserProfileOpt.isEmpty()) {
+                log.warn("Student email {} not found for guardian linking", event.getGuardianStudentEmail());
+                return;
+            }
+            Long studentUserId = studentUserProfileOpt.get().getUserId();
+            var studentProfileOpt = studentProfileRepository.findByUserId(studentUserId);
+            if (studentProfileOpt.isEmpty()) {
+                log.warn("Student profile not found for user {} when linking guardian", studentUserId);
+                return;
+            }
+            Long guardianUserId = Long.valueOf(event.getId());
+            var guardianProfileOpt = guardianProfileRepository.findByUserId(guardianUserId);
+            if (guardianProfileOpt.isEmpty()) {
+                log.warn("Guardian profile not found for user {} when linking", guardianUserId);
+                return;
+            }
+            var link = new com.mss301.profileservice.entity.StudentGuardian();
+            link.setStudentId(studentProfileOpt.get().getId());
+            link.setGuardianId(guardianProfileOpt.get().getId());
+            studentGuardianRepository.save(link);
+            log.info("Linked guardian {} to student {}", guardianUserId, studentUserId);
+        } catch (Exception e) {
+            log.warn(
+                    "Failed to link guardian to student via email {}: {}",
+                    event.getGuardianStudentEmail(),
+                    e.getMessage());
+        }
     }
 
     @Override

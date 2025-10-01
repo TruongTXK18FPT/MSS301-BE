@@ -72,8 +72,6 @@ public class UserAccount {
 
     public enum UserStatus {
         ACTIVE,
-        INACTIVE,
-        SUSPENDED,
-        PENDING_VERIFICATION
+        INACTIVE
     }
 }

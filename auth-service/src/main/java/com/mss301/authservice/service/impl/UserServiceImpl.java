@@ -189,12 +189,14 @@ public class UserServiceImpl implements UserService {
             // Create CreatedUserEvent with complete user details
             CreatedUserEvent event = CreatedUserEvent.builder()
                     .id(user.getId().toString())
+                    .email(user.getEmail())
                     .fullName(request.getFullName() != null ? request.getFullName() : request.getUsername())
                     .userType(request.getUserType()) // STUDENT, TEACHER, GUARDIAN
                     .phone(request.getPhone())
                     .address(request.getAddress())
                     .districtCode(request.getDistrictCode())
                     .provinceCode(request.getProvinceCode())
+                    .guardianStudentEmail(request.getGuardianStudentEmail())
                     // birthDate can be added later if needed
                     .build();
 

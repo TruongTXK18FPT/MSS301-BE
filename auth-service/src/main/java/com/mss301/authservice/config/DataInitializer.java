@@ -69,7 +69,7 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private List<Role> createDefaultRoles(Tenant tenant) {
-        List<String> roleNames = Arrays.asList("ADMIN", "USER", "GUARDIAN", "TEACHER");
+        List<String> roleNames = Arrays.asList("ADMIN", "STUDENT", "GUARDIAN", "TEACHER");
 
         return roleNames.stream()
                 .map(roleName -> {
@@ -91,7 +91,7 @@ public class DataInitializer implements CommandLineRunner {
         // Test users data
         List<TestUserData> testUsers = Arrays.asList(
                 new TestUserData("mss301admin@gmail.com", "mss301admin", "ADMIN"),
-                new TestUserData("mss301user@gmail.com", "mss301user", "USER"),
+                new TestUserData("mss301student@gmail.com", "mss301student", "STUDENT"),
                 new TestUserData("mssguardian@gmail.com", "mssguardian", "GUARDIAN"),
                 new TestUserData("mss301teacher@gmail.com", "mss301teacher", "TEACHER"));
 

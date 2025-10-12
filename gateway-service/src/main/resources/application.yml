@@ -4,7 +4,7 @@ server:
 
 app:
   api:
-    prefix: /api/v1
+      prefix: /api/v1
   service-prefix:
     auth: /authenticate
     payment: /payment

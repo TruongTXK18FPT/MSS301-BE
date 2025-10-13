@@ -17,4 +17,6 @@ public interface ContentItemService {
     List<ContentItemResponse> getMyContents(Long ownerId);
 
     List<ContentItemResponse> getPublicContents();
+
+    List<ContentItemResponse> searchPublic(String subject, String grade, String keyword);
 }

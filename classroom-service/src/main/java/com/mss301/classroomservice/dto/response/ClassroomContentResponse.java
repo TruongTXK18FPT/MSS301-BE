@@ -1,4 +1,4 @@
-package com.mss301.contentservice.dto.response;
+package com.mss301.classroomservice.dto.response;
 
 import java.time.LocalDateTime;
 
@@ -11,17 +11,16 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ContentItemResponse {
+public class ClassroomContentResponse {
     private Long id;
-    private Long ownerId;
+    private Long classroomId;
+    private Long contentId;
     private String type;
-    private String title;
-    private String description;
-    private String content;
-    private String subject;
-    private String grade;
-    private String tags;
-    private Boolean isPublic;
+    private Boolean visible;
+    private Integer orderIndex;
+    private LocalDateTime publishAt;
+    private LocalDateTime dueAt;
+    private Integer maxPoints;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -26,5 +26,9 @@ public class ContentItemRequest {
 
     private String content;
 
+    private String subject;
+    private String grade;
+    private String tags;
+
     private Boolean isPublic = false;
 }

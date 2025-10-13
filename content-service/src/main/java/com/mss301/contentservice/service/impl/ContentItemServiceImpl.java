@@ -30,6 +30,9 @@ public class ContentItemServiceImpl implements ContentItemService {
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .content(request.getContent())
+                .subject(request.getSubject())
+                .grade(request.getGrade())
+                .tags(request.getTags())
                 .isPublic(Boolean.TRUE.equals(request.getIsPublic()))
                 .build();
         return toResponse(repository.save(item));
@@ -46,6 +49,9 @@ public class ContentItemServiceImpl implements ContentItemService {
         item.setTitle(request.getTitle());
         item.setDescription(request.getDescription());
         item.setContent(request.getContent());
+        item.setSubject(request.getSubject());
+        item.setGrade(request.getGrade());
+        item.setTags(request.getTags());
         item.setIsPublic(Boolean.TRUE.equals(request.getIsPublic()));
         return toResponse(repository.save(item));
     }
@@ -79,6 +85,13 @@ public class ContentItemServiceImpl implements ContentItemService {
         return repository.findByIsPublicTrue().stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    @Override
+    public List<ContentItemResponse> searchPublic(String subject, String grade, String keyword) {
+        return repository.searchPublic(subject, grade, keyword).stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     private ContentItemResponse toResponse(ContentItem item) {
         return ContentItemResponse.builder()
                 .id(item.getId())
@@ -87,6 +100,9 @@ public class ContentItemServiceImpl implements ContentItemService {
                 .title(item.getTitle())
                 .description(item.getDescription())
                 .content(item.getContent())
+                .subject(item.getSubject())
+                .grade(item.getGrade())
+                .tags(item.getTags())
                 .isPublic(item.getIsPublic())
                 .createdAt(item.getCreatedAt())
                 .updatedAt(item.getUpdatedAt())

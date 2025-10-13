@@ -68,4 +68,13 @@ public class ContentItemController {
     public ResponseEntity<List<ContentItemResponse>> publics() {
         return ResponseEntity.ok(service.getPublicContents());
     }
+
+    @GetMapping("/search")
+    @Operation(summary = "Search public contents by subject/grade/keyword")
+    public ResponseEntity<List<ContentItemResponse>> search(
+            @RequestParam(required = false) String subject,
+            @RequestParam(required = false) String grade,
+            @RequestParam(required = false) String keyword) {
+        return ResponseEntity.ok(service.searchPublic(subject, grade, keyword));
+    }
 }

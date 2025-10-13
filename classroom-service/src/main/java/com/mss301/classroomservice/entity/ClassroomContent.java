@@ -1,4 +1,4 @@
-package com.mss301.contentservice.entity;
+package com.mss301.classroomservice.entity;
 
 import java.time.LocalDateTime;
 
@@ -11,15 +11,15 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "content_items")
+@Table(name = "classroom_contents")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ContentItem {
+public class ClassroomContent {
 
-    public enum Type {
+    public enum ContentType {
         LESSON,
         ASSIGNMENT,
         QUIZ,
@@ -31,31 +31,21 @@ public class ContentItem {
     private Long id;
 
     @Column(nullable = false)
-    private Long ownerId;
+    private Long classroomId;
+
+    @Column(nullable = false)
+    private Long contentId; // reference to content-service ContentItem
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Type type;
+    private ContentType type;
 
-    @Column(nullable = false, length = 255)
-    private String title;
+    private Boolean visible = true;
+    private Integer orderIndex;
 
-    @Column(length = 2000)
-    private String description;
-
-    @Lob
-    private String content;
-
-    @Column(length = 100)
-    private String subject; // e.g., Math
-
-    @Column(length = 50)
-    private String grade; // e.g., Grade 6
-
-    @Column(length = 500)
-    private String tags; // comma-separated tags
-
-    private Boolean isPublic = false;
+    private LocalDateTime publishAt;
+    private LocalDateTime dueAt;
+    private Integer maxPoints;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

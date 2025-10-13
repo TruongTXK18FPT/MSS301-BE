@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.mss301.authservice.dto.request.*;
+import com.mss301.authservice.dto.response.ProfileStatusResponse;
 import com.mss301.authservice.dto.response.UserResponse;
 
 public interface UserService {
@@ -30,4 +31,8 @@ public interface UserService {
     boolean existsByEmail(String email);
 
     void sendVerificationEmail(Long userId);
+
+    void completeProfile(ProfileCompletionRequest request);
+
+    ProfileStatusResponse getProfileStatus();
 }

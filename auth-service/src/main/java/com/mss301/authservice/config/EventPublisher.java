@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import com.mss301.authservice.event.CreatedUserEvent;
 import com.mss301.authservice.event.NotificationEvent;
+import com.mss301.authservice.event.ProfileCompletedEvent;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -53,6 +54,24 @@ public class EventPublisher {
             }
         } catch (Exception e) {
             log.error("Error publishing NotificationEvent to: {}", event.getRecipient(), e);
+        }
+    }
+
+    /**
+     * Publishes ProfileCompletedEvent when a user completes their profile
+     *
+     * @param event The event to publish containing profile completion details
+     */
+    public void publishProfileCompletedEvent(ProfileCompletedEvent event) {
+        try {
+            boolean result = streamBridge.send("profileCompleted-out-0", event);
+            if (result) {
+                log.info("Successfully published ProfileCompletedEvent for user ID: {}", event.getUserId());
+            } else {
+                log.error("Failed to publish ProfileCompletedEvent for user ID: {}", event.getUserId());
+            }
+        } catch (Exception e) {
+            log.error("Error publishing ProfileCompletedEvent for user ID: {}", event.getUserId(), e);
         }
     }
 }

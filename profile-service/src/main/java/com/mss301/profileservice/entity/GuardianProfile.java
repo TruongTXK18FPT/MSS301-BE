@@ -25,6 +25,5 @@ public class GuardianProfile {
     @Column(name = "relationship")
     private String relationship;
 
-    @Column(name = "phone_alt", length = 15)
-    private String phoneAlt;
+    // phoneAlt removed per new requirement
 }

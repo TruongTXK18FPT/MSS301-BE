@@ -23,6 +23,8 @@ public interface AuthenticationService {
 
     void sendPasswordResetOTP(String email);
 
+    void resendOTP(String email);
+
     /**
      * Authenticate user using Google OAuth2 authorization code
      *

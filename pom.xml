@@ -33,6 +33,7 @@
         <module>payment-service</module>
         <module>notification-service</module>
         <module>chatbot-service</module>
+        <module>classroom-service</module>
     </modules>
 
     <dependencyManagement>

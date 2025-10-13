@@ -14,7 +14,7 @@ spring:
     host: smtp.gmail.com
     port: 587
     username: skillverseexe@gmail.com
-    password: fgbx gygh iglz dcou
+    password: fgbxgyghiglzdcou
     properties:
       mail:
         smtp:
@@ -25,6 +25,8 @@ spring:
           timeout: 3000
           writetimeout: 5000
   cloud:
+    function:
+      definition: notificationDelivery
     stream:
       bindings:
         notificationDelivery-in-0:
@@ -32,6 +34,17 @@ spring:
       kafka:
         binder:
           brokers: localhost:9092
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        "[spring.json.trusted.packages]": "*"
 eureka:
   client:
     service-url:

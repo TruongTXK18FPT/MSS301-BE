@@ -8,10 +8,8 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CreatedUserEvent {
-    String id;
-    String email;
-    String fullName;
-    String username;
+public class ProfileCompletedEvent {
+    String userId;
     String userType; // STUDENT, TEACHER, GUARDIAN
+    Object data; // JSON data containing profile completion info
 }

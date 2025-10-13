@@ -1,6 +1,7 @@
 package com.mss301.profileservice.service;
 
 import com.mss301.profileservice.dto.request.StudentProfileRequest;
+import com.mss301.profileservice.dto.response.ProfileCompletionStatusResponse;
 import com.mss301.profileservice.dto.response.StudentProfileResponse;
 
 /**
@@ -25,4 +26,12 @@ public interface UserProfileService {
      * @return StudentProfileResponse Updated profile
      */
     StudentProfileResponse updateCurrentUserProfile(String userId, StudentProfileRequest request);
+
+    /**
+     * Get profile completion status for the current user
+     *
+     * @param userId Current authenticated user ID
+     * @return ProfileCompletionStatusResponse Profile completion status
+     */
+    ProfileCompletionStatusResponse getProfileCompletionStatus(String userId);
 }

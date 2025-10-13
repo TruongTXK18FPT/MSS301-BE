@@ -6,6 +6,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.web.bind.annotation.*;
 
 import com.mss301.profileservice.dto.request.StudentProfileRequest;
+import com.mss301.profileservice.dto.response.ProfileCompletionStatusResponse;
 import com.mss301.profileservice.dto.response.StudentProfileResponse;
 import com.mss301.profileservice.service.ProfileService;
 
@@ -45,6 +46,17 @@ public class ProfileController {
     public ResponseEntity<StudentProfileResponse> updateCurrentUserProfile(@RequestBody StudentProfileRequest request) {
         String currentUserId = getCurrentUserId();
         StudentProfileResponse response = profileService.updateCurrentUserProfile(currentUserId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/completion-status")
+    @Operation(
+            summary = "Get Profile Completion Status",
+            description = "Check if the current user has completed their profile")
+    @ApiResponse(responseCode = "200", description = "Profile status retrieved successfully")
+    public ResponseEntity<ProfileCompletionStatusResponse> getProfileCompletionStatus() {
+        String currentUserId = getCurrentUserId();
+        ProfileCompletionStatusResponse response = profileService.getProfileCompletionStatus(currentUserId);
         return ResponseEntity.ok(response);
     }
 

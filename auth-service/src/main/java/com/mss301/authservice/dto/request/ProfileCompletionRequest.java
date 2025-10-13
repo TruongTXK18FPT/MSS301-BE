@@ -1,17 +1,14 @@
-package com.mss301.authservice.event;
+package com.mss301.authservice.dto.request;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CreatedUserEvent {
-    String id;
-    String email;
-    String fullName;
-    String username;
+public class ProfileCompletionRequest {
     String userType; // STUDENT, TEACHER, GUARDIAN
+    Object data; // Will be deserialized to specific request based on userType
 }

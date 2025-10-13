@@ -1,6 +1,7 @@
 package com.mss301.profileservice.service;
 
 import com.mss301.profileservice.event.CreatedUserEvent;
+import com.mss301.profileservice.event.ProfileCompletedEvent;
 
 /**
  * Service interface for event-driven profile operations
@@ -30,4 +31,12 @@ public interface EventProfileService {
      * @param event  The user creation event
      */
     void createGuardianProfile(Long userId, CreatedUserEvent event);
+
+    /**
+     * Complete user profile from ProfileCompletedEvent
+     * Updates the profile with role-specific data
+     *
+     * @param event The profile completion event
+     */
+    void completeProfileFromEvent(ProfileCompletedEvent event);
 }

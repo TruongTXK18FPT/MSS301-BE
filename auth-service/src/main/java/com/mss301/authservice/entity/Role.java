@@ -22,27 +22,20 @@ public class Role {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "tenant_id", nullable = false)
-    private Long tenantId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tenant_id", insertable = false, updatable = false)
-    private Tenant tenant;
-
     public enum RoleType {
         ADMIN("Administrator"),
         STUDENT("Student"),
         GUARDIAN("Guardian"),
         TEACHER("Teacher");
 
-        private final String name;
+        private final String displayName;
 
-        RoleType(String name) {
-            this.name = name;
+        RoleType(String displayName) {
+            this.displayName = displayName;
         }
 
-        public String getName() {
-            return name;
+        public String getDisplayName() {
+            return displayName;
         }
     }
 }

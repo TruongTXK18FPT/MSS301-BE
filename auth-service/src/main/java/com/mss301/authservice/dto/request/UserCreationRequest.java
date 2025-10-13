@@ -9,17 +9,10 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UserCreationRequest {
+    String fullName;
     String username;
     String email;
     String password;
     String confirmPassword;
-    String phone;
-    Long tenantId;
     String userType; // STUDENT, TEACHER, GUARDIAN
-
-    // Additional profile fields based on user type
-    String fullName;
-    String address;
-    Integer districtCode;
-    Integer provinceCode;
 }

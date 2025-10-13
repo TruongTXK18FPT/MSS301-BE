@@ -5,17 +5,24 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.Date;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mss301.authservice.client.GoogleOAuthClient;
+import com.mss301.authservice.client.GoogleUserInfoClient;
+import com.mss301.authservice.config.EventPublisher;
 import com.mss301.authservice.dto.request.*;
 import com.mss301.authservice.dto.response.AuthenticationResponse;
+import com.mss301.authservice.dto.response.GoogleOAuthTokenResponse;
+import com.mss301.authservice.dto.response.GoogleUserInfoResponse;
 import com.mss301.authservice.dto.response.IntrospectResponse;
 import com.mss301.authservice.entity.*;
+import com.mss301.authservice.event.NotificationEvent;
 import com.mss301.authservice.repository.*;
 import com.mss301.authservice.service.AuthenticationService;
 import com.nimbusds.jose.*;
@@ -36,7 +43,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final OTPRepository otpRepository;
     private final InvalidatedTokenRepository invalidatedTokenRepository;
     private final PasswordEncoder passwordEncoder;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final GoogleOAuthClient googleOAuthClient;
+    private final GoogleUserInfoClient googleUserInfoClient;
+    private final EventPublisher eventPublisher;
 
     @Value("${jwt.signerKey:mySecretKey}")
     private String signerKey;
@@ -46,6 +55,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Value("${jwt.refreshable-duration:86400}")
     private long refreshableDuration;
+
+    @Value("${google.oauth.client-id:}")
+    private String googleClientId;
+
+    @Value("${google.oauth.client-secret:}")
+    private String googleClientSecret;
+
+    @Value("${google.oauth.redirect-uri:}")
+    private String googleRedirectUri;
 
     @Override
     @Transactional
@@ -62,6 +80,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         if (user.getStatus() != UserAccount.UserStatus.ACTIVE) {
             throw new RuntimeException("User is not active");
+        }
+
+        if (!user.getEmailVerified()) {
+            throw new RuntimeException("Email chưa được xác thực. Vui lòng kiểm tra email và nhập mã OTP để xác thực.");
         }
 
         var token = generateToken(user);
@@ -82,6 +104,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         boolean isValid = true;
         String userId = null;
         String email = null;
+        String username = null;
 
         try {
             verifyToken(token, false);
@@ -91,15 +114,26 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
             userId = claims.getSubject();
             email = claims.getStringClaim("email");
+            username = claims.getStringClaim("username");
 
         } catch (Exception e) {
             isValid = false;
+        }
+
+        String role = null;
+        try {
+            SignedJWT signedJWT = SignedJWT.parse(token);
+            JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
+            role = claims.getStringClaim("role");
+        } catch (Exception ignored) {
         }
 
         return IntrospectResponse.builder()
                 .valid(isValid)
                 .id(userId)
                 .email(email)
+                .username(username)
+                .role(role)
                 .build();
     }
 
@@ -171,6 +205,20 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         user.setEmailVerified(true);
         userRepository.save(user);
+
+        // Send welcome email after successful verification
+        Map<String, Object> welcomeData = new HashMap<>();
+        welcomeData.put("fullName", user.getUsername()); // Or use actual fullName if available
+
+        NotificationEvent welcomeEvent = NotificationEvent.builder()
+                .recipient(user.getEmail())
+                .subject("Welcome to MSS301!")
+                .templateCode("welcome_email") // Now use welcome template
+                .param(welcomeData)
+                .build();
+
+        eventPublisher.publishNotificationEvent(welcomeEvent);
+        log.info("Sent welcome email to verified user: {}", user.getEmail());
     }
 
     @Override
@@ -224,18 +272,25 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .email(email)
                 .otp(otpCode)
                 .purpose(OTP.OtpPurpose.EMAIL_VERIFICATION)
-                .expiryTime(LocalDateTime.now().plusMinutes(15))
+                .expiryTime(LocalDateTime.now().plusMinutes(5))
                 .build();
 
         otpRepository.save(otp);
 
-        // Send email notification via Kafka
-        Map<String, Object> emailData = new HashMap<>();
-        emailData.put("email", email);
-        emailData.put("otp", otpCode);
-        emailData.put("purpose", "EMAIL_VERIFICATION");
+        // Send email notification via EventPublisher
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("OTP", otpCode); // Capital letters to match template variable
+        templateData.put("PURPOSE", "EMAIL_VERIFICATION"); // Add PURPOSE for template
 
-        kafkaTemplate.send("email-verification", emailData);
+        NotificationEvent notificationEvent = NotificationEvent.builder()
+                .recipient(email)
+                .subject("Mã xác thực Email - MSS301")
+                .templateCode("otp_verified") // Use OTP template not welcome template
+                .param(templateData)
+                .build();
+
+        eventPublisher.publishNotificationEvent(notificationEvent);
+        log.info("Sent email verification OTP to: {}", email);
     }
 
     @Override
@@ -256,22 +311,79 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .email(email)
                 .otp(otpCode)
                 .purpose(OTP.OtpPurpose.PASSWORD_RESET)
-                .expiryTime(LocalDateTime.now().plusMinutes(15))
+                .expiryTime(LocalDateTime.now().plusMinutes(5))
                 .build();
 
         otpRepository.save(otp);
 
-        // Send email notification via Kafka
-        Map<String, Object> emailData = new HashMap<>();
-        emailData.put("email", email);
-        emailData.put("otp", otpCode);
-        emailData.put("purpose", "PASSWORD_RESET");
+        // Send email notification via EventPublisher
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("OTP", otpCode); // Capital letters
+        templateData.put("PURPOSE", "PASSWORD_RESET"); // Add PURPOSE
 
-        kafkaTemplate.send("password-reset", emailData);
+        NotificationEvent notificationEvent = NotificationEvent.builder()
+                .recipient(email)
+                .subject("Mã đặt lại mật khẩu - MSS301")
+                .templateCode("otp_verified") // Use OTP template
+                .param(templateData)
+                .build();
+
+        eventPublisher.publishNotificationEvent(notificationEvent);
+        log.info("Sent password reset OTP to: {}", email);
+    }
+
+    @Override
+    public void resendOTP(String email) {
+        // Check if user exists
+        userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Generate new OTP
+        String otpCode = String.format("%06d", new Random().nextInt(999999));
+
+        // Invalidate previous OTPs for email verification
+        var previousOtps = otpRepository.findByEmailAndPurposeAndUsedFalse(email, OTP.OtpPurpose.EMAIL_VERIFICATION);
+        previousOtps.forEach(otp -> otp.setUsed(true));
+        otpRepository.saveAll(previousOtps);
+
+        // Create new OTP
+        OTP otp = OTP.builder()
+                .email(email)
+                .otp(otpCode)
+                .purpose(OTP.OtpPurpose.EMAIL_VERIFICATION)
+                .expiryTime(LocalDateTime.now().plusMinutes(5))
+                .build();
+
+        otpRepository.save(otp);
+
+        // Send email notification via EventPublisher
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("OTP", otpCode); // Capital letters
+        templateData.put("PURPOSE", "EMAIL_VERIFICATION"); // Add PURPOSE
+
+        NotificationEvent notificationEvent = NotificationEvent.builder()
+                .recipient(email)
+                .subject("Mã xác thực Email - MSS301")
+                .templateCode("otp_verified") // Use OTP template
+                .param(templateData)
+                .build();
+
+        eventPublisher.publishNotificationEvent(notificationEvent);
+        log.info("Resent OTP to email: {}", email);
     }
 
     private String generateToken(UserAccount user) {
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
+
+        String roleName = null;
+        if (user.getRoleId() != null) {
+            try {
+                Optional<Role> roleOpt = Optional.ofNullable(user.getRole());
+                if (roleOpt.isPresent()) {
+                    roleName = roleOpt.get().getName();
+                }
+            } catch (Exception ignored) {
+            }
+        }
 
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
                 .subject(user.getId().toString())
@@ -281,7 +393,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                         Instant.now().plus(validDuration, ChronoUnit.SECONDS).toEpochMilli()))
                 .jwtID(UUID.randomUUID().toString())
                 .claim("email", user.getEmail())
-                .claim("tenant", user.getTenant() != null ? user.getTenant().getId() : null)
+                .claim("username", user.getUsername())
+                .claim("role", roleName)
                 .build();
 
         Payload payload = new Payload(jwtClaimsSet.toJSONObject());
@@ -322,5 +435,70 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         return signedJWT;
+    }
+
+    @Override
+    @Transactional
+    public AuthenticationResponse authenticateWithGoogle(String code) {
+        try {
+            log.info("Starting Google OAuth authentication with code: {}", code);
+
+            // Step 1: Exchange authorization code for access token
+            GoogleOAuthTokenResponse tokenResponse = googleOAuthClient.exchangeToken(
+                    code, googleClientId, googleClientSecret, googleRedirectUri, "authorization_code");
+
+            if (tokenResponse.getAccessToken() == null) {
+                throw new RuntimeException("Failed to exchange Google authorization code for access token");
+            }
+
+            // Step 2: Get user information from Google
+            GoogleUserInfoResponse userInfo = googleUserInfoClient.getUserInfo("json", tokenResponse.getAccessToken());
+
+            if (userInfo.getEmail() == null) {
+                throw new RuntimeException("Failed to retrieve user information from Google");
+            }
+
+            log.info("Retrieved Google user info for email: {}", userInfo.getEmail());
+
+            // Step 3: Check if user exists in our database
+            Optional<UserAccount> existingUser = userRepository.findByEmail(userInfo.getEmail());
+
+            if (existingUser.isEmpty()) {
+                // Do NOT auto-create. Ask FE to proceed to registration with prefilled Google
+                // data
+                log.info(
+                        "Google email not found in DB. Returning REGISTRATION_REQUIRED for email: {}",
+                        userInfo.getEmail());
+
+                return AuthenticationResponse.builder()
+                        .authenticated(false)
+                        .email(userInfo.getEmail())
+                        .name(userInfo.getName())
+                        .givenName(userInfo.getGivenName())
+                        .familyName(userInfo.getFamilyName())
+                        .picture(userInfo.getPicture())
+                        .build();
+            }
+
+            // Existing user: issue JWT
+            UserAccount user = existingUser.get();
+            log.info("Existing user logged in with Google: {}", user.getEmail());
+
+            String jwtToken = generateToken(user);
+            user.setLastLoginAt(LocalDateTime.now());
+            userRepository.save(user);
+
+            log.info("Google OAuth authentication successful for user: {}", user.getEmail());
+
+            return AuthenticationResponse.builder()
+                    .token(jwtToken)
+                    .expiryTime(Date.from(Instant.now().plus(validDuration, ChronoUnit.SECONDS)))
+                    .authenticated(true)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Google OAuth authentication failed: {}", e.getMessage(), e);
+            throw new RuntimeException("Google OAuth authentication failed: " + e.getMessage());
+        }
     }
 }

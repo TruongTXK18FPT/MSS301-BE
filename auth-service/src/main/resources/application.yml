@@ -36,8 +36,27 @@ spring:
       kafka:
         binder:
           brokers: localhost:9092
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        "[spring.json.trusted.packages]": "*"
 server:
   port: 8081
 
 jwt:
   signerKey: "1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij"
+
+# Google OAuth2 Configuration
+# Replace these placeholder values with your actual Google OAuth2 credentials
+google:
+  oauth:
+    client-id: "YOUR_GOOGLE_CLIENT_ID"
+    client-secret: "YOUR_GOOGLE_CLIENT_SECRET"
+    redirect-uri: "http://localhost:3000/auth/google/callback" # Frontend callback URL

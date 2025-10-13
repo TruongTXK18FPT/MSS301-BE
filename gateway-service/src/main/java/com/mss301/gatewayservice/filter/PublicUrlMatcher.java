@@ -11,19 +11,24 @@ public class PublicUrlMatcher {
     private static final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     private static final Set<String> PUBLIC_EXACT_PATHS = Set.of(
-            // Authentication endpoints
-            "/authenticate/login",
-            "/authenticate/register",
-            "/authenticate/introspect",
-            "/authenticate/logout",
-            "/authenticate/refresh",
-            "/authenticate/verify-email",
-            "/authenticate/forgot-password",
-            "/authenticate/reset-password",
+            // Authentication endpoints (AuthenticationController with /auth prefix)
+            "/authenticate/auth/login",
+            "/authenticate/auth/introspect",
+            "/authenticate/auth/logout",
+            "/authenticate/auth/refresh",
+            "/authenticate/auth/verify-email",
+            "/authenticate/auth/reset-password",
+            "/authenticate/auth/google",
+            "/authenticate/auth/send-email-verification",
+            "/authenticate/auth/send-password-reset",
+
+            // User endpoints (UserController with /users prefix)
+            "/authenticate/users/register",
             "/authenticate/users/verify-otp",
             "/authenticate/users/resend",
             "/authenticate/users/forgot-password/reset",
             "/authenticate/users/forgot-password/verify",
+            "/authenticate/users/my-profile-status",
 
             // Test endpoints
             "/authenticate/test",
@@ -36,18 +41,14 @@ public class PublicUrlMatcher {
             "/notification/test",
 
             // Public content endpoints
-            "/premium/premiums", // get all premiums
-            "/content/contents", // get all contents
-            "/profile/profiles" // get all profiles
-            );
+            "/premium/premiums",
+            "/content/contents",
+            "/profile/profiles");
 
-    private static final List<String> PUBLIC_WILDCARD_PATTERNS = List.of(
-            "/premium/premiums/*", // get premium by id
-            "/content/contents/*", // get content by id
-            "/profile/profiles/*" // get profile by id
-            );
+    private static final List<String> PUBLIC_WILDCARD_PATTERNS =
+            List.of("/premium/premiums/*", "/content/contents/*", "/profile/profiles/*");
 
-    public boolean matches(String path) {
+    public boolean isPublicUrl(String path) {
         return PUBLIC_EXACT_PATHS.contains(path)
                 || PUBLIC_WILDCARD_PATTERNS.stream().anyMatch(pattern -> pathMatcher.match(pattern, path));
     }

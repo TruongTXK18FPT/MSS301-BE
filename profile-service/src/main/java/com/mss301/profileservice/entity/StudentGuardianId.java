@@ -1,4 +1,4 @@
-package com.mss301.authservice.entity;
+package com.mss301.profileservice.entity;
 
 import java.io.Serializable;
 
@@ -13,7 +13,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode
-public class UserRoleId implements Serializable {
-    private Long userId;
-    private Long roleId;
+public class StudentGuardianId implements Serializable {
+    private Long studentId;
+    private Long guardianId;
 }

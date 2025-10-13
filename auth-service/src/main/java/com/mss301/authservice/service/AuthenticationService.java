@@ -22,4 +22,14 @@ public interface AuthenticationService {
     void sendEmailVerification(String email);
 
     void sendPasswordResetOTP(String email);
+
+    void resendOTP(String email);
+
+    /**
+     * Authenticate user using Google OAuth2 authorization code
+     *
+     * @param code Authorization code from Google OAuth2 flow
+     * @return AuthenticationResponse with JWT token
+     */
+    AuthenticationResponse authenticateWithGoogle(String code);
 }

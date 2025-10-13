@@ -41,11 +41,17 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        String path = exchange.getRequest().getURI().getPath().replaceAll(API_PREFIX, "");
+        String originalPath = exchange.getRequest().getURI().getPath();
+        String path = originalPath.replace(API_PREFIX, "");
 
-        if (publicUrlMatcher.matches(path)) {
+        log.info("Original path: {}, Stripped path: {}, API_PREFIX: {}", originalPath, path, API_PREFIX);
+
+        if (publicUrlMatcher.isPublicUrl(path)) {
+            log.info("Path {} is public, allowing access", path);
             return chain.filter(exchange);
         }
+
+        log.info("Path {} is not public, checking authentication", path);
 
         List<String> authHeader = exchange.getRequest().getHeaders().get(HttpHeaders.AUTHORIZATION);
         if (CollectionUtils.isEmpty(authHeader)) {

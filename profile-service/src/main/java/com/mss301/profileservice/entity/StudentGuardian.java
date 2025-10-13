@@ -1,11 +1,8 @@
 package com.mss301.profileservice.entity;
 
-import java.io.Serializable;
-
 import jakarta.persistence.*;
 
 import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -34,14 +31,4 @@ public class StudentGuardian {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "guardian_id", insertable = false, updatable = false)
     private GuardianProfile guardianProfile;
-}
-
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@EqualsAndHashCode
-class StudentGuardianId implements Serializable {
-    private Long studentId;
-    private Long guardianId;
 }

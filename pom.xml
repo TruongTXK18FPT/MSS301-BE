@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.5.5</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <relativePath /> <!-- lookup parent from repository -->
     </parent>
 
     <groupId>com.MSS301</groupId>
@@ -19,7 +20,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <java.version>17</java.version>
+        <java.version>21</java.version>
     </properties>
 
     <modules>
@@ -33,6 +34,7 @@
         <module>payment-service</module>
         <module>notification-service</module>
         <module>chatbot-service</module>
+        <module>classroom-service</module>
     </modules>
 
     <dependencyManagement>
@@ -54,36 +56,36 @@
 
     <build>
         <plugins>
-        <plugin>
-            <groupId>com.diffplug.spotless</groupId>
-            <artifactId>spotless-maven-plugin</artifactId>
-            <version>2.43.0</version>
-            <configuration>
-                <java>
-                    <removeUnusedImports />
-                    <toggleOffOn/>
-                    <trimTrailingWhitespace/>
-                    <endWithNewline/>
-                    <indent>
-                        <tabs>true</tabs>
-                        <spacesPerTab>4</spacesPerTab>
-                    </indent>
-                    <palantirJavaFormat/>
-                    <importOrder>
-                        <!-- Specify either order or file, but not both -->
-                        <order>java,jakarta,org,com,com.diffplug,</order>
-                    </importOrder>
-                </java>
-            </configuration>
-            <executions>
-                <execution>
-                    <phase>compile</phase>
-                    <goals>
-                        <goal>apply</goal>
-                    </goals>
-                </execution>
-            </executions>
-        </plugin>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>2.43.0</version>
+                <configuration>
+                    <java>
+                        <removeUnusedImports />
+                        <toggleOffOn />
+                        <trimTrailingWhitespace />
+                        <endWithNewline />
+                        <indent>
+                            <tabs>true</tabs>
+                            <spacesPerTab>4</spacesPerTab>
+                        </indent>
+                        <palantirJavaFormat />
+                        <importOrder>
+                            <!-- Specify either order or file, but not both -->
+                            <order>java,jakarta,org,com,com.diffplug,</order>
+                        </importOrder>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>apply</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>

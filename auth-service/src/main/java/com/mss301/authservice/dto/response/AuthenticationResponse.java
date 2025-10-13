@@ -14,4 +14,10 @@ public class AuthenticationResponse {
     String token;
     Date expiryTime;
     boolean authenticated;
+    // ADDED: Optional fields for Google-first login when registration is required
+    String email;
+    String name;
+    String givenName;
+    String familyName;
+    String picture;
 }

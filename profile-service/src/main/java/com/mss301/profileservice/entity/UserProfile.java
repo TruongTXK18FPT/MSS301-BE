@@ -25,6 +25,9 @@ public class UserProfile {
     @Column(name = "user_id", nullable = false, unique = true)
     private Long userId;
 
+    @Column(name = "email", nullable = false, unique = true)
+    private String email;
+
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
@@ -42,6 +45,15 @@ public class UserProfile {
 
     @Column(name = "avatar_url")
     private String avatarUrl;
+
+    @Column(name = "profile_completed", nullable = false)
+    private boolean profileCompleted = false;
+
+    @Column(name = "user_type")
+    private String userType; // STUDENT, TEACHER, GUARDIAN
+
+    @Column(name = "username")
+    private String username;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

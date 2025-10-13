@@ -1,0 +1,23 @@
+package com.mss301.classroomservice.dto.response;
+
+import java.time.LocalDateTime;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ClassroomResponse {
+    private Long id;
+    private String name;
+    private String description;
+    private Boolean isPublic;
+    private String joinCode;
+    private Long ownerId;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}

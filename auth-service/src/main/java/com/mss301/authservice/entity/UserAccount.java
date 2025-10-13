@@ -55,6 +55,13 @@ public class UserAccount {
     @Column(name = "phone", length = 15)
     private String phone;
 
+    @Column(name = "role_id")
+    private Long roleId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "role_id", insertable = false, updatable = false)
+    private Role role;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", insertable = false, updatable = false)
     private Tenant tenant;

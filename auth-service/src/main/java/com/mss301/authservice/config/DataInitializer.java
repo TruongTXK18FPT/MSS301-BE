@@ -12,11 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.mss301.authservice.entity.Role;
 import com.mss301.authservice.entity.Tenant;
 import com.mss301.authservice.entity.UserAccount;
-import com.mss301.authservice.entity.UserRole;
 import com.mss301.authservice.repository.RoleRepository;
 import com.mss301.authservice.repository.TenantRepository;
 import com.mss301.authservice.repository.UserRepository;
-import com.mss301.authservice.repository.UserRoleRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +30,6 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final TenantRepository tenantRepository;
-    private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -111,18 +108,16 @@ public class DataInitializer implements CommandLineRunner {
                 user = userRepository.save(user);
                 log.info("Created test user: {}", userData.email);
 
-                // Assign role to user
+                // Assign role to user (single role)
                 Role userRole = roles.stream()
                         .filter(role -> role.getName().equals(userData.roleName))
                         .findFirst()
                         .orElseThrow(() -> new RuntimeException("Role not found: " + userData.roleName));
 
-                UserRole userRoleAssignment = new UserRole();
-                userRoleAssignment.setUserId(user.getId());
-                userRoleAssignment.setRoleId(userRole.getId());
-                userRoleRepository.save(userRoleAssignment);
+                user.setRoleId(userRole.getId());
+                userRepository.save(user);
 
-                log.info("Assigned role {} to user {}", userData.roleName, userData.email);
+                log.info("Assigned role {} (id={}) to user {}", userData.roleName, userRole.getId(), userData.email);
             } else {
                 log.info("Test user already exists: {}", userData.email);
             }

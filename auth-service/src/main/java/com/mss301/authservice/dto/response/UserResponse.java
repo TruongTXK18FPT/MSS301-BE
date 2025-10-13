@@ -19,6 +19,7 @@ public class UserResponse {
     UserAccount.UserStatus status;
     boolean emailVerified;
     String tenantId;
+    Long roleId;
     LocalDateTime createdAt;
     LocalDateTime lastLoginAt;
 }

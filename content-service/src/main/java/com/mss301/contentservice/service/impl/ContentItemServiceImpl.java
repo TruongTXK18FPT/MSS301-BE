@@ -56,12 +56,13 @@ public class ContentItemServiceImpl implements ContentItemService {
                 .isPublic(Boolean.TRUE.equals(request.getIsPublic()))
                 .build();
         item = repository.save(item);
+        final Long contentId = item.getId();
         // Save type-specific details
         if (item.getType() == Type.QUIZ && request.getQuiz() != null) {
-            saveQuiz(item.getId(), request.getQuiz());
+            saveQuiz(contentId, request.getQuiz());
         } else if (item.getType() == Type.ASSIGNMENT && request.getAssignment() != null) {
             saveAssignment(
-                    item.getId(),
+                    contentId,
                     request.getAssignment().getInstructions(),
                     request.getAssignment().getSubmissionType(),
                     request.getAssignment().getAttachmentFileIds());
@@ -85,12 +86,13 @@ public class ContentItemServiceImpl implements ContentItemService {
         item.setTags(request.getTags());
         item.setIsPublic(Boolean.TRUE.equals(request.getIsPublic()));
         item = repository.save(item);
+        final Long contentId = item.getId();
         // Update type-specific details
         if (item.getType() == Type.QUIZ) {
             // clear and re-save for simplicity
-            quizRepository.findById(item.getId()).ifPresent(q -> {
+            quizRepository.findById(contentId).ifPresent(q -> {
                 // delete existing questions/options
-                List<QuizQuestion> qs = quizQuestionRepository.findByQuizIdOrderByIdAsc(item.getId());
+                List<QuizQuestion> qs = quizQuestionRepository.findByQuizIdOrderByIdAsc(contentId);
                 for (QuizQuestion qq : qs) {
                     quizOptionRepository
                             .findByQuestionIdOrderByIdAsc(qq.getId())
@@ -100,13 +102,13 @@ public class ContentItemServiceImpl implements ContentItemService {
                 quizRepository.delete(q);
             });
             if (request.getQuiz() != null) {
-                saveQuiz(item.getId(), request.getQuiz());
+                saveQuiz(contentId, request.getQuiz());
             }
         } else if (item.getType() == Type.ASSIGNMENT) {
-            assignmentDetailRepository.findById(item.getId()).ifPresent(assignmentDetailRepository::delete);
+            assignmentDetailRepository.findById(contentId).ifPresent(assignmentDetailRepository::delete);
             if (request.getAssignment() != null) {
                 saveAssignment(
-                        item.getId(),
+                        contentId,
                         request.getAssignment().getInstructions(),
                         request.getAssignment().getSubmissionType(),
                         request.getAssignment().getAttachmentFileIds());
@@ -171,8 +173,9 @@ public class ContentItemServiceImpl implements ContentItemService {
                 .updatedAt(item.getUpdatedAt());
 
         if (item.getType() == Type.QUIZ) {
-            quizRepository.findById(item.getId()).ifPresent(q -> {
-                List<QuizQuestion> questions = quizQuestionRepository.findByQuizIdOrderByIdAsc(item.getId());
+            final Long contentId = item.getId();
+            quizRepository.findById(contentId).ifPresent(q -> {
+                List<QuizQuestion> questions = quizQuestionRepository.findByQuizIdOrderByIdAsc(contentId);
                 List<QuizQuestionDto> questionDtos = new ArrayList<>();
                 for (QuizQuestion qq : questions) {
                     List<QuizOption> options = quizOptionRepository.findByQuestionIdOrderByIdAsc(qq.getId());

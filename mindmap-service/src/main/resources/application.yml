@@ -28,3 +28,37 @@ spring:
 
 jwt:
   signerKey: "1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij"
+
+# AI Configuration
+ai:
+  mistral:
+    api-key: "OYzJvGt3V4IA458SbOMGraxpBkwZyANg"
+    base-url: "https://api.mistral.ai/v1"
+    model: "mistral-large-latest"
+    timeout: 30000
+    max-tokens: 4000
+  
+  gemini:
+    api-key: "AIzaSyDtwnAbU30A1r_ixXtuZLZusEcmLa8tzNg"
+    base-url: "https://generativelanguage.googleapis.com/v1beta"
+    models:
+      primary: "gemini-2.5-flash-preview-09-2025"
+      fallback-1: "gemini-1.5-pro"
+      fallback-2: "gemini-2.0-flash"
+    timeout: 30000
+    max-tokens: 4000
+  
+  # AI Service Configuration
+  service:
+    default-provider: "gemini" # mistral or gemini
+    enable-fallback: true
+    max-retries: 3
+    retry-delay: 1000
+
+# Mindmap Configuration
+mindmap:
+  max-nodes-per-mindmap: 100
+  max-mindmaps-free-user: 1
+  max-mindmaps-premium-user: 50
+  default-node-color: "#4A90E2"
+  default-edge-color: "#7ED321"

@@ -179,6 +179,7 @@ public class UserServiceImpl implements UserService {
                 .status(user.getStatus())
                 .emailVerified(user.getEmailVerified() != null && user.getEmailVerified())
                 .tenantId(user.getTenantId() != null ? user.getTenantId().toString() : null)
+                .roleId(user.getRoleId())
                 .createdAt(user.getCreatedAt())
                 .lastLoginAt(user.getLastLoginAt())
                 .build();

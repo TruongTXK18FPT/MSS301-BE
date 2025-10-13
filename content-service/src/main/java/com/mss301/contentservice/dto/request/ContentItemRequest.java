@@ -31,4 +31,8 @@ public class ContentItemRequest {
     private String tags;
 
     private Boolean isPublic = false;
+
+    // type-specific payloads (optional; only used for matching type)
+    private QuizRequestPayload.QuizRequest quiz;
+    private AssignmentDetailRequest assignment;
 }

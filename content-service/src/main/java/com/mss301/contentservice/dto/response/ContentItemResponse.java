@@ -24,4 +24,8 @@ public class ContentItemResponse {
     private Boolean isPublic;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // type-specific response blocks
+    private QuizResponsePayload quiz;
+    private AssignmentDetailResponse assignment;
 }

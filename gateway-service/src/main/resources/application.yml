@@ -87,6 +87,13 @@ spring:
               filters:
                 - RewritePath=${app.api.prefix}${app.service-prefix.media}/(?<segment>.*), /${segment}
 
+            - id: document-service #8091
+              uri: lb://document-service
+              predicates:
+                - Path=${app.api.prefix}${app.service-prefix.document}/**
+              filters:
+                - RewritePath=${app.api.prefix}${app.service-prefix.document}/(?<segment>.*), /${segment}
+
             - id: notification-service #8088
               uri: lb://notification-service
               predicates:

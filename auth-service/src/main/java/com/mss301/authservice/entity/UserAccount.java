@@ -21,7 +21,7 @@ public class UserAccount {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "tenant_id", nullable = false)
+    @Column(name = "tenant_id")
     private Long tenantId;
 
     @Column(name = "email", nullable = false, unique = true)
@@ -54,6 +54,16 @@ public class UserAccount {
 
     @Column(name = "phone", length = 15)
     private String phone;
+
+    @Column(name = "profile_completed", nullable = false)
+    private boolean profileCompleted = false;
+
+    @Column(name = "role_id")
+    private Long roleId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "role_id", insertable = false, updatable = false)
+    private Role role;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", insertable = false, updatable = false)

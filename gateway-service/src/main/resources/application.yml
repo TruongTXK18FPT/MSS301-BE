@@ -13,6 +13,8 @@ app:
     content: /content
     chatbot: /chatbot
     profile: /profile
+    classroom: /classroom
+    media: /media
 
 spring:
   application:
@@ -70,6 +72,20 @@ spring:
                 - Path=${app.api.prefix}${app.service-prefix.profile}/**
               filters:
                 - RewritePath=${app.api.prefix}${app.service-prefix.profile}/(?<segment>.*), /${segment}
+
+            - id: classroom-service #8090
+              uri: lb://classroom-service
+              predicates:
+                - Path=${app.api.prefix}${app.service-prefix.classroom}/**
+              filters:
+                - RewritePath=${app.api.prefix}${app.service-prefix.classroom}/(?<segment>.*), /${segment}
+
+            - id: media-service #8089
+              uri: lb://media-service
+              predicates:
+                - Path=${app.api.prefix}${app.service-prefix.media}/**
+              filters:
+                - RewritePath=${app.api.prefix}${app.service-prefix.media}/(?<segment>.*), /${segment}
 
             - id: notification-service #8088
               uri: lb://notification-service

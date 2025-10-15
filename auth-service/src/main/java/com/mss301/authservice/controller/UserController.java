@@ -7,10 +7,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import com.mss301.authservice.dto.ApiResponse;
+import com.mss301.authservice.dto.request.ProfileCompletionRequest;
 import com.mss301.authservice.dto.request.UpdateUserStatusRequest;
 import com.mss301.authservice.dto.request.UserCreationRequest;
 import com.mss301.authservice.dto.request.UserUpdateRequest;
+import com.mss301.authservice.dto.response.ProfileStatusResponse;
 import com.mss301.authservice.dto.response.UserResponse;
+import com.mss301.authservice.service.AuthenticationService;
 import com.mss301.authservice.service.UserService;
 
 import lombok.AccessLevel;
@@ -24,15 +27,24 @@ import lombok.experimental.FieldDefaults;
 public class UserController {
 
     UserService userService;
+    AuthenticationService authenticationService;
 
-    @PostMapping
+    @PostMapping("/register")
     public ApiResponse<UserResponse> createUser(@RequestBody UserCreationRequest request) {
         return ApiResponse.<UserResponse>builder()
                 .result(userService.createUser(request))
                 .build();
     }
 
-    @GetMapping
+    @PostMapping("/resend-otp")
+    public ApiResponse<Void> resendOTP(@RequestParam String email) {
+        authenticationService.resendOTP(email);
+        return ApiResponse.<Void>builder()
+                .message("OTP đã được gửi lại thành công")
+                .build();
+    }
+
+    @GetMapping("/get-users")
     public ApiResponse<Page<UserResponse>> getUsers(Pageable pageable) {
         return ApiResponse.<Page<UserResponse>>builder()
                 .result(userService.getUsers(pageable))
@@ -96,5 +108,20 @@ public class UserController {
     public ApiResponse<String> deleteUser(@PathVariable Long userId) {
         userService.deleteUser(userId);
         return ApiResponse.<String>builder().result("User has been deleted").build();
+    }
+
+    @PostMapping("/complete-profile")
+    public ApiResponse<String> completeProfile(@RequestBody ProfileCompletionRequest request) {
+        userService.completeProfile(request);
+        return ApiResponse.<String>builder()
+                .result("Profile completed successfully")
+                .build();
+    }
+
+    @GetMapping("/my-profile-status")
+    public ApiResponse<ProfileStatusResponse> getProfileStatus() {
+        return ApiResponse.<ProfileStatusResponse>builder()
+                .result(userService.getProfileStatus())
+                .build();
     }
 }

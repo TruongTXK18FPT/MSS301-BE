@@ -25,14 +25,18 @@ public class SecurityConfig {
     }
 
     private final String[] PUBLIC_ENDPOINTS = {
-        "auth/login",
-        "/register",
-        "/introspect",
-        "auth/logout",
-        "/refresh",
-        "/verify-email",
-        "/forgot-password",
-        "/reset-password"
+        "/auth/login",
+        "/auth/introspect",
+        "/auth/logout",
+        "/auth/refresh",
+        "/auth/verify-email",
+        "/auth/reset-password",
+        "/auth/send-email-verification",
+        "/auth/send-password-reset",
+        "/auth/google",
+        "/users/register",
+        "/users/verify-otp",
+        "/users/resend-otp"
     };
 
     private final String[] SWAGGER_ENDPOINTS = {

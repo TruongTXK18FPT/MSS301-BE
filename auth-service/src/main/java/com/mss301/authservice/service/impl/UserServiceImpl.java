@@ -6,7 +6,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -15,9 +14,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.mss301.authservice.config.EventPublisher;
 import com.mss301.authservice.dto.request.*;
+import com.mss301.authservice.dto.response.ProfileStatusResponse;
 import com.mss301.authservice.dto.response.UserResponse;
+import com.mss301.authservice.entity.Role;
 import com.mss301.authservice.entity.UserAccount;
 import com.mss301.authservice.event.CreatedUserEvent;
+import com.mss301.authservice.event.ProfileCompletedEvent;
+import com.mss301.authservice.repository.RoleRepository;
 import com.mss301.authservice.repository.UserRepository;
 import com.mss301.authservice.service.AuthenticationService;
 import com.mss301.authservice.service.UserService;
@@ -31,9 +34,9 @@ import lombok.extern.slf4j.Slf4j;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationService authenticationService;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final EventPublisher eventPublisher;
 
     @Override
@@ -49,14 +52,22 @@ public class UserServiceImpl implements UserService {
         user.setEmail(request.getEmail());
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setPhone(request.getPhone());
         user.setEmailVerified(false);
         user.setStatus(UserAccount.UserStatus.ACTIVE);
         user.setCreatedAt(LocalDateTime.now());
 
-        // Set tenant if provided
-        if (request.getTenantId() != null) {
-            user.setTenantId(request.getTenantId());
+        // Assign role based on userType
+        if (request.getUserType() != null) {
+            try {
+                Role role = roleRepository
+                        .findByName(request.getUserType())
+                        .orElseThrow(() -> new RuntimeException("Role not found: " + request.getUserType()));
+                user.setRoleId(role.getId());
+            } catch (Exception e) {
+                log.warn(
+                        "Could not assign role for userType: {}. User will be created without role.",
+                        request.getUserType());
+            }
         }
 
         user = userRepository.save(user);
@@ -179,6 +190,7 @@ public class UserServiceImpl implements UserService {
                 .status(user.getStatus())
                 .emailVerified(user.getEmailVerified() != null && user.getEmailVerified())
                 .tenantId(user.getTenantId() != null ? user.getTenantId().toString() : null)
+                .roleId(user.getRoleId())
                 .createdAt(user.getCreatedAt())
                 .lastLoginAt(user.getLastLoginAt())
                 .build();
@@ -186,26 +198,88 @@ public class UserServiceImpl implements UserService {
 
     private void publishUserCreatedEvent(UserAccount user, UserCreationRequest request) {
         try {
-            // Create CreatedUserEvent with complete user details
+            // Create CreatedUserEvent with basic user details only
             CreatedUserEvent event = CreatedUserEvent.builder()
                     .id(user.getId().toString())
                     .email(user.getEmail())
-                    .fullName(request.getFullName() != null ? request.getFullName() : request.getUsername())
+                    .fullName(request.getFullName())
+                    .username(user.getUsername())
                     .userType(request.getUserType()) // STUDENT, TEACHER, GUARDIAN
-                    .phone(request.getPhone())
-                    .address(request.getAddress())
-                    .districtCode(request.getDistrictCode())
-                    .provinceCode(request.getProvinceCode())
-                    .guardianStudentEmail(request.getGuardianStudentEmail())
-                    // birthDate can be added later if needed
                     .build();
 
-            //
             eventPublisher.publishCreatedUserEvent(event);
             log.info("Published CreatedUserEvent for user: {}", user.getEmail());
-            //
         } catch (Exception e) {
             log.error("Failed to publish CreatedUserEvent for user: {}", user.getEmail(), e);
         }
+    }
+
+    @Override
+    @Transactional
+    public void completeProfile(ProfileCompletionRequest request) {
+        // Get current user
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = null;
+
+        if (authentication instanceof JwtAuthenticationToken jwtToken) {
+            userId = jwtToken.getToken().getSubject();
+        }
+
+        if (userId == null) {
+            throw new RuntimeException("Unauthenticated");
+        }
+
+        UserAccount user = userRepository
+                .findById(Long.parseLong(userId))
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Validate that userType matches
+        if (!user.getRole().getName().equalsIgnoreCase(request.getUserType())) {
+            throw new RuntimeException("User type mismatch. Cannot change role after registration.");
+        }
+
+        // Mark profile as completed
+        user.setProfileCompleted(true);
+        userRepository.save(user);
+
+        // Publish ProfileCompletedEvent to Kafka
+        try {
+            ProfileCompletedEvent event = ProfileCompletedEvent.builder()
+                    .userId(user.getId().toString())
+                    .userType(request.getUserType())
+                    .data(request.getData())
+                    .build();
+
+            eventPublisher.publishProfileCompletedEvent(event);
+            log.info("Published ProfileCompletedEvent for user: {}", user.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to publish ProfileCompletedEvent for user: {}", user.getEmail(), e);
+        }
+    }
+
+    @Override
+    public ProfileStatusResponse getProfileStatus() {
+        // Get current user
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = null;
+
+        if (authentication instanceof JwtAuthenticationToken jwtToken) {
+            userId = jwtToken.getToken().getSubject();
+        }
+
+        if (userId == null) {
+            throw new RuntimeException("Unauthenticated");
+        }
+
+        UserAccount user = userRepository
+                .findById(Long.parseLong(userId))
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return ProfileStatusResponse.builder()
+                .profileCompleted(user.isProfileCompleted())
+                .userType(user.getRole().getName())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .build();
     }
 }

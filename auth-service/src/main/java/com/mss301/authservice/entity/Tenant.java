@@ -1,7 +1,6 @@
 package com.mss301.authservice.entity;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 import jakarta.persistence.*;
 
@@ -34,9 +33,6 @@ public class Tenant {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    @OneToMany(mappedBy = "tenant", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private List<Role> roles;
 
     @PrePersist
     protected void onCreate() {

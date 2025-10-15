@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: retrieval-service
+
+  server:
+    port: 8092
+
+  elasticsearch:
+    uris: ${elasticsearch.host}
+    connection-timeout: 10s
+    socket-timeout: 30s
+
+  data:
+    elasticsearch:
+      uris: http://localhost:9200
+
+logging:
+  level:
+    mss301.retrievalservice: DEBUG
+    feign: DEBUG
+
+elasticsearch:
+  host: http://localhost:9200
+
+embedding:
+  service:
+    url: http://localhost:8000
+
+feign:
+  client:
+    config:
+      embeddingService:
+        connectTimeout: 5000
+        readTimeout: 10000
+        loggerLevel: basic

@@ -15,6 +15,9 @@ app:
     profile: /profile
     classroom: /classroom
     media: /media
+    document: /document
+    retrieval: /retrieval
+    rag: /rag
 
 spring:
   application:
@@ -93,6 +96,20 @@ spring:
                 - Path=${app.api.prefix}${app.service-prefix.document}/**
               filters:
                 - RewritePath=${app.api.prefix}${app.service-prefix.document}/(?<segment>.*), /${segment}
+
+            - id: retrieval-service #8092
+              uri: lb://retrieval-service
+              predicates:
+                - Path=${app.api.prefix}${app.service-prefix.retrieval}/**
+              filters:
+                - RewritePath=${app.api.prefix}${app.service-prefix.retrieval}/(?<segment>.*), /${segment}
+
+            - id: rag-service #8093
+              uri: lb://rag-service
+              predicates:
+                - Path=${app.api.prefix}${app.service-prefix.rag}/**
+              filters:
+                - RewritePath=${app.api.prefix}${app.service-prefix.rag}/(?<segment>.*), /${segment}
 
             - id: notification-service #8088
               uri: lb://notification-service

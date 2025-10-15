@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: document-service
+
+  server:
+    port: 8089
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+  task:
+    execution:
+      pool:
+        core-size: 2
+        max-size: 5
+        queue-capacity: 100
+      thread-name-prefix: doc-processing-
+
+  elasticsearch:
+    uris: http://localhost:9200
+    connection-timeout: 10s
+    socket-timeout: 30s
+
+logging:
+  level:
+    mss301.documentservice: INFO
+    org.elasticsearch: WARN
+
+app:
+  upload:
+    dir: ./uploads
+
+  processing:
+    async: true
+    chunk-size: 1000
+    chunk-overlap: 200
+    min-chars-per-page: 20
+
+  ocr:
+    thread-pool-size: 2
+    confidence-threshold: 0.7
+
+embedding:
+  service:
+    url: http://localhost:8000/embed
+
+chunking:
+  embedding:
+    log:
+      enabled: false
+      interval: 100

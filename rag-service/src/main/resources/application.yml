@@ -1,0 +1,85 @@
+# ============================================
+# Server Configuration
+# ============================================
+server:
+  port: 8093
+
+spring:
+  application:
+    name: rag-service
+
+  main:
+    allow-bean-definition-overriding: true
+
+  ai:
+    mistralai:
+      api-key: ${MISTRAL_API_KEY:4ibVZkeLmZaZ1MnIA4GF6DMQTkeiHn8f}
+      chat:
+        options:
+          model: mistral-large-latest
+          temperature: 0.7
+          max-tokens: 2048
+
+# ============================================
+# External Services - Retrieval Service
+# ============================================
+external:
+  retrieval-service:
+    url: http://localhost:8083
+
+# ============================================
+# Feign Configuration
+# ============================================
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 10000
+        readTimeout: 60000
+        loggerLevel: full
+      retrieval-service:
+        connectTimeout: 5000
+        readTimeout: 30000
+
+# ============================================
+# RAG Configuration
+# ============================================
+rag:
+  default-top-k: 7
+  max-context-length: 4000
+
+# ============================================
+# Logging
+# ============================================
+logging:
+  level:
+    root: INFO
+    mss301.ragservice: DEBUG
+    mss301.ragservice.client: DEBUG
+    org.springframework.ai: DEBUG
+
+# ============================================
+# Swagger/OpenAPI Configuration
+# ============================================
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operationsSorter: method
+    tagsSorter: alpha
+    tryItOutEnabled: true
+    filter: true
+    displayRequestDuration: true
+    defaultModelRendering: example
+    docExpansion: none
+  packages-to-scan: mss301.ragservice
+  paths-to-match: /api/**
+
+# ============================================
+# FPT AI Configuration
+# ============================================
+fptai:
+  api-key: ${FPTAI_API_KEY:peZ3IXt25wVqC2eRLZKJlgG927wtUAOJ}
+  url: https://api.fpt.ai/hmi/tts/v5

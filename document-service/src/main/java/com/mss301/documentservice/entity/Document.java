@@ -2,10 +2,7 @@ package com.mss301.documentservice.entity;
 
 import com.mss301.documentservice.entity.enums.DocumentStatus;
 import com.mss301.documentservice.entity.enums.Language;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Field;
@@ -17,6 +14,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Document {
     @Id
     private String id;

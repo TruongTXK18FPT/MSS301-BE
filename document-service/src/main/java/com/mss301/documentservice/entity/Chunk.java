@@ -2,10 +2,7 @@ package com.mss301.documentservice.entity;
 
 import com.mss301.documentservice.entity.embedded.DocumentStructure;
 import com.mss301.documentservice.entity.embedded.ProcessingInfo;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
@@ -17,6 +14,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Chunk {
     @Id
     private String id;

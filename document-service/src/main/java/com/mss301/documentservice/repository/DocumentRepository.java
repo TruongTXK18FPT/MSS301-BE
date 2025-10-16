@@ -16,5 +16,5 @@ public interface DocumentRepository extends ElasticsearchRepository<Document, St
 
     List<Document> findAllByOrderByUploadedAtDesc();
 
-    boolean existsByFilename(String filename);
+    boolean existsByFileName(String filename);
 }

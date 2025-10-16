@@ -35,6 +35,9 @@
         <module>notification-service</module>
         <module>chatbot-service</module>
         <module>classroom-service</module>
+        <module>document-service</module>
+        <module>rag-service</module>
+        <module>retrieval-service</module>
     </modules>
 
     <dependencyManagement>

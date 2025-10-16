@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @Service
 @Transactional
@@ -161,7 +162,7 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
         return needsOcr;
     }
 
-    private List<String> extractTextWithOcr(File pdfFile) {
+    private List<String> extractTextWithOcr(File pdfFile) throws IOException, ExecutionException, InterruptedException {
         return pdfExtractorService.extractPages(pdfFile);
     }
 

@@ -44,8 +44,10 @@ app:
     confidence-threshold: 0.7
 
 embedding:
-  service:
-    url: http://localhost:8000/embed
+  client:
+    url: https://aiportalapi.stu-platform.live/jpe/v1
+    api-key: ${AI_PORTAL_API_KEY:}
+    model: text-embedding-3-small
 
 chunking:
   embedding:

@@ -1,20 +1,22 @@
 package com.mss301.documentservice.service.extraction.impl;
 
-import com.mss301.documentservice.service.extraction.OcrService;
-import com.mss301.documentservice.service.extraction.PdfExtractorService;
-import lombok.RequiredArgsConstructor;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.rendering.PDFRenderer;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
+
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.PDFRenderer;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.mss301.documentservice.service.extraction.OcrService;
+import com.mss301.documentservice.service.extraction.PdfExtractorService;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional
@@ -57,8 +59,8 @@ public class PdfExtractorServiceImpl implements PdfExtractorService {
                             image.flush();
 
                             if (!text.isEmpty()) {
-                                System.out.println("Successfully processed page " + (pageIndex + 1) +
-                                        " (" + text.length() + " characters)");
+                                System.out.println("Successfully processed page " + (pageIndex + 1) + " ("
+                                        + text.length() + " characters)");
                                 return new PageResult(pageIndex, text);
                             } else {
                                 System.out.println("Page " + (pageIndex + 1) + " contains no text");
@@ -108,5 +110,4 @@ public class PdfExtractorServiceImpl implements PdfExtractorService {
             this.text = text;
         }
     }
-
 }

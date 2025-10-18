@@ -1,15 +1,16 @@
 package com.mss301.documentservice.service.chunk.impl;
 
-import com.mss301.documentservice.service.chunk.ChunkEmbedder;
-import com.mss301.documentservice.service.integration.EmbeddingService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.mss301.documentservice.service.chunk.ChunkEmbedder;
+import com.mss301.documentservice.service.integration.EmbeddingService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -42,8 +43,10 @@ public class ChunkEmbedderImpl implements ChunkEmbedder {
             List<Float> embedding = embeddingService.generateEmbedding(chunkText);
 
             if (embeddingLogEnabled && (chunkIndex < 5 || chunkIndex % logInterval == 0)) {
-                log.debug("Successfully generated embedding with {} dimensions for chunk {}",
-                        embedding.size(), chunkIndex);
+                log.debug(
+                        "Successfully generated embedding with {} dimensions for chunk {}",
+                        embedding.size(),
+                        chunkIndex);
             }
 
             return embedding;

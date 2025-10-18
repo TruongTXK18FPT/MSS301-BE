@@ -1,14 +1,16 @@
 package com.mss301.documentservice.service.chunk.impl;
 
-import com.mss301.documentservice.service.analysis.models.toc.PageMapping;
-import com.mss301.documentservice.service.chunk.PageEstimator;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.springframework.stereotype.Service;
+
+import com.mss301.documentservice.service.analysis.models.toc.PageMapping;
+import com.mss301.documentservice.service.chunk.PageEstimator;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -22,8 +24,10 @@ public class PageEstimatorImpl implements PageEstimator {
         this.tocPageMapping = tocPageMapping;
         this.totalPages = totalPages;
 
-        log.debug("PageEstimator initialized with TOC mapping: {} entries, total pages: {}",
-                tocPageMapping != null ? tocPageMapping.size() : 0, totalPages);
+        log.debug(
+                "PageEstimator initialized with TOC mapping: {} entries, total pages: {}",
+                tocPageMapping != null ? tocPageMapping.size() : 0,
+                totalPages);
     }
 
     @Override
@@ -68,8 +72,11 @@ public class PageEstimatorImpl implements PageEstimator {
             bestPage = Math.max(bestPage - 1, 1);
         }
 
-        log.debug("TOC-based page estimation for position {}: estimated page {} (distance: {})",
-                position, bestPage, bestDistance);
+        log.debug(
+                "TOC-based page estimation for position {}: estimated page {} (distance: {})",
+                position,
+                bestPage,
+                bestDistance);
 
         return bestPage;
     }
@@ -102,8 +109,11 @@ public class PageEstimatorImpl implements PageEstimator {
         int estimatedPage = Math.max(1, (int) Math.ceil(position / avgCharsPerPage));
 
         // Add debug logging to understand the estimation
-        log.debug("Character-based page estimation for position {}: avgCharsPerPage={}, estimated={}",
-                position, avgCharsPerPage, estimatedPage);
+        log.debug(
+                "Character-based page estimation for position {}: avgCharsPerPage={}, estimated={}",
+                position,
+                avgCharsPerPage,
+                estimatedPage);
 
         return estimatedPage;
     }

@@ -1,15 +1,17 @@
 package com.mss301.documentservice.service.analysis.impl;
 
-import com.mss301.documentservice.service.analysis.TableOfContentService;
-import com.mss301.documentservice.service.analysis.models.toc.PageMapping;
-import com.mss301.documentservice.service.analysis.models.toc.TocEntry;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
+import com.mss301.documentservice.service.analysis.TableOfContentService;
+import com.mss301.documentservice.service.analysis.models.toc.PageMapping;
+import com.mss301.documentservice.service.analysis.models.toc.TocEntry;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -21,27 +23,27 @@ public class TableOfContentServiceImpl implements TableOfContentService {
     private static final int MIN_TITLE_LENGTH = 3;
     private static final int LOOKAHEAD_LINES = 4;
 
-    private static final Pattern CHAPTER_PATTERN = Pattern.compile(
-            "Chương\\s+(\\d+)\\s+([^\\d]+?)\\s+(\\d+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CHAPTER_PATTERN =
+            Pattern.compile("Chương\\s+(\\d+)\\s+([^\\d]+?)\\s+(\\d+)", Pattern.CASE_INSENSITIVE);
 
-    private static final Pattern LESSON_PATTERN = Pattern.compile(
-            "Bài\\s+(\\d+)\\s+([^\\d]+?)\\s+(\\d+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern LESSON_PATTERN =
+            Pattern.compile("Bài\\s+(\\d+)\\s+([^\\d]+?)\\s+(\\d+)", Pattern.CASE_INSENSITIVE);
 
-    private static final Pattern FLEXIBLE_CHAPTER = Pattern.compile(
-            "Chương\\s+(\\d+)\\s+([^\\n\\d]+?)(?:\\s+(\\d+))?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern FLEXIBLE_CHAPTER =
+            Pattern.compile("Chương\\s+(\\d+)\\s+([^\\n\\d]+?)(?:\\s+(\\d+))?", Pattern.CASE_INSENSITIVE);
 
-    private static final Pattern FLEXIBLE_LESSON = Pattern.compile(
-            "Bài\\s+(\\d+)\\s+([^\\n]+?)\\s+(\\d{2,})(?=\\s|$|\\n)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern FLEXIBLE_LESSON =
+            Pattern.compile("Bài\\s+(\\d+)\\s+([^\\n]+?)\\s+(\\d{2,})(?=\\s|$|\\n)", Pattern.CASE_INSENSITIVE);
 
-    private static final Pattern LINE_LESSON = Pattern.compile(
-            "Bài\\s+(\\d+)\\s+(.+?)\\s+(\\d{1,})$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern LINE_LESSON =
+            Pattern.compile("Bài\\s+(\\d+)\\s+(.+?)\\s+(\\d{1,})$", Pattern.CASE_INSENSITIVE);
 
     private static final String[] TOC_MARKERS = {
-            "Mục lục", "MỤC LỤC", "mục lục", "Table of Contents", "TABLE OF CONTENTS"
+        "Mục lục", "MỤC LỤC", "mục lục", "Table of Contents", "TABLE OF CONTENTS"
     };
 
     private static final String[] CONTENT_MARKERS = {
-            "Phần SỐ VÀ ĐẠI SỐ", "Chương này ôn tập", "HƯỚNG DẪN SỬ DỤNG", "Lời nói đầu"
+        "Phần SỐ VÀ ĐẠI SỐ", "Chương này ôn tập", "HƯỚNG DẪN SỬ DỤNG", "Lời nói đầu"
     };
 
     @Override
@@ -94,7 +96,8 @@ public class TableOfContentServiceImpl implements TableOfContentService {
                 .collect(Collectors.toList());
     }
 
-    private Map<Integer, PageMapping> buildPageMapping(List<TocEntry> chapters, List<TocEntry> lessons, int totalPages) {
+    private Map<Integer, PageMapping> buildPageMapping(
+            List<TocEntry> chapters, List<TocEntry> lessons, int totalPages) {
         Map<Integer, PageMapping> pageMap = new HashMap<>();
 
         for (int page = 1; page <= totalPages; page++) {
@@ -151,8 +154,10 @@ public class TableOfContentServiceImpl implements TableOfContentService {
     private void assignLessonsToChapters(List<TocEntry> sortedEntries) {
         List<TocEntry> chapters = filterByType(sortedEntries, "chapter");
 
-        log.info("Starting lesson-to-chapter assignment for {} entries ({} chapters)",
-                sortedEntries.size(), chapters.size());
+        log.info(
+                "Starting lesson-to-chapter assignment for {} entries ({} chapters)",
+                sortedEntries.size(),
+                chapters.size());
 
         Integer currentChapter = null;
         for (TocEntry entry : sortedEntries) {
@@ -163,8 +168,12 @@ public class TableOfContentServiceImpl implements TableOfContentService {
                 Integer assigned = findChapterForLessonByPage(entry, chapters);
                 if (assigned != null) {
                     entry.setParentChapter(assigned);
-                    log.info("Assigned lesson {} '{}' (page {}) to chapter {}",
-                            entry.getNumber(), entry.getTitle(), entry.getPageNumber(), assigned);
+                    log.info(
+                            "Assigned lesson {} '{}' (page {}) to chapter {}",
+                            entry.getNumber(),
+                            entry.getTitle(),
+                            entry.getPageNumber(),
+                            assigned);
                 } else if (currentChapter != null) {
                     entry.setParentChapter(currentChapter);
                     log.info("Fallback assignment: lesson {} to chapter {}", entry.getNumber(), currentChapter);
@@ -203,8 +212,11 @@ public class TableOfContentServiceImpl implements TableOfContentService {
                 TocEntry assignedChapter = findChapterForLesson(lesson, chapters);
                 if (assignedChapter != null) {
                     lesson.setParentChapter(assignedChapter.getNumber());
-                    log.info("Alternative assignment: lesson {} → chapter {} (page {})",
-                            lesson.getNumber(), assignedChapter.getNumber(), assignedChapter.getPageNumber());
+                    log.info(
+                            "Alternative assignment: lesson {} → chapter {} (page {})",
+                            lesson.getNumber(),
+                            assignedChapter.getNumber(),
+                            assignedChapter.getPageNumber());
                 } else {
                     log.error("Could not assign lesson {} to any chapter", lesson.getNumber());
                 }
@@ -438,9 +450,8 @@ public class TableOfContentServiceImpl implements TableOfContentService {
 
     private boolean isDuplicateLesson(List<TocEntry> entries, int number, int pageNumber) {
         return entries.stream()
-                .anyMatch(e -> "lesson".equals(e.getType())
-                        && e.getNumber() == number
-                        && e.getPageNumber() == pageNumber);
+                .anyMatch(e ->
+                        "lesson".equals(e.getType()) && e.getNumber() == number && e.getPageNumber() == pageNumber);
     }
 
     private String cleanTitle(String title) {
@@ -453,9 +464,8 @@ public class TableOfContentServiceImpl implements TableOfContentService {
     private void logParsedEntries(List<TocEntry> entries) {
         log.info("Parsed {} TOC entries", entries.size());
         entries.forEach(entry -> {
-            String parentInfo = entry.getParentChapter() != null
-                    ? " (parent: " + entry.getParentChapter() + ")"
-                    : " (no parent)";
+            String parentInfo =
+                    entry.getParentChapter() != null ? " (parent: " + entry.getParentChapter() + ")" : " (no parent)";
             log.info("  {}{}", entry, parentInfo);
         });
     }
@@ -465,8 +475,12 @@ public class TableOfContentServiceImpl implements TableOfContentService {
         for (int page = 20; page <= 25; page++) {
             PageMapping mapping = pageMap.get(page);
             if (mapping != null) {
-                log.info("  Page {}: Chapter {} - Lesson {} ({})",
-                        page, mapping.getChapterNumber(), mapping.getLessonNumber(), mapping.getLessonTitle());
+                log.info(
+                        "  Page {}: Chapter {} - Lesson {} ({})",
+                        page,
+                        mapping.getChapterNumber(),
+                        mapping.getLessonNumber(),
+                        mapping.getLessonTitle());
             } else {
                 log.info("  Page {}: NO MAPPING", page);
             }

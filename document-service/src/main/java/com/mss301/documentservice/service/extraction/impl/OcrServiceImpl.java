@@ -1,14 +1,16 @@
 package com.mss301.documentservice.service.extraction.impl;
 
-import com.mss301.documentservice.service.extraction.OcrService;
-import lombok.RequiredArgsConstructor;
-import net.sourceforge.tess4j.Tesseract;
-import net.sourceforge.tess4j.TesseractException;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.awt.*;
-import java.awt.image.BufferedImage;
+import com.mss301.documentservice.service.extraction.OcrService;
+
+import lombok.RequiredArgsConstructor;
+import net.sourceforge.tess4j.Tesseract;
+import net.sourceforge.tess4j.TesseractException;
 
 @Service
 @Transactional
@@ -46,7 +48,6 @@ public class OcrServiceImpl implements OcrService {
         }
     }
 
-
     private String performOCRWithRetry(BufferedImage image, int maxRetries) throws TesseractException {
         TesseractException lastException = null;
 
@@ -55,9 +56,7 @@ public class OcrServiceImpl implements OcrService {
                 System.out.println("OCR attempt " + attempt + "/" + maxRetries);
 
                 // Create a fresh copy of the image for each attempt
-                BufferedImage imageCopy = new BufferedImage(
-                        image.getWidth(), image.getHeight(), image.getType()
-                );
+                BufferedImage imageCopy = new BufferedImage(image.getWidth(), image.getHeight(), image.getType());
                 imageCopy.getGraphics().drawImage(image, 0, 0, null);
 
                 String result = tesseract.doOCR(imageCopy);
@@ -83,20 +82,20 @@ public class OcrServiceImpl implements OcrService {
             }
         }
 
-        throw lastException != null ? lastException : new TesseractException("OCR failed after " + maxRetries + " attempts");
+        throw lastException != null
+                ? lastException
+                : new TesseractException("OCR failed after " + maxRetries + " attempts");
     }
 
     private BufferedImage enhanceImageForOCR(BufferedImage original) {
-        BufferedImage grayscale = new BufferedImage(
-                original.getWidth(), original.getHeight(), BufferedImage.TYPE_BYTE_GRAY
-        );
+        BufferedImage grayscale =
+                new BufferedImage(original.getWidth(), original.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
         Graphics2D g2d = grayscale.createGraphics();
         g2d.drawImage(original, 0, 0, null);
         g2d.dispose();
 
-        BufferedImage enhanced = new BufferedImage(
-                grayscale.getWidth(), grayscale.getHeight(), BufferedImage.TYPE_BYTE_GRAY
-        );
+        BufferedImage enhanced =
+                new BufferedImage(grayscale.getWidth(), grayscale.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
 
         for (int x = 0; x < grayscale.getWidth(); x++) {
             for (int y = 0; y < grayscale.getHeight(); y++) {

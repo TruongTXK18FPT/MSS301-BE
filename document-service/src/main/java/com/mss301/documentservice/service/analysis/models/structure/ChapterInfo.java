@@ -1,9 +1,9 @@
 package com.mss301.documentservice.service.analysis.models.structure;
 
-import lombok.Data;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import lombok.Data;
 
 @Data
 public class ChapterInfo {

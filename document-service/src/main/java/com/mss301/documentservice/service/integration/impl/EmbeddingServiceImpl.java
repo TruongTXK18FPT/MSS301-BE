@@ -1,16 +1,18 @@
 package com.mss301.documentservice.service.integration.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
 import com.mss301.documentservice.dto.request.EmbeddingRequest;
 import com.mss301.documentservice.dto.response.EmbeddingResponse;
 import com.mss301.documentservice.service.integration.EmbeddingClient;
 import com.mss301.documentservice.service.integration.EmbeddingService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor

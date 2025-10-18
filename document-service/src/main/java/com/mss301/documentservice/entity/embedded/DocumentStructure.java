@@ -12,12 +12,12 @@ import lombok.NoArgsConstructor;
 public class DocumentStructure {
     private Integer pageNumber;
 
-    //Chapter:
+    // Chapter:
     private String chapterId;
     private Integer chapterNumber;
     private String chapterTitle;
 
-    //Lesson:
+    // Lesson:
     private String lessonId;
     private Integer lessonNumber;
     private String lessonTitle;

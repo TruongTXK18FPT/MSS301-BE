@@ -1,5 +1,18 @@
 package com.mss301.documentservice.service.document.impl;
 
+import java.io.File;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.mss301.documentservice.entity.Chunk;
 import com.mss301.documentservice.entity.Document;
 import com.mss301.documentservice.entity.ProcessingJob;
@@ -13,20 +26,9 @@ import com.mss301.documentservice.repository.ProcessingJobRepository;
 import com.mss301.documentservice.service.chunk.ChunkingService;
 import com.mss301.documentservice.service.document.DocumentProcessingService;
 import com.mss301.documentservice.service.extraction.PdfExtractorService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.text.PDFTextStripper;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.io.File;
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 @Service
 @Transactional
@@ -44,16 +46,17 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
     private static final int CHUNK_SIZE = 1500; // Increase chunk size
     private static final int CHUNK_OVERLAP = 100;
 
-    //Chạy background thread
+    // Chạy background thread
     @Override
     @Async("documentProcessingExecutor")
     public CompletableFuture<Void> processDocumentAsync(String documentId, String jobId) {
 
         long startTime = System.currentTimeMillis();
-        try{
+        try {
             updateJobStatus(jobId, JobStatus.RUNNING, 5, "Starting document processing");
 
-            Document document = documentRepository.findById(documentId)
+            Document document = documentRepository
+                    .findById(documentId)
                     .orElseThrow(() -> new IllegalArgumentException("Document not found: " + documentId));
 
             File pdfFile = new File(document.getFilePath());
@@ -112,8 +115,11 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
                 processingJobRepository.save(job);
             }
 
-            log.info("Document processing completed successfully: {} ({}ms, OCR: {})",
-                    documentId, processingTime, usedOcr);
+            log.info(
+                    "Document processing completed successfully: {} ({}ms, OCR: {})",
+                    documentId,
+                    processingTime,
+                    usedOcr);
         } catch (Exception e) {
             long endTime = System.currentTimeMillis();
             log.error("Document processing failed after {} ms", (endTime - startTime), e);
@@ -125,17 +131,16 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
     private List<String> extractTextDirectly(File pdfFile) throws IOException {
         List<String> pageTexts = new ArrayList<>();
 
-        try(PDDocument document = PDDocument.load(pdfFile)){
+        try (PDDocument document = PDDocument.load(pdfFile)) {
             PDFTextStripper stripper = new PDFTextStripper();
             int totalPages = document.getNumberOfPages();
 
-            for (int i=1; i<=totalPages; i++) {
+            for (int i = 1; i <= totalPages; i++) {
                 stripper.setStartPage(i);
                 stripper.setEndPage(i);
                 String text = stripper.getText(document).trim();
-                pageTexts.add(text != null? text.trim(): "");
+                pageTexts.add(text != null ? text.trim() : "");
             }
-
         }
         return pageTexts;
     }
@@ -144,7 +149,7 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
         int totalChars = 0;
         int pagesWithText = 0;
 
-        for (String pageText :pageTexts) {
+        for (String pageText : pageTexts) {
             int pageChars = pageText.length();
             totalChars += pageChars;
 
@@ -156,8 +161,12 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
         double contentRatio = (double) pagesWithText / pageTexts.size();
         boolean needsOcr = contentRatio < 0.5;
 
-        log.info("Document analysis: totalChars={}, pagesWithText={}, totalPages={}, contentRatio={}",
-                totalChars, pagesWithText, pageTexts.size(), contentRatio);
+        log.info(
+                "Document analysis: totalChars={}, pagesWithText={}, totalPages={}, contentRatio={}",
+                totalChars,
+                pagesWithText,
+                pageTexts.size(),
+                contentRatio);
 
         return needsOcr;
     }
@@ -173,38 +182,32 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
                 CHUNK_SIZE,
                 CHUNK_OVERLAP,
                 document.getLanguage().toString(),
-                pageTexts.size()
-        );
+                pageTexts.size());
 
-        for (int i =0; i <chunks.size(); i++) {
+        for (int i = 0; i < chunks.size(); i++) {
             Chunk chunk = chunks.get(i);
             chunk.setId(UUID.randomUUID().toString());
 
             int sourcePage = findSourcePage(chunk.getContent(), pageTexts);
 
-            if (chunk.getStructure() != null){
+            if (chunk.getStructure() != null) {
                 DocumentStructure structure = chunk.getStructure();
 
-                chunk.setStructure(
-                  DocumentStructure.builder()
-                          .pageNumber(sourcePage)
-                          .chapterId(structure.getChapterId())
-                          .chapterNumber(structure.getChapterNumber())
-                          .chapterTitle(structure.getChapterTitle())
-                          .lessonId(structure.getLessonId())
-                          .lessonNumber(structure.getLessonNumber())
-                          .lessonTitle(structure.getLessonTitle())
-                          .build()
-                );
+                chunk.setStructure(DocumentStructure.builder()
+                        .pageNumber(sourcePage)
+                        .chapterId(structure.getChapterId())
+                        .chapterNumber(structure.getChapterNumber())
+                        .chapterTitle(structure.getChapterTitle())
+                        .lessonId(structure.getLessonId())
+                        .lessonNumber(structure.getLessonNumber())
+                        .lessonTitle(structure.getLessonTitle())
+                        .build());
             } else {
                 chunk.setStructure(
-                        DocumentStructure.builder()
-                                .pageNumber(sourcePage)
-                                .build()
-                );
+                        DocumentStructure.builder().pageNumber(sourcePage).build());
             }
 
-            if (chunk.getProcessingInfo() != null){
+            if (chunk.getProcessingInfo() != null) {
                 ProcessingInfo info = chunk.getProcessingInfo();
 
                 chunk.setProcessingInfo(ProcessingInfo.builder()
@@ -231,7 +234,7 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
         int bestPage = 1;
         int maxOverlap = 0;
 
-        for (int i=0; i<pageTexts.size(); i++) {
+        for (int i = 0; i < pageTexts.size(); i++) {
             String pageText = pageTexts.get(i);
             int overlap = calculateTextOverlap(chunkText, pageText);
             if (overlap > maxOverlap) {
@@ -270,7 +273,5 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
     }
 
     @Override
-    public void handleProcessingError(String documentId, String jobId, Exception error) {
-
-    }
+    public void handleProcessingError(String documentId, String jobId, Exception error) {}
 }

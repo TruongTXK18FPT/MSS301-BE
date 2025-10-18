@@ -1,17 +1,19 @@
 package com.mss301.documentservice.entity;
 
-import com.mss301.documentservice.entity.enums.JobStatus;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
-import java.time.LocalDateTime;
+import com.mss301.documentservice.entity.enums.JobStatus;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Document(indexName = "processing_jobs")
 @Data
@@ -21,6 +23,7 @@ import java.time.LocalDateTime;
 public class ProcessingJob {
     @Id
     private String id;
+
     private String documentId;
     private JobStatus status;
     private String currentStep;

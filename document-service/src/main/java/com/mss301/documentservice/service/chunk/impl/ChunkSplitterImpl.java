@@ -1,17 +1,18 @@
 package com.mss301.documentservice.service.chunk.impl;
 
-import com.mss301.documentservice.service.chunk.ChunkSplitter;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.mss301.documentservice.service.chunk.ChunkSplitter;
+
 public class ChunkSplitterImpl implements ChunkSplitter {
 
     private static final Pattern PARAGRAPH_BREAK = Pattern.compile("\n\\s*\n");
     private static final Pattern SENTENCE_END = Pattern.compile("[.!?]\\s+");
-    private static final Pattern SECTION_HEADER = Pattern.compile("^(\\d+\\.\\d*|[IVXLC]+\\.|Chương|Bài|Phần)\\s+", Pattern.MULTILINE);
+    private static final Pattern SECTION_HEADER =
+            Pattern.compile("^(\\d+\\.\\d*|[IVXLC]+\\.|Chương|Bài|Phần)\\s+", Pattern.MULTILINE);
 
     @Override
     public List<String> createChunks(String text, int maxChunkSize, int overlap) {

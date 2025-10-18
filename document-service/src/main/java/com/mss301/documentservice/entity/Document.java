@@ -1,14 +1,16 @@
 package com.mss301.documentservice.entity;
 
-import com.mss301.documentservice.entity.enums.DocumentStatus;
-import com.mss301.documentservice.entity.enums.Language;
-import lombok.*;
+import java.time.LocalDateTime;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
-import java.time.LocalDateTime;
+import com.mss301.documentservice.entity.enums.DocumentStatus;
+import com.mss301.documentservice.entity.enums.Language;
+
+import lombok.*;
 
 @org.springframework.data.elasticsearch.annotations.Document(indexName = "documents")
 @Data

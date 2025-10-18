@@ -1,14 +1,16 @@
 package com.mss301.documentservice.entity;
 
-import com.mss301.documentservice.entity.embedded.DocumentStructure;
-import com.mss301.documentservice.entity.embedded.ProcessingInfo;
-import lombok.*;
+import java.util.List;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
-import java.util.List;
+import com.mss301.documentservice.entity.embedded.DocumentStructure;
+import com.mss301.documentservice.entity.embedded.ProcessingInfo;
+
+import lombok.*;
 
 @Document(indexName = "chunks")
 @Data

@@ -1,15 +1,16 @@
 package com.mss301.documentservice.service.chunk.impl;
 
-import com.mss301.documentservice.service.analysis.models.toc.PageMapping;
-import com.mss301.documentservice.service.chunk.ChunkDeduplicator;
-import com.mss301.documentservice.service.chunk.ChunkSplitter;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.springframework.stereotype.Service;
+
+import com.mss301.documentservice.service.chunk.ChunkDeduplicator;
+import com.mss301.documentservice.service.chunk.ChunkSplitter;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -54,7 +55,8 @@ public class ChunkDeduplicatorImpl implements ChunkDeduplicator {
         return chunks;
     }
 
-    private List<String> createChunksWithDedupInternal(String text, int maxChunkSize, int overlap, Set<String> seenChunks) {
+    private List<String> createChunksWithDedupInternal(
+            String text, int maxChunkSize, int overlap, Set<String> seenChunks) {
         List<String> chunks = new ArrayList<>();
 
         // Split into paragraphs first
@@ -88,7 +90,8 @@ public class ChunkDeduplicatorImpl implements ChunkDeduplicator {
 
                 // If paragraph itself is too long, split it further
                 if (paragraph.length() > maxChunkSize) {
-                    List<String> splitParagraph = splitLongParagraphWithDedup(paragraph, maxChunkSize, overlap, seenChunks);
+                    List<String> splitParagraph =
+                            splitLongParagraphWithDedup(paragraph, maxChunkSize, overlap, seenChunks);
 
                     for (int i = 0; i < splitParagraph.size(); i++) {
                         if (i == 0 && currentChunk.length() > 0) {
@@ -205,7 +208,8 @@ public class ChunkDeduplicatorImpl implements ChunkDeduplicator {
     /**
      * Split long paragraph with deduplication
      */
-    private List<String> splitLongParagraphWithDedup(String paragraph, int maxChunkSize, int overlap, Set<String> seenChunks) {
+    private List<String> splitLongParagraphWithDedup(
+            String paragraph, int maxChunkSize, int overlap, Set<String> seenChunks) {
         List<String> chunks = new ArrayList<>();
 
         // Split by sentences
@@ -243,7 +247,8 @@ public class ChunkDeduplicatorImpl implements ChunkDeduplicator {
 
                 // If single sentence is still too long, split by character count
                 if (sentence.length() > maxChunkSize) {
-                    List<String> splitSentence = splitByCharacterCountWithDedup(sentence, maxChunkSize, overlap, seenChunks);
+                    List<String> splitSentence =
+                            splitByCharacterCountWithDedup(sentence, maxChunkSize, overlap, seenChunks);
                     chunks.addAll(splitSentence);
                     currentChunk = new StringBuilder();
                 } else {
@@ -273,7 +278,8 @@ public class ChunkDeduplicatorImpl implements ChunkDeduplicator {
     /**
      * Last resort: split by character count with word boundaries and deduplication
      */
-    private List<String> splitByCharacterCountWithDedup(String text, int maxChunkSize, int overlap, Set<String> seenChunks) {
+    private List<String> splitByCharacterCountWithDedup(
+            String text, int maxChunkSize, int overlap, Set<String> seenChunks) {
         List<String> chunks = new ArrayList<>();
 
         int start = 0;

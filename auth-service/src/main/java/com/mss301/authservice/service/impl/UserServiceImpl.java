@@ -53,7 +53,12 @@ public class UserServiceImpl implements UserService {
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setEmailVerified(false);
-        user.setStatus(UserAccount.UserStatus.ACTIVE);
+        // Teacher accounts require admin approval before activation
+        if ("TEACHER".equalsIgnoreCase(request.getUserType())) {
+            user.setStatus(UserAccount.UserStatus.INACTIVE);
+        } else {
+            user.setStatus(UserAccount.UserStatus.ACTIVE);
+        }
         user.setCreatedAt(LocalDateTime.now());
 
         // Assign role based on userType

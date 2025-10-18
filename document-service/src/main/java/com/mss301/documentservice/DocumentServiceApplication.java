@@ -13,5 +13,4 @@ public class DocumentServiceApplication {
     public static void main(String[] args) {
         SpringApplication.run(DocumentServiceApplication.class, args);
     }
-
 }

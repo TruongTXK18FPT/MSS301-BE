@@ -1,5 +1,11 @@
 package com.mss301.documentservice.service.analysis.impl;
 
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.springframework.stereotype.Service;
+
 import com.mss301.documentservice.service.analysis.DocumentStructureService;
 import com.mss301.documentservice.service.analysis.TableOfContentService;
 import com.mss301.documentservice.service.analysis.models.structure.ChapterInfo;
@@ -8,13 +14,9 @@ import com.mss301.documentservice.service.analysis.models.structure.LessonInfo;
 import com.mss301.documentservice.service.analysis.models.structure.StructureContext;
 import com.mss301.documentservice.service.analysis.models.toc.PageMapping;
 import com.mss301.documentservice.service.analysis.models.toc.TocEntry;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 @Slf4j
@@ -24,11 +26,11 @@ public class DocumentStructureServiceImpl implements DocumentStructureService {
     private static final int PAGE_OFFSET_RANGE = 3;
     private static final int MIN_SCORE_THRESHOLD = 15;
 
-    private static final Pattern CHAPTER_PATTERN = Pattern.compile(
-            "^\\s*Chương\\s+(\\d+)\\s+(.*)$", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);
+    private static final Pattern CHAPTER_PATTERN =
+            Pattern.compile("^\\s*Chương\\s+(\\d+)\\s+(.*)$", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);
 
-    private static final Pattern LESSON_PATTERN = Pattern.compile(
-            "^\\s*Bài\\s+(\\d+)\\s+(.*)$", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);
+    private static final Pattern LESSON_PATTERN =
+            Pattern.compile("^\\s*Bài\\s+(\\d+)\\s+(.*)$", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);
 
     private TableOfContentService tableOfContentService;
 
@@ -123,7 +125,8 @@ public class DocumentStructureServiceImpl implements DocumentStructureService {
     private void handleOrphanLesson(LessonInfo lesson, Map<Integer, ChapterInfo> chapterMap) {
         log.warn("Lesson {} has no parent chapter", lesson.getNumber());
 
-        Integer targetChapter = chapterMap.isEmpty() ? 0 : chapterMap.keySet().iterator().next();
+        Integer targetChapter =
+                chapterMap.isEmpty() ? 0 : chapterMap.keySet().iterator().next();
         ChapterInfo chapter = chapterMap.computeIfAbsent(targetChapter, num -> {
             ChapterInfo defaultChapter = new ChapterInfo();
             defaultChapter.setNumber(num);
@@ -151,9 +154,7 @@ public class DocumentStructureServiceImpl implements DocumentStructureService {
     private void setEndPositions(List<ChapterInfo> items, int defaultEnd) {
         for (int i = 0; i < items.size(); i++) {
             ChapterInfo current = items.get(i);
-            current.setEndPosition(i + 1 < items.size()
-                    ? items.get(i + 1).getStartPosition() - 1
-                    : defaultEnd);
+            current.setEndPosition(i + 1 < items.size() ? items.get(i + 1).getStartPosition() - 1 : defaultEnd);
         }
     }
 
@@ -163,21 +164,22 @@ public class DocumentStructureServiceImpl implements DocumentStructureService {
 
         for (int i = 0; i < lessons.size(); i++) {
             LessonInfo current = lessons.get(i);
-            current.setEndPosition(i + 1 < lessons.size()
-                    ? lessons.get(i + 1).getStartPosition() - 1
-                    : chapter.getEndPosition());
+            current.setEndPosition(
+                    i + 1 < lessons.size() ? lessons.get(i + 1).getStartPosition() - 1 : chapter.getEndPosition());
         }
     }
 
     private void logStructureSummary(List<ChapterInfo> chapters) {
         log.info("Created {} chapters with lessons:", chapters.size());
         chapters.forEach(chapter -> {
-            log.info("  Chapter {}: {} ({} lessons)",
-                    chapter.getNumber(), chapter.getTitle(), chapter.getLessons().size());
-            chapter.getLessons().forEach(lesson ->
-                    log.info("    Lesson {}: {} (ID: {})",
-                            lesson.getNumber(), lesson.getTitle(), lesson.getLessonId())
-            );
+            log.info(
+                    "  Chapter {}: {} ({} lessons)",
+                    chapter.getNumber(),
+                    chapter.getTitle(),
+                    chapter.getLessons().size());
+            chapter.getLessons()
+                    .forEach(lesson -> log.info(
+                            "    Lesson {}: {} (ID: {})", lesson.getNumber(), lesson.getTitle(), lesson.getLessonId()));
         });
     }
 
@@ -196,7 +198,8 @@ public class DocumentStructureServiceImpl implements DocumentStructureService {
         while (matcher.find()) {
             ChapterInfo chapter = new ChapterInfo();
             chapter.setNumber(Integer.parseInt(matcher.group(1)));
-            chapter.setTitle("Chương " + chapter.getNumber() + " " + matcher.group(2).trim());
+            chapter.setTitle(
+                    "Chương " + chapter.getNumber() + " " + matcher.group(2).trim());
             chapter.setStartPosition(matcher.start());
             chapters.add(chapter);
         }
@@ -222,9 +225,8 @@ public class DocumentStructureServiceImpl implements DocumentStructureService {
 
         for (int i = 0; i < lessons.size(); i++) {
             LessonInfo current = lessons.get(i);
-            current.setEndPosition(i + 1 < lessons.size()
-                    ? lessons.get(i + 1).getStartPosition()
-                    : chapter.getEndPosition());
+            current.setEndPosition(
+                    i + 1 < lessons.size() ? lessons.get(i + 1).getStartPosition() : chapter.getEndPosition());
         }
 
         return lessons;
@@ -303,14 +305,20 @@ public class DocumentStructureServiceImpl implements DocumentStructureService {
     public StructureContext findStructureContextWithContentAnalysis(
             DocumentStructure structure, int textPosition, int estimatedPage, String chunkContent) {
 
-        log.info("Finding context for position {}, page {}, content: '{}'",
-                textPosition, estimatedPage, chunkContent.substring(0, Math.min(100, chunkContent.length())));
+        log.info(
+                "Finding context for position {}, page {}, content: '{}'",
+                textPosition,
+                estimatedPage,
+                chunkContent.substring(0, Math.min(100, chunkContent.length())));
 
         // Priority 1: Content analysis
         StructureContext context = findStructureContextByContent(chunkContent, structure);
         if (context.hasLesson()) {
-            log.info("✓ Found via CONTENT: Chapter {}, Lesson {} '{}'",
-                    context.getChapter().getNumber(), context.getLesson().getNumber(), context.getLesson().getTitle());
+            log.info(
+                    "✓ Found via CONTENT: Chapter {}, Lesson {} '{}'",
+                    context.getChapter().getNumber(),
+                    context.getLesson().getNumber(),
+                    context.getLesson().getTitle());
             return context;
         }
 
@@ -318,9 +326,12 @@ public class DocumentStructureServiceImpl implements DocumentStructureService {
         if (tocPageMapping != null && !tocPageMapping.isEmpty() && estimatedPage > 0) {
             context = findStructureContextByPage(estimatedPage);
             if (context.hasLesson()) {
-                log.info("✓ Found via PAGE {}: Chapter {}, Lesson {} '{}'",
-                        estimatedPage, context.getChapter().getNumber(),
-                        context.getLesson().getNumber(), context.getLesson().getTitle());
+                log.info(
+                        "✓ Found via PAGE {}: Chapter {}, Lesson {} '{}'",
+                        estimatedPage,
+                        context.getChapter().getNumber(),
+                        context.getLesson().getNumber(),
+                        context.getLesson().getTitle());
                 return context;
             }
         }
@@ -328,9 +339,12 @@ public class DocumentStructureServiceImpl implements DocumentStructureService {
         // Priority 3: Position
         context = findStructureContextByPosition(structure, textPosition);
         if (context.hasLesson()) {
-            log.info("✓ Found via POSITION {}: Chapter {}, Lesson {} '{}'",
-                    textPosition, context.getChapter().getNumber(),
-                    context.getLesson().getNumber(), context.getLesson().getTitle());
+            log.info(
+                    "✓ Found via POSITION {}: Chapter {}, Lesson {} '{}'",
+                    textPosition,
+                    context.getChapter().getNumber(),
+                    context.getLesson().getNumber(),
+                    context.getLesson().getTitle());
         } else {
             log.warn("❌ No context found for position {}, page {}", textPosition, estimatedPage);
         }
@@ -405,8 +419,8 @@ public class DocumentStructureServiceImpl implements DocumentStructureService {
         return score;
     }
 
-    private StructureContext findBestMatch(Map<LessonInfo, Integer> scores,
-                                           DocumentStructure structure, String chunkContent) {
+    private StructureContext findBestMatch(
+            Map<LessonInfo, Integer> scores, DocumentStructure structure, String chunkContent) {
         StructureContext context = new StructureContext();
 
         LessonInfo bestMatch = null;
@@ -427,9 +441,11 @@ public class DocumentStructureServiceImpl implements DocumentStructureService {
                     .findFirst()
                     .ifPresent(context::setChapter);
 
-            log.info("Content matched: '{}' -> Lesson {} (score: {})",
+            log.info(
+                    "Content matched: '{}' -> Lesson {} (score: {})",
                     chunkContent.substring(0, Math.min(50, chunkContent.length())),
-                    bestMatch.getNumber(), bestScore);
+                    bestMatch.getNumber(),
+                    bestScore);
         }
 
         return context;
@@ -447,18 +463,18 @@ public class DocumentStructureServiceImpl implements DocumentStructureService {
     }
 
     private boolean containsChapter1Indicators(String contentLower) {
-        return contentLower.contains("số tự nhiên") ||
-                contentLower.contains("tập hợp số tự nhiên") ||
-                contentLower.contains("thực hành") ||
-                contentLower.contains("bài tập") ||
-                (contentLower.contains("phép tính") && contentLower.contains("tập hợp"));
+        return contentLower.contains("số tự nhiên")
+                || contentLower.contains("tập hợp số tự nhiên")
+                || contentLower.contains("thực hành")
+                || contentLower.contains("bài tập")
+                || (contentLower.contains("phép tính") && contentLower.contains("tập hợp"));
     }
 
     private boolean containsChapter2StrongIndicators(String contentLower) {
-        return contentLower.contains("số nguyên") ||
-                contentLower.contains("số nguyên âm") ||
-                contentLower.contains("tập hợp số nguyên") ||
-                contentLower.contains("hai số nguyên");
+        return contentLower.contains("số nguyên")
+                || contentLower.contains("số nguyên âm")
+                || contentLower.contains("tập hợp số nguyên")
+                || contentLower.contains("hai số nguyên");
     }
 
     private int getSpecialContentScore(String contentLower, LessonInfo lesson) {

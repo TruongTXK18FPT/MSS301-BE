@@ -1,11 +1,12 @@
 package com.mss301.documentservice.repository;
 
-import com.mss301.documentservice.entity.Document;
-import com.mss301.documentservice.entity.enums.DocumentStatus;
+import java.util.List;
+
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import com.mss301.documentservice.entity.Document;
+import com.mss301.documentservice.entity.enums.DocumentStatus;
 
 @Repository
 public interface DocumentRepository extends ElasticsearchRepository<Document, String> {

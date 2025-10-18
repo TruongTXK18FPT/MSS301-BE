@@ -1,9 +1,10 @@
 package com.mss301.documentservice.service.extraction;
 
-import net.sourceforge.tess4j.TesseractException;
+import java.awt.image.BufferedImage;
+
 import org.springframework.stereotype.Service;
 
-import java.awt.image.BufferedImage;
+import net.sourceforge.tess4j.TesseractException;
 
 @Service
 public interface OcrService {

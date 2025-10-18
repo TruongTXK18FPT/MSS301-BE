@@ -1,5 +1,11 @@
 package com.mss301.documentservice.service.chunk.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.mss301.documentservice.entity.Chunk;
 import com.mss301.documentservice.entity.embedded.DocumentStructure;
 import com.mss301.documentservice.entity.embedded.ProcessingInfo;
@@ -8,14 +14,9 @@ import com.mss301.documentservice.service.analysis.models.structure.ChapterInfo;
 import com.mss301.documentservice.service.analysis.models.structure.LessonInfo;
 import com.mss301.documentservice.service.analysis.models.structure.StructureContext;
 import com.mss301.documentservice.service.chunk.*;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Service
 @Transactional
@@ -33,9 +34,9 @@ public class ChunkingServiceImpl implements ChunkingService {
 
     private ChunkEmbedder chunkEmbedder;
 
-
     @Override
-    public List<Chunk> createStructuredChunks(String documentId, String fullText, int maxChunkSize, int overlap, String language, int totalPages) {
+    public List<Chunk> createStructuredChunks(
+            String documentId, String fullText, int maxChunkSize, int overlap, String language, int totalPages) {
         List<Chunk> chunks = new ArrayList<>();
 
         if (fullText == null || fullText.trim().isEmpty()) {
@@ -49,14 +50,13 @@ public class ChunkingServiceImpl implements ChunkingService {
         // Initialize PageEstimator with TOC mapping for accurate page estimation
         @SuppressWarnings("unchecked")
         java.util.Map rawTocMap = (java.util.Map) documentStructureService.getTocPageMapping();
-        pageEstimator.initializeWithTocMapping(
-                rawTocMap,
-                documentStructureService.getTotalPages()
-        );
+        pageEstimator.initializeWithTocMapping(rawTocMap, documentStructureService.getTotalPages());
 
-        log.info("ChunkingService: Retrieved TOC page mapping with {} entries, total pages: {}",
-                documentStructureService.getTocPageMapping() != null ?
-                        documentStructureService.getTocPageMapping().size() : 0,
+        log.info(
+                "ChunkingService: Retrieved TOC page mapping with {} entries, total pages: {}",
+                documentStructureService.getTocPageMapping() != null
+                        ? documentStructureService.getTocPageMapping().size()
+                        : 0,
                 documentStructureService.getTotalPages());
 
         // Clean up text
@@ -77,20 +77,33 @@ public class ChunkingServiceImpl implements ChunkingService {
             // Estimate page number from position
             int estimatedPage = pageEstimator.estimatePageFromPosition(fullText, chunkStartPosition);
 
-            // Find structure context for this chunk using page-based mapping with content analysis fallback
+            // Find structure context for this chunk using page-based mapping with content
+            // analysis fallback
             StructureContext context = documentStructureService.findStructureContextWithContentAnalysis(
                     structure, chunkStartPosition, estimatedPage, chunkText);
 
-            // Debug log to track context finding with more detail (only for first 30 chunks to avoid spam)
+            // Debug log to track context finding with more detail (only for first 30 chunks
+            // to avoid spam)
             if (i < 30) {
-                log.info("Chunk {} at position {} (page {}): hasChapter={}, hasLesson={}",
-                        i, chunkStartPosition, estimatedPage, context.hasChapter(), context.hasLesson());
+                log.info(
+                        "Chunk {} at position {} (page {}): hasChapter={}, hasLesson={}",
+                        i,
+                        chunkStartPosition,
+                        estimatedPage,
+                        context.hasChapter(),
+                        context.hasLesson());
                 if (context.hasChapter()) {
-                    log.info("  Chapter: {} - {}", context.getChapter().getNumber(), context.getChapter().getTitle());
+                    log.info(
+                            "  Chapter: {} - {}",
+                            context.getChapter().getNumber(),
+                            context.getChapter().getTitle());
                 }
                 if (context.hasLesson()) {
-                    log.info("  Lesson: {} - {} (ID: {})", context.getLesson().getNumber(),
-                            context.getLesson().getTitle(), context.getLesson().getLessonId());
+                    log.info(
+                            "  Lesson: {} - {} (ID: {})",
+                            context.getLesson().getNumber(),
+                            context.getLesson().getTitle(),
+                            context.getLesson().getLessonId());
                 } else {
                     log.info("  No lesson found for chunk {} (page {})", i, estimatedPage);
                 }
@@ -107,8 +120,8 @@ public class ChunkingServiceImpl implements ChunkingService {
             chunk.setEmbedding(embedding);
 
             // ✨ Build DocumentStructure object
-            DocumentStructure.DocumentStructureBuilder structureBuilder = DocumentStructure.builder()
-                    .pageNumber(estimatedPage);
+            DocumentStructure.DocumentStructureBuilder structureBuilder =
+                    DocumentStructure.builder().pageNumber(estimatedPage);
 
             if (context.hasChapter()) {
                 ChapterInfo chapter = context.getChapter();
@@ -124,8 +137,11 @@ public class ChunkingServiceImpl implements ChunkingService {
                         .lessonId(lesson.getLessonId())
                         .lessonNumber(lesson.getNumber())
                         .lessonTitle(lesson.getTitle());
-                log.debug("  Set lesson metadata: number={}, title={}, id={}",
-                        lesson.getNumber(), lesson.getTitle(), lesson.getLessonId());
+                log.debug(
+                        "  Set lesson metadata: number={}, title={}, id={}",
+                        lesson.getNumber(),
+                        lesson.getTitle(),
+                        lesson.getLessonId());
             } else {
                 log.debug("  No lesson found for chunk {} (page {})", i, estimatedPage);
             }

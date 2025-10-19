@@ -4,7 +4,6 @@ import java.util.concurrent.CompletableFuture;
 
 import org.springframework.stereotype.Service;
 
-@Service
 public interface DocumentProcessingService {
     CompletableFuture<Void> processDocumentAsync(String documentId, String jobId);
 

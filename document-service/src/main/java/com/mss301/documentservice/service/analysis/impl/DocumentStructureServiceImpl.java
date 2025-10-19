@@ -32,7 +32,7 @@ public class DocumentStructureServiceImpl implements DocumentStructureService {
     private static final Pattern LESSON_PATTERN =
             Pattern.compile("^\\s*Bài\\s+(\\d+)\\s+(.*)$", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);
 
-    private TableOfContentService tableOfContentService;
+    private final TableOfContentService tableOfContentService;
 
     private Map<Integer, PageMapping> tocPageMapping;
     private int totalPages;

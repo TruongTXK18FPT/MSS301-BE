@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 
 import net.sourceforge.tess4j.TesseractException;
 
-@Service
 public interface OcrService {
     String extractText(BufferedImage image) throws TesseractException;
 }

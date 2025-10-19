@@ -2,9 +2,6 @@ spring:
   application:
     name: document-service
 
-  server:
-    port: 8089
-
   servlet:
     multipart:
       enabled: true
@@ -26,12 +23,12 @@ spring:
 
 logging:
   level:
-    mss301.documentservice: INFO
+    com.mss301.documentservice: INFO
     org.elasticsearch: WARN
 
 app:
   upload:
-    dir: ./uploads
+    dir: ${UPLOAD_DIR:./uploads}
 
   processing:
     async: true
@@ -54,3 +51,13 @@ chunking:
     log:
       enabled: false
       interval: 100
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+server:
+  port: 8089

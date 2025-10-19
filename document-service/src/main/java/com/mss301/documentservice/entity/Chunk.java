@@ -33,7 +33,7 @@ public class Chunk {
     @Field(type = FieldType.Text)
     private String summary; // Optional ( Using AI to summarize, now tốn token quá =))
 
-    @Field(type = FieldType.Dense_Vector, dims = 768)
+    @Field(type = FieldType.Dense_Vector, dims = 1536)
     private List<Float> embedding;
 
     @Field(type = FieldType.Object)

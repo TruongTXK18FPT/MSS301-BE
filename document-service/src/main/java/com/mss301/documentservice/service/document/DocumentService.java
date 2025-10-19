@@ -11,7 +11,6 @@ import com.mss301.documentservice.entity.Document;
 import com.mss301.documentservice.entity.ProcessingJob;
 import com.mss301.documentservice.entity.enums.DocumentStatus;
 
-@Service
 public interface DocumentService {
     Document uploadPdf(MultipartFile file, String title, String description) throws IOException;
 

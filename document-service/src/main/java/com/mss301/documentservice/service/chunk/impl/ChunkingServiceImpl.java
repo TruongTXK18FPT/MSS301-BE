@@ -2,6 +2,7 @@ package com.mss301.documentservice.service.chunk.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.mss301.documentservice.entity.Chunk;
 import com.mss301.documentservice.entity.embedded.DocumentStructure;
 import com.mss301.documentservice.entity.embedded.ProcessingInfo;
+import com.mss301.documentservice.repository.ChunkRepository;
 import com.mss301.documentservice.service.analysis.DocumentStructureService;
 import com.mss301.documentservice.service.analysis.models.structure.ChapterInfo;
 import com.mss301.documentservice.service.analysis.models.structure.LessonInfo;
@@ -24,15 +26,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ChunkingServiceImpl implements ChunkingService {
 
-    private DocumentStructureService documentStructureService;
-
-    private ChunkSplitter chunkSplitter;
-
-    private ChunkDeduplicator chunkDeduplicator;
-
-    private PageEstimator pageEstimator;
-
-    private ChunkEmbedder chunkEmbedder;
+    private final ChunkRepository chunkRepository;
+    private final DocumentStructureService documentStructureService;
+    private final ChunkSplitter chunkSplitter;
+    private final ChunkDeduplicator chunkDeduplicator;
+    private final PageEstimator pageEstimator;
+    private final ChunkEmbedder chunkEmbedder;
 
     @Override
     public List<Chunk> createStructuredChunks(
@@ -166,5 +165,32 @@ public class ChunkingServiceImpl implements ChunkingService {
 
         log.info("Successfully created {} structured chunks with embeddings", chunks.size());
         return chunks;
+    }
+
+    @Override
+    public List<Chunk> findByDocumentIdOrderByChunkIndex(String documentId) {
+        log.debug("Finding chunks by documentId: {} ordered by chunk index", documentId);
+        return chunkRepository.findByDocumentIdOrderByChunkIndex(documentId);
+    }
+
+    @Override
+    public List<Chunk> findByDocumentIdAndStructure_ChapterNumber(String documentId, Integer chapterNumber) {
+        log.debug("Finding chunks by documentId: {} and chapterNumber: {}", documentId, chapterNumber);
+        return chunkRepository.findByDocumentIdAndStructure_ChapterNumber(documentId, chapterNumber);
+    }
+
+    @Override
+    public List<Chunk> findByDocumentIdAndStructure_ChapterNumberAndStructure_LessonNumber(
+            String documentId, Integer chapterNumber, Integer lessonNumber) {
+        log.debug("Finding chunks by documentId: {}, chapterNumber: {}, lessonNumber: {}",
+                documentId, chapterNumber, lessonNumber);
+        return chunkRepository.findByDocumentIdAndStructure_ChapterNumberAndStructure_LessonNumber(
+                documentId, chapterNumber, lessonNumber);
+    }
+
+    @Override
+    public Optional<Chunk> findById(String chunkId) {
+        log.debug("Finding chunk by id: {}", chunkId);
+        return chunkRepository.findById(chunkId);
     }
 }

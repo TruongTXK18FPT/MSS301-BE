@@ -17,7 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ChunkEmbedderImpl implements ChunkEmbedder {
 
-    private EmbeddingService embeddingService;
+    private final EmbeddingService embeddingService;
 
     @Value("${chunking.embedding.log.enabled:false}")
     private boolean embeddingLogEnabled;

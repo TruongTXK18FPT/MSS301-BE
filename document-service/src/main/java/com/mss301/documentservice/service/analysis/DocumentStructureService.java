@@ -8,7 +8,6 @@ import com.mss301.documentservice.service.analysis.models.structure.DocumentStru
 import com.mss301.documentservice.service.analysis.models.structure.StructureContext;
 import com.mss301.documentservice.service.analysis.models.toc.PageMapping;
 
-@Service
 public interface DocumentStructureService {
     DocumentStructure analyzeDocumentStructure(String fullText);
 

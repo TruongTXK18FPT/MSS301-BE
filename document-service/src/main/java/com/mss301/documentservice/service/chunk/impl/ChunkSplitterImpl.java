@@ -6,7 +6,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.mss301.documentservice.service.chunk.ChunkSplitter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
+@Service
+@RequiredArgsConstructor
 public class ChunkSplitterImpl implements ChunkSplitter {
 
     private static final Pattern PARAGRAPH_BREAK = Pattern.compile("\n\\s*\n");

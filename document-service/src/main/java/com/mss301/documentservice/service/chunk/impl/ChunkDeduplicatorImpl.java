@@ -20,7 +20,7 @@ public class ChunkDeduplicatorImpl implements ChunkDeduplicator {
     private static final Pattern PARAGRAPH_BREAK = Pattern.compile("\n\\s*\n");
     private static final Pattern SENTENCE_END = Pattern.compile("[.!?]\\s+");
 
-    private ChunkSplitter chunkSplitter;
+    private final ChunkSplitter chunkSplitter;
 
     @Override
     public List<String> createChunksWithDeduplication(String text, int maxChunkSize, int overlap) {

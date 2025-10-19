@@ -1,5 +1,6 @@
 package com.mss301.documentservice.service.document.impl;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,27 +43,77 @@ public class DocumentServiceImpl implements DocumentService {
     @Value("${app.upload.dir}")
     private String uploadDir;
 
+    /**
+     * Xác định đường dẫn thư mục uploads luôn nằm trong document-service
+     * Bất kể ứng dụng chạy từ đâu
+     */
+    private Path resolveUploadPath() {
+        // Lấy thư mục làm việc hiện tại
+        String currentDir = System.getProperty("user.dir");
+        File currentDirFile = new File(currentDir);
+
+        log.debug("Current working directory: {}", currentDir);
+
+        Path uploadPath;
+
+        // Kiểm tra xem đang chạy từ document-service hay không
+        if (currentDirFile.getName().equals("document-service")) {
+            // Đang chạy từ trong document-service -> sử dụng trực tiếp
+            uploadPath = Paths.get(currentDir, "uploads");
+            log.debug("Running from document-service, upload path: {}", uploadPath);
+        } else {
+            // Đang chạy từ root hoặc nơi khác
+            // Kiểm tra xem document-service có tồn tại trong thư mục hiện tại không
+            File documentServiceDir = new File(currentDir, "document-service");
+            if (documentServiceDir.exists() && documentServiceDir.isDirectory()) {
+                // document-service tồn tại -> sử dụng nó
+                uploadPath = Paths.get(currentDir, "document-service", "uploads");
+                log.debug("Found document-service folder, upload path: {}", uploadPath);
+            } else {
+                // Không tìm thấy document-service, fallback về đường dẫn tương đối
+                uploadPath = Paths.get(uploadDir);
+                log.warn("document-service folder not found, using configured path: {}", uploadPath);
+            }
+        }
+
+        return uploadPath;
+    }
+
     @Override
     public Document uploadPdf(MultipartFile file, String title, String description) throws IOException {
         // Kiểm tra file có hợp lệ không?
         validateFile(file);
 
+        // Xác định thư mục upload
+        Path uploadPath = resolveUploadPath();
+
         // Tạo thư mục upload nếu chưa tồn tại
-        Path uploadPath = Paths.get(uploadDir);
-        if (!uploadPath.toFile().exists()) {
-            uploadPath.toFile().mkdirs();
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+            log.info("Created upload directory at: {}", uploadPath.toAbsolutePath());
         }
+
+        log.info("Upload directory: {}", uploadPath.toAbsolutePath());
 
         // Tạo tên file duy nhất
         String originalFilename = file.getOriginalFilename();
-        String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
-        String uniqueFilename = java.util.UUID.randomUUID().toString() + fileExtension;
+        if (originalFilename == null || originalFilename.isEmpty()) {
+            throw new IllegalArgumentException("Original filename is empty");
+        }
+
+        String fileExtension = "";
+        int lastDotIndex = originalFilename.lastIndexOf(".");
+        if (lastDotIndex > 0) {
+            fileExtension = originalFilename.substring(lastDotIndex);
+        }
+
+        String uniqueFilename = UUID.randomUUID() + fileExtension;
 
         // Lưu file vào thư mục uploads
         Path filePath = uploadPath.resolve(uniqueFilename);
         Files.copy(file.getInputStream(), filePath);
 
-        log.info("File uploaded successfully");
+        log.info("File uploaded successfully to: {}", filePath.toAbsolutePath());
 
         return documentRepository.save(Document.builder()
                 .id(UUID.randomUUID().toString())
@@ -113,32 +164,44 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public List<Document> getAllDocuments() {
-        return List.of();
+        return documentRepository.findAllByOrderByUploadedAtDesc();
     }
 
     @Override
     public List<Document> getDocumentsByStatus(DocumentStatus status) {
-        return List.of();
+        return documentRepository.findByStatusOrderByUploadedAtDesc(status);
     }
 
     @Override
     public Optional<ProcessingJob> getProcessingStatus(String documentId) {
-        return Optional.empty();
+        return processingJobRepository.findByDocumentId(documentId);
     }
 
     @Override
     public Optional<Document> getDocumentById(String documentId) {
-        return Optional.empty();
+        return documentRepository.findById(documentId);
     }
 
     @Override
-    public void deleteDocument(String documentId) {}
+    public void deleteDocument(String documentId) {
+        // Xóa tất cả chunks liên quan
+        chunkRepository.deleteByDocumentId(documentId);
+
+        // Xóa processing job nếu có
+        processingJobRepository.findByDocumentId(documentId)
+                .ifPresent(job -> processingJobRepository.deleteById(job.getId()));
+
+        // Xóa document
+        documentRepository.deleteById(documentId);
+
+        log.info("Deleted document {} and all related data", documentId);
+    }
 
     private void validateFile(MultipartFile file) {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("File is empty");
         }
-        if (!"appication/pdf".equals(file.getContentType())) {
+        if (!"application/pdf".equals(file.getContentType())) {
             throw new IllegalArgumentException("Only PDF files are supported");
         }
         long maxFileSize = 50 * 1024 * 1024; // 50 MB

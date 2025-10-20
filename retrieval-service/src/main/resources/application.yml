@@ -2,9 +2,6 @@ spring:
   application:
     name: retrieval-service
 
-  server:
-    port: 8092
-
   elasticsearch:
     uris: ${elasticsearch.host}
     connection-timeout: 10s
@@ -33,3 +30,13 @@ feign:
         connectTimeout: 5000
         readTimeout: 10000
         loggerLevel: basic
+
+server:
+  port: 8092
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true

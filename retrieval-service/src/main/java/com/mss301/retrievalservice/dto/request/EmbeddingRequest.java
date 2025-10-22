@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class EmbedRequest {
-    private String text;
+public class EmbeddingRequest {
+    private String model;
+    private String input;
 }

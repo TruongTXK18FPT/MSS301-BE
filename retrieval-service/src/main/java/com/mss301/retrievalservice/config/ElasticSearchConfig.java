@@ -1,14 +1,15 @@
 package com.mss301.retrievalservice.config;
 
-import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.json.jackson.JacksonJsonpMapper;
-import co.elastic.clients.transport.ElasticsearchTransport;
-import co.elastic.clients.transport.rest_client.RestClientTransport;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.json.jackson.JacksonJsonpMapper;
+import co.elastic.clients.transport.ElasticsearchTransport;
+import co.elastic.clients.transport.rest_client.RestClientTransport;
 
 @Configuration
 public class ElasticSearchConfig {
@@ -17,11 +18,9 @@ public class ElasticSearchConfig {
     private String elasticHost;
 
     @Bean
-    public ElasticsearchClient elasticsearchClient(){
+    public ElasticsearchClient elasticsearchClient() {
         RestClient restClient = RestClient.builder(HttpHost.create(elasticHost)).build();
-        ElasticsearchTransport transport = new RestClientTransport(
-                restClient, new JacksonJsonpMapper()
-        );
+        ElasticsearchTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper());
         return new ElasticsearchClient(transport);
     }
 }

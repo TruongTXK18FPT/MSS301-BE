@@ -8,8 +8,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @EnableFeignClients
 public class RetrievalServiceApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(RetrievalServiceApplication.class, args);
-	}
-
+    public static void main(String[] args) {
+        SpringApplication.run(RetrievalServiceApplication.class, args);
+    }
 }

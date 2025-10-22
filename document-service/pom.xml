@@ -16,10 +16,6 @@
     <name>document-service</name>
     <description>Document processing and extraction microservice</description>
 
-    <properties>
-        <java.version>21</java.version>
-    </properties>
-
     <dependencies>
         <!-- Spring Boot core -->
         <dependency>
@@ -67,6 +63,7 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Swagger/OpenAPI -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -74,12 +71,19 @@
         </dependency>
     </dependencies>
 
-
     <build>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
             </plugin>
         </plugins>
     </build>

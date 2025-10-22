@@ -13,15 +13,12 @@ spring:
 
 logging:
   level:
-    mss301.retrievalservice: DEBUG
+    com.mss301.retrievalservice: DEBUG
     feign: DEBUG
+    com.mss301.retrievalservice.service.EmbeddingClient: DEBUG
 
 elasticsearch:
   host: http://localhost:9200
-
-embedding:
-  service:
-    url: http://localhost:8000
 
 feign:
   client:
@@ -40,3 +37,9 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     enabled: true
+
+embedding:
+  client:
+    url: https://aiportalapi.stu-platform.live/jpe/v1
+    api-key: sk-Z64PdmBB55a3eXZuLcM2zQ
+    model: text-embedding-3-small

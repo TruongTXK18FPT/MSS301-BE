@@ -34,28 +34,14 @@ public class AddressController {
                 return ApiResponse.success(data);
         }
 
-        @GetMapping("/districts")
-        @Cacheable(cacheNames = "districts", key = "#provinceId")
-        public ApiResponse<Object> getDistricts(String provinceId) {
+        @GetMapping("/provinces/{provinceCode}/wards")
+        @Cacheable(cacheNames = "wards", key = "#provinceCode")
+        public ApiResponse<Object> getWardsByProvince(@PathVariable String provinceCode) {
                 Object data = ttWebClient
                                 .get()
                                 .uri(uriBuilder -> uriBuilder
-                                                .path("/new-provinces/{code}/districts")
-                                                .build(provinceId))
-                                .retrieve()
-                                .bodyToMono(Object.class)
-                                .block();
-                return ApiResponse.success(data);
-        }
-
-        @GetMapping("/wards")
-        @Cacheable(cacheNames = "wards", key = "#districtId")
-        public ApiResponse<Object> getWards(String districtId) {
-                Object data = ttWebClient
-                                .get()
-                                .uri(uriBuilder -> uriBuilder
-                                                .path("/new-districts/{code}/wards")
-                                                .build(districtId))
+                                                .path("/new-provinces/{code}/wards")
+                                                .build(provinceCode))
                                 .retrieve()
                                 .bodyToMono(Object.class)
                                 .block();

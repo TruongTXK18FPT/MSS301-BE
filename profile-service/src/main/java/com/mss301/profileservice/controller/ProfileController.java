@@ -26,9 +26,7 @@ public class ProfileController {
     private final ProfileService profileService;
 
     @GetMapping("/me")
-    @Operation(
-            summary = "Get Current User Profile",
-            description = "Get the profile of the currently authenticated user")
+    @Operation(summary = "Get Current User Profile", description = "Get the profile of the currently authenticated user")
     @ApiResponse(responseCode = "200", description = "Profile retrieved successfully")
     @ApiResponse(responseCode = "404", description = "Profile not found")
     public ResponseEntity<StudentProfileResponse> getCurrentUserProfile() {
@@ -38,9 +36,7 @@ public class ProfileController {
     }
 
     @PutMapping("/me")
-    @Operation(
-            summary = "Update Current User Profile",
-            description = "Update the profile of the currently authenticated user")
+    @Operation(summary = "Update Current User Profile", description = "Update the profile of the currently authenticated user")
     @ApiResponse(responseCode = "200", description = "Profile updated successfully")
     @ApiResponse(responseCode = "404", description = "Profile not found")
     public ResponseEntity<StudentProfileResponse> updateCurrentUserProfile(@RequestBody StudentProfileRequest request) {
@@ -50,9 +46,7 @@ public class ProfileController {
     }
 
     @GetMapping("/completion-status")
-    @Operation(
-            summary = "Get Profile Completion Status",
-            description = "Check if the current user has completed their profile")
+    @Operation(summary = "Get Profile Completion Status", description = "Check if the current user has completed their profile")
     @ApiResponse(responseCode = "200", description = "Profile status retrieved successfully")
     public ResponseEntity<ProfileCompletionStatusResponse> getProfileCompletionStatus() {
         String currentUserId = getCurrentUserId();

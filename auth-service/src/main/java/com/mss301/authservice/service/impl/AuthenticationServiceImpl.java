@@ -506,7 +506,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             log.info("Retrieved Google user info for email: {}", userInfo.getEmail());
 
             // Handle user authentication
+            boolean wasNewUser = !googleUserService.userExists(userInfo.getEmail());
             UserAccount user = handleGoogleUser(userInfo);
+
+            // Publish user created event ONLY after successful OAuth callback completion
+            // This ensures we have complete Google user information
+            if (wasNewUser) {
+                log.info("Publishing CreatedUserEvent for new Google user: {}", userInfo.getEmail());
+                publishUserCreatedEvent(user, userInfo);
+            }
 
             // Generate JWT token
             String jwtToken = generateToken(user);
@@ -552,8 +560,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         UserAccount newUser = googleUserService.createGoogleUser(userInfo, "STUDENT"); // Default to STUDENT for Google
         // login
 
-        // Publish user created event
-        publishUserCreatedEvent(newUser, userInfo);
+        // DON'T publish event here - wait until OAuth callback is complete
+        // Event will be published in authenticateWithGoogle after successful
+        // authentication
 
         return newUser;
     }

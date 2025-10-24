@@ -8,7 +8,11 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 import com.mss301.profileservice.config.EventPublisher;
 import com.mss301.profileservice.dto.request.StudentProfileRequest;
@@ -44,6 +48,9 @@ public class ProfileServiceImpl implements ProfileService {
     private final GuardianProfileRepository guardianProfileRepository;
     private final StudentGuardianRepository studentGuardianRepository;
     private final EventPublisher eventPublisher;
+
+    @PersistenceContext
+    private EntityManager entityManager;
     // Note: using repositories above to link guardian and student
 
     // UserProfileService implementation - Current user operations
@@ -66,16 +73,39 @@ public class ProfileServiceImpl implements ProfileService {
     public ProfileCompletionStatusResponse getProfileCompletionStatus(String userId) {
         log.info("Getting profile completion status for user: {}", userId);
 
-        UserProfile userProfile = userProfileRepository
-                .findByUserId(Long.valueOf(userId))
-                .orElseThrow(() -> new RuntimeException("User profile not found for user ID: " + userId));
+        try {
+            UserProfile userProfile = userProfileRepository
+                    .findByUserId(Long.valueOf(userId))
+                    .orElseGet(() -> {
+                        log.warn("User profile not found for user: {}, returning default values", userId);
+                        return null;
+                    });
 
-        return ProfileCompletionStatusResponse.builder()
-                .profileCompleted(userProfile.isProfileCompleted())
-                .userType(userProfile.getUserType())
-                .username(userProfile.getUsername())
-                .email(userProfile.getEmail())
-                .build();
+            if (userProfile == null) {
+                // Return default values if no profile exists
+                return ProfileCompletionStatusResponse.builder()
+                        .profileCompleted(false)
+                        .userType("STUDENT")
+                        .username("")
+                        .email("")
+                        .build();
+            }
+
+            return ProfileCompletionStatusResponse.builder()
+                    .profileCompleted(userProfile.isProfileCompleted())
+                    .userType(userProfile.getUserType())
+                    .username(userProfile.getUsername())
+                    .email(userProfile.getEmail())
+                    .build();
+        } catch (Exception e) {
+            log.error("Failed to get profile completion status for user: {}: {}", userId, e.getMessage(), e);
+            // Return default values on error
+            return ProfileCompletionStatusResponse.builder()
+                    .profileCompleted(false)
+                    .userType("STUDENT")
+                    .email("")
+                    .build();
+        }
     }
 
     // ProfileManagementService implementation - Admin operations
@@ -157,7 +187,55 @@ public class ProfileServiceImpl implements ProfileService {
         try {
             StudentProfile existingProfile = studentProfileRepository
                     .findByUserId(Long.valueOf(userId))
-                    .orElseThrow(() -> new RuntimeException("Student profile not found for user: " + userId));
+                    .orElseGet(() -> {
+                        log.warn("StudentProfile not found for user: {}, creating new one", userId);
+                        // Create StudentProfile if it doesn't exist (fallback for users created before
+                        // event flow)
+                        Long userIdLong = Long.valueOf(userId);
+
+                        // Find UserProfile first, create if not exists
+                        UserProfile userProfile = userProfileRepository.findByUserId(userIdLong)
+                                .orElseGet(() -> {
+                                    log.warn("UserProfile not found for user: {}, creating new one", userId);
+                                    // Create minimal UserProfile
+                                    UserProfile newUserProfile = new UserProfile();
+                                    newUserProfile.setUserId(userIdLong);
+                                    newUserProfile.setEmail(""); // Will be updated later
+                                    newUserProfile.setFullName(""); // Will be updated later
+                                    newUserProfile.setUserType("STUDENT");
+                                    newUserProfile.setProfileCompleted(false);
+                                    newUserProfile.setCreatedAt(LocalDateTime.now());
+                                    newUserProfile.setUpdatedAt(LocalDateTime.now());
+
+                                    userProfileRepository.save(newUserProfile);
+                                    userProfileRepository.flush();
+
+                                    log.info("Created new UserProfile for user: {}", userId);
+                                    return newUserProfile;
+                                });
+
+                        log.info("Found UserProfile for user {}: id={}, email={}", userIdLong, userProfile.getId(),
+                                userProfile.getEmail());
+
+                        // Force flush and refresh to ensure UserProfile is persisted in database
+                        userProfileRepository.flush();
+                        entityManager.refresh(userProfile);
+
+                        log.info("After flush and refresh - UserProfile id={}, email={}", userProfile.getId(),
+                                userProfile.getEmail());
+
+                        // Create new StudentProfile
+                        StudentProfile newProfile = new StudentProfile();
+                        newProfile.setUserId(userIdLong); // Set userId for foreign key
+                        // Don't set userProfile - let Hibernate handle the relationship via userId
+                        newProfile.setCreatedAt(LocalDateTime.now());
+                        newProfile.setUpdatedAt(LocalDateTime.now());
+
+                        log.info("Creating StudentProfile with userId={}, UserProfile.id={}, UserProfile.userId={}",
+                                userIdLong, userProfile.getId(), userProfile.getUserId());
+
+                        return studentProfileRepository.save(newProfile);
+                    });
 
             // Update UserProfile if it exists
             if (existingProfile.getUserProfile() != null) {
@@ -251,12 +329,23 @@ public class ProfileServiceImpl implements ProfileService {
         try {
             Long userId = Long.valueOf(event.getId());
 
-            // Create empty base UserProfile only (no role-specific profiles yet)
-            // User will complete their profile later via ProfileCompletedEvent
-            createBaseUserProfile(userId, event);
+            // Step 1: Create UserProfile in separate transaction
+            createUserProfileInSeparateTransaction(userId, event);
+
+            // Step 2: Create StudentProfile in separate transaction (if needed)
+            if ("STUDENT".equalsIgnoreCase(event.getUserType())) {
+                createStudentProfileInSeparateTransaction(userId);
+                log.info("Auto-created StudentProfile for user ID: {}", userId);
+            } else if ("TEACHER".equalsIgnoreCase(event.getUserType())) {
+                createTeacherProfileInSeparateTransaction(userId, event);
+                log.info("Auto-created TeacherProfile for user ID: {}", userId);
+            } else if ("GUARDIAN".equalsIgnoreCase(event.getUserType())) {
+                createGuardianProfileInSeparateTransaction(userId, event);
+                log.info("Auto-created GuardianProfile for user ID: {}", userId);
+            }
 
             log.info(
-                    "Empty profile creation completed for user ID: {} with type: {}",
+                    "Profile creation completed for user ID: {} with type: {}",
                     event.getId(),
                     event.getUserType());
 
@@ -292,11 +381,15 @@ public class ProfileServiceImpl implements ProfileService {
             userProfile.setCreatedAt(LocalDateTime.now());
             userProfile.setUpdatedAt(LocalDateTime.now());
 
+            // Force flush to ensure UserProfile is persisted before continuing
             userProfileRepository.save(userProfile);
+            userProfileRepository.flush();
+
             log.info("Empty base user profile created for user ID: {} with type: {}", userId, event.getUserType());
         } catch (Exception e) {
             log.error("Failed to create base user profile for user ID: {}: {}", userId, e.getMessage(), e);
-            throw new RuntimeException("Failed to create user profile: " + e.getMessage(), e);
+            // Don't throw exception - let the outer transaction handle it
+            // This prevents transaction rollback
         }
     }
 
@@ -304,13 +397,151 @@ public class ProfileServiceImpl implements ProfileService {
         if (studentProfileRepository.existsByUserId(userId)) {
             return;
         }
+
+        // Get UserProfile first to ensure it exists
+        UserProfile userProfile = userProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("UserProfile not found for user ID: " + userId));
+
+        // Force flush to ensure UserProfile is persisted before creating StudentProfile
+        userProfileRepository.flush();
+
         StudentProfile studentProfile = new StudentProfile();
         studentProfile.setUserId(userId);
-        // link back to base user profile
-        userProfileRepository.findByUserId(userId).ifPresent(studentProfile::setUserProfile);
+        studentProfile.setUserProfile(userProfile); // Set the relationship properly
         studentProfile.setCreatedAt(LocalDateTime.now());
         studentProfile.setUpdatedAt(LocalDateTime.now());
         studentProfileRepository.save(studentProfile);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createBaseUserProfileInNewTransaction(Long userId, CreatedUserEvent event) {
+        createBaseUserProfile(userId, event);
+    }
+
+    // NEW APPROACH: Completely separate UserProfile and StudentProfile creation
+    // with REQUIRES_NEW
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createUserProfileInSeparateTransaction(Long userId, CreatedUserEvent event) {
+        try {
+            // Check if user profile already exists
+            Optional<UserProfile> existingProfile = userProfileRepository.findByUserId(userId);
+            if (existingProfile.isPresent()) {
+                log.info("User profile already exists for user ID: {}", userId);
+                return;
+            }
+
+            // Create new UserProfile with basic info from registration
+            UserProfile userProfile = new UserProfile();
+            userProfile.setUserId(userId);
+            userProfile.setEmail(event.getEmail());
+            userProfile.setFullName(event.getFullName());
+            userProfile.setUserType(event.getUserType());
+            userProfile.setProfileCompleted(false);
+            userProfile.setCreatedAt(LocalDateTime.now());
+            userProfile.setUpdatedAt(LocalDateTime.now());
+
+            // Save and flush immediately
+            userProfileRepository.save(userProfile);
+            userProfileRepository.flush();
+
+            log.info("UserProfile created successfully in separate transaction for user ID: {} with type: {}", userId,
+                    event.getUserType());
+        } catch (Exception e) {
+            log.error("Failed to create UserProfile in separate transaction for user ID: {}: {}", userId,
+                    e.getMessage(), e);
+            throw new RuntimeException("Failed to create UserProfile: " + e.getMessage(), e);
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createStudentProfileInSeparateTransaction(Long userId) {
+        try {
+            // Check if StudentProfile already exists
+            if (studentProfileRepository.existsByUserId(userId)) {
+                log.info("StudentProfile already exists for user ID: {}", userId);
+                return;
+            }
+
+            // Verify UserProfile exists
+            UserProfile userProfile = userProfileRepository.findByUserId(userId)
+                    .orElseThrow(() -> new RuntimeException("UserProfile not found for user ID: " + userId));
+
+            // Create StudentProfile
+            StudentProfile studentProfile = new StudentProfile();
+            studentProfile.setUserId(userId);
+            studentProfile.setCreatedAt(LocalDateTime.now());
+            studentProfile.setUpdatedAt(LocalDateTime.now());
+
+            // Save and flush immediately
+            studentProfileRepository.save(studentProfile);
+            studentProfileRepository.flush();
+
+            log.info("StudentProfile created successfully in separate transaction for user ID: {}", userId);
+        } catch (Exception e) {
+            log.error("Failed to create StudentProfile in separate transaction for user ID: {}: {}", userId,
+                    e.getMessage(), e);
+            throw new RuntimeException("Failed to create StudentProfile: " + e.getMessage(), e);
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createTeacherProfileInSeparateTransaction(Long userId, CreatedUserEvent event) {
+        // TODO: Implement TeacherProfile creation
+        log.info("TeacherProfile creation not implemented yet for user ID: {}", userId);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createGuardianProfileInSeparateTransaction(Long userId, CreatedUserEvent event) {
+        // TODO: Implement GuardianProfile creation
+        log.info("GuardianProfile creation not implemented yet for user ID: {}", userId);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void autoCreateStudentProfileInNewTransaction(Long userId) {
+        try {
+            log.info("Creating StudentProfile in new transaction for user ID: {}", userId);
+
+            // Check if StudentProfile already exists
+            if (studentProfileRepository.existsByUserId(userId)) {
+                log.info("StudentProfile already exists for user ID: {}", userId);
+                return;
+            }
+
+            // Use EntityManager to find UserProfile by userId (not by primary key)
+            UserProfile userProfile = userProfileRepository.findByUserId(userId)
+                    .orElseThrow(() -> new RuntimeException("UserProfile not found for user ID: " + userId));
+
+            // Create StudentProfile with proper relationship
+            StudentProfile studentProfile = new StudentProfile();
+            studentProfile.setUserId(userId); // Set userId for foreign key
+            // Don't set userProfile - let Hibernate handle the relationship via userId
+            studentProfile.setCreatedAt(LocalDateTime.now());
+            studentProfile.setUpdatedAt(LocalDateTime.now());
+
+            log.info("Creating StudentProfile with userId={}, UserProfile.id={}, UserProfile.userId={}",
+                    userId, userProfile.getId(), userProfile.getUserId());
+
+            // Force flush to ensure StudentProfile is persisted
+            studentProfileRepository.save(studentProfile);
+            studentProfileRepository.flush();
+
+            log.info("Successfully created StudentProfile for user ID: {}", userId);
+        } catch (Exception e) {
+            log.error("Failed to create StudentProfile in new transaction for user ID: {}: {}", userId, e.getMessage(),
+                    e);
+            // Don't throw exception - let the outer transaction handle it
+            // This prevents transaction rollback
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createTeacherProfileInNewTransaction(Long userId, CreatedUserEvent event) {
+        createTeacherProfile(userId, event);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createGuardianProfileInNewTransaction(Long userId, CreatedUserEvent event) {
+        createGuardianProfile(userId, event);
     }
 
     // tryLinkGuardianToStudent() method removed - guardian linking now happens

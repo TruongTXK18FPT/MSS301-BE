@@ -2,8 +2,9 @@ package com.mss301.authservice.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.MediaType;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import com.mss301.authservice.dto.response.GoogleOAuthTokenResponse;
 
@@ -17,18 +18,9 @@ public interface GoogleOAuthClient {
     /**
      * Exchange authorization code for access token
      *
-     * @param code         Authorization code from Google
-     * @param clientId     Google OAuth2 client ID
-     * @param clientSecret Google OAuth2 client secret
-     * @param redirectUri  Redirect URI configured in Google Console
-     * @param grantType    Grant type (authorization_code)
+     * @param formData Form data containing OAuth parameters
      * @return GoogleOAuthTokenResponse containing access token
      */
-    @PostMapping(value = "/token", produces = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    GoogleOAuthTokenResponse exchangeToken(
-            @RequestParam("code") String code,
-            @RequestParam("client_id") String clientId,
-            @RequestParam("client_secret") String clientSecret,
-            @RequestParam("redirect_uri") String redirectUri,
-            @RequestParam("grant_type") String grantType);
+    @PostMapping(value = "/token", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    GoogleOAuthTokenResponse exchangeToken(@RequestBody MultiValueMap<String, String> formData);
 }

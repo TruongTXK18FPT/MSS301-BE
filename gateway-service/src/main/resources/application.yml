@@ -1,10 +1,11 @@
 server:
   port: 8080
   address: 0.0.0.0
+  forward-headers-strategy: framework
 
 app:
   api:
-      prefix: /api/v1
+    prefix: /api/v1
   service-prefix:
     auth: /authenticate
     payment: /payment
@@ -23,9 +24,28 @@ spring:
   application:
     name: gateway-service
   cloud:
+    loadbalancer:
+      ribbon:
+        enabled: false
+    discovery:
+      client:
+        simple:
+          instances:
+            auth-service:
+              - uri: http://127.0.0.1:8081
     gateway:
       server:
         webflux:
+          httpclient:
+            connect-timeout: 1000
+            response-timeout: 5s
+            pool:
+              max-connections: 1000
+              max-idle-time: 30s
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
           routes:
             - id: auth-service #8081
               uri: lb://auth-service
@@ -122,5 +142,9 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: false
   instance:
     prefer-ip-address: true
+    hostname: localhost
+    ip-address: 127.0.0.1

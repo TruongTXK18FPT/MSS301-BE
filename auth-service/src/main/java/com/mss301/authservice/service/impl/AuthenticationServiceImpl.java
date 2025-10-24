@@ -13,8 +13,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.mss301.authservice.client.GoogleOAuthClient;
-import com.mss301.authservice.client.GoogleUserInfoClient;
 import com.mss301.authservice.config.EventPublisher;
 import com.mss301.authservice.dto.request.*;
 import com.mss301.authservice.dto.response.AuthenticationResponse;
@@ -22,9 +20,12 @@ import com.mss301.authservice.dto.response.GoogleOAuthTokenResponse;
 import com.mss301.authservice.dto.response.GoogleUserInfoResponse;
 import com.mss301.authservice.dto.response.IntrospectResponse;
 import com.mss301.authservice.entity.*;
+import com.mss301.authservice.event.CreatedUserEvent;
 import com.mss301.authservice.event.NotificationEvent;
 import com.mss301.authservice.repository.*;
 import com.mss301.authservice.service.AuthenticationService;
+import com.mss301.authservice.service.GoogleOAuthService;
+import com.mss301.authservice.service.GoogleUserService;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
@@ -43,8 +44,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final OTPRepository otpRepository;
     private final InvalidatedTokenRepository invalidatedTokenRepository;
     private final PasswordEncoder passwordEncoder;
-    private final GoogleOAuthClient googleOAuthClient;
-    private final GoogleUserInfoClient googleUserInfoClient;
+    private final GoogleOAuthService googleOAuthService;
+    private final GoogleUserService googleUserService;
     private final EventPublisher eventPublisher;
 
     @Value("${jwt.signerKey:mySecretKey}")
@@ -104,7 +105,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         boolean isValid = true;
         String userId = null;
         String email = null;
-        String username = null;
 
         try {
             verifyToken(token, false);
@@ -114,7 +114,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
             userId = claims.getSubject();
             email = claims.getStringClaim("email");
-            username = claims.getStringClaim("username");
 
         } catch (Exception e) {
             isValid = false;
@@ -132,7 +131,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .valid(isValid)
                 .id(userId)
                 .email(email)
-                .username(username)
                 .role(role)
                 .build();
     }
@@ -233,7 +231,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         // Send welcome email after successful verification
         Map<String, Object> welcomeData = new HashMap<>();
-        welcomeData.put("fullName", user.getUsername()); // Or use actual fullName if available
+        welcomeData.put("fullName", "User"); // Use generic name for personalization
 
         NotificationEvent welcomeEvent = NotificationEvent.builder()
                 .recipient(user.getEmail())
@@ -283,6 +281,28 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
         log.info("Updated password for user: {}", request.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public void setupPasswordForGoogleUser(String email, String newPassword) {
+        // Reuse existing logic from resetPassword but without OTP validation
+        var user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Check if user is Google user
+        if (!user.getIsGoogleUser()) {
+            throw new RuntimeException("User is not a Google user");
+        }
+
+        // Check if password setup is required
+        if (!user.getPasswordSetupRequired()) {
+            throw new RuntimeException("Password already set for this user");
+        }
+
+        // Update password (reuse existing logic)
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPasswordSetupRequired(false);
+        userRepository.save(user);
     }
 
     @Override
@@ -432,7 +452,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                         Instant.now().plus(validDuration, ChronoUnit.SECONDS).toEpochMilli()))
                 .jwtID(UUID.randomUUID().toString())
                 .claim("email", user.getEmail())
-                .claim("username", user.getUsername())
                 .claim("role", roleName)
                 .build();
 
@@ -482,62 +501,102 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         try {
             log.info("Starting Google OAuth authentication with code: {}", code);
 
-            // Step 1: Exchange authorization code for access token
-            GoogleOAuthTokenResponse tokenResponse = googleOAuthClient.exchangeToken(
-                    code, googleClientId, googleClientSecret, googleRedirectUri, "authorization_code");
-
-            if (tokenResponse.getAccessToken() == null) {
-                throw new RuntimeException("Failed to exchange Google authorization code for access token");
-            }
-
-            // Step 2: Get user information from Google
-            GoogleUserInfoResponse userInfo = googleUserInfoClient.getUserInfo("json", tokenResponse.getAccessToken());
-
-            if (userInfo.getEmail() == null) {
-                throw new RuntimeException("Failed to retrieve user information from Google");
-            }
-
+            // Get Google user info
+            GoogleUserInfoResponse userInfo = getGoogleUserInfo(code);
             log.info("Retrieved Google user info for email: {}", userInfo.getEmail());
 
-            // Step 3: Check if user exists in our database
-            Optional<UserAccount> existingUser = userRepository.findByEmail(userInfo.getEmail());
+            // Handle user authentication
+            UserAccount user = handleGoogleUser(userInfo);
 
-            if (existingUser.isEmpty()) {
-                // Do NOT auto-create. Ask FE to proceed to registration with prefilled Google
-                // data
-                log.info(
-                        "Google email not found in DB. Returning REGISTRATION_REQUIRED for email: {}",
-                        userInfo.getEmail());
-
-                return AuthenticationResponse.builder()
-                        .authenticated(false)
-                        .email(userInfo.getEmail())
-                        .name(userInfo.getName())
-                        .givenName(userInfo.getGivenName())
-                        .familyName(userInfo.getFamilyName())
-                        .picture(userInfo.getPicture())
-                        .build();
-            }
-
-            // Existing user: issue JWT
-            UserAccount user = existingUser.get();
-            log.info("Existing user logged in with Google: {}", user.getEmail());
-
+            // Generate JWT token
             String jwtToken = generateToken(user);
-            user.setLastLoginAt(LocalDateTime.now());
-            userRepository.save(user);
-
-            log.info("Google OAuth authentication successful for user: {}", user.getEmail());
 
             return AuthenticationResponse.builder()
                     .token(jwtToken)
                     .expiryTime(Date.from(Instant.now().plus(validDuration, ChronoUnit.SECONDS)))
                     .authenticated(true)
+                    .email(user.getEmail())
+                    .name("User")
                     .build();
 
         } catch (Exception e) {
             log.error("Google OAuth authentication failed: {}", e.getMessage(), e);
             throw new RuntimeException("Google OAuth authentication failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Get Google user information from authorization code
+     */
+    private GoogleUserInfoResponse getGoogleUserInfo(String code) {
+        GoogleOAuthTokenResponse tokenResponse = googleOAuthService.exchangeToken(code);
+        return googleOAuthService.getUserInfo(tokenResponse.getAccessToken());
+    }
+
+    /**
+     * Handle Google user - create new or authenticate existing
+     */
+    private UserAccount handleGoogleUser(GoogleUserInfoResponse userInfo) {
+        if (!googleUserService.userExists(userInfo.getEmail())) {
+            return createNewGoogleUser(userInfo);
+        } else {
+            return authenticateExistingGoogleUser(userInfo);
+        }
+    }
+
+    /**
+     * Create new Google user
+     */
+    private UserAccount createNewGoogleUser(GoogleUserInfoResponse userInfo) {
+        log.info("Creating new Google user for email: {}", userInfo.getEmail());
+        UserAccount newUser = googleUserService.createGoogleUser(userInfo, "STUDENT"); // Default to STUDENT for Google
+        // login
+
+        // Publish user created event
+        publishUserCreatedEvent(newUser, userInfo);
+
+        return newUser;
+    }
+
+    /**
+     * Authenticate existing Google user
+     */
+    private UserAccount authenticateExistingGoogleUser(GoogleUserInfoResponse userInfo) {
+        UserAccount user = googleUserService.getUserByEmail(userInfo.getEmail());
+        log.info("Existing user logged in with Google: {}", user.getEmail());
+
+        // Check if user role is allowed for Google login (only GUARDIAN and STUDENT)
+        if (!user.getRole().equals("GUARDIAN") && !user.getRole().equals("STUDENT")) {
+            log.warn("Google login not allowed for role: {} for user: {}", user.getRole(), user.getEmail());
+            throw new RuntimeException("Google login is only available for students and guardians");
+        }
+
+        googleUserService.updateLastLogin(user);
+        log.info("Google OAuth authentication successful for user: {}", user.getEmail());
+
+        return user;
+    }
+
+    /**
+     * Publish user created event for Google users
+     *
+     * @param user     Created user
+     * @param userInfo Google user info
+     */
+    private void publishUserCreatedEvent(UserAccount user, GoogleUserInfoResponse userInfo) {
+        try {
+            // Create CreatedUserEvent with Google user details
+            CreatedUserEvent event = CreatedUserEvent.builder()
+                    .id(user.getId().toString())
+                    .email(user.getEmail())
+                    .fullName(userInfo.getName()) // Set fullName from Google user info
+                    .userType("STUDENT") // Default for Google users
+                    .build();
+
+            eventPublisher.publishCreatedUserEvent(event);
+            log.info("Published CreatedUserEvent for Google user: {}", user.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to publish CreatedUserEvent for Google user: {}", user.getEmail(), e);
         }
     }
 }

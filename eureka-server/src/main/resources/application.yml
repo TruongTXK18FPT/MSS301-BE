@@ -8,14 +8,12 @@ spring:
     active: default
 
 eureka:
+  client:
+    fetch-registry: false
+    register-with-eureka: false
   instance:
     hostname: localhost
     prefer-ip-address: true
-  client:
-    register-with-eureka: false
-    fetch-registry: false
-    service-url:
-      default-zone: http://${eureka.instance.hostname}:${server.port}/eureka/
   server:
     enable-self-preservation: false
     eviction-interval-timer-in-ms: 4000

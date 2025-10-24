@@ -32,4 +32,12 @@ public interface AuthenticationService {
      * @return AuthenticationResponse with JWT token
      */
     AuthenticationResponse authenticateWithGoogle(String code);
+
+    /**
+     * Setup password for Google users
+     *
+     * @param email       User email
+     * @param newPassword New password
+     */
+    void setupPasswordForGoogleUser(String email, String newPassword);
 }

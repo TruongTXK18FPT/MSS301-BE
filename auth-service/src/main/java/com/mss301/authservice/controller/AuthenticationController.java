@@ -1,5 +1,10 @@
 package com.mss301.authservice.controller;
 
+import java.util.UUID;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.mss301.authservice.dto.ApiResponse;
@@ -7,6 +12,8 @@ import com.mss301.authservice.dto.request.*;
 import com.mss301.authservice.dto.response.AuthenticationResponse;
 import com.mss301.authservice.dto.response.IntrospectResponse;
 import com.mss301.authservice.service.AuthenticationService;
+import com.mss301.authservice.service.GoogleOAuthService;
+import com.mss301.authservice.config.FrontendProperties;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +26,8 @@ import lombok.experimental.FieldDefaults;
 public class AuthenticationController {
 
     AuthenticationService authenticationService;
+    GoogleOAuthService googleOAuthService;
+    FrontendProperties frontendProperties;
 
     @PostMapping("/login")
     public ApiResponse<AuthenticationResponse> authenticate(@RequestBody AuthenticationRequest request) {
@@ -80,12 +89,53 @@ public class AuthenticationController {
         return ApiResponse.<Void>builder().message("Password reset OTP sent").build();
     }
 
-    @PostMapping("/google")
-    public ApiResponse<AuthenticationResponse> authenticateWithGoogle(@RequestParam("code") String code) {
-        var result = authenticationService.authenticateWithGoogle(code);
-        return ApiResponse.<AuthenticationResponse>builder()
-                .result(result)
-                .message("Google authentication successful")
-                .build();
+    @GetMapping("/google/redirect")
+    public ResponseEntity<Void> redirectToGoogle() {
+        try {
+            String state = UUID.randomUUID().toString();
+            String authorizationUrl = googleOAuthService.generateAuthorizationUrl(state);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Location", authorizationUrl);
+            return new ResponseEntity<>(headers, HttpStatus.FOUND);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
+
+    @GetMapping("/google/callback")
+    public ResponseEntity<Void> handleGoogleCallback(
+            @RequestParam("code") String code,
+            @RequestParam("state") String state) {
+        try {
+            // Process Google OAuth callback
+            AuthenticationResponse authResponse = authenticationService.authenticateWithGoogle(code);
+
+            // Determine redirect URL based on auth response
+            String redirectUrl;
+            if (authResponse.isAuthenticated() && authResponse.getToken() != null) {
+                // User authenticated successfully - redirect with token for localStorage
+                redirectUrl = frontendProperties.getDashboardUrl() + "?token=" + authResponse.getToken();
+            } else {
+                // New user needs password setup
+                redirectUrl = frontendProperties.getPasswordSetupUrl() + "?email=" + authResponse.getEmail();
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Location", redirectUrl);
+            return new ResponseEntity<>(headers, HttpStatus.FOUND);
+        } catch (Exception e) {
+            // Redirect to error page
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Location", frontendProperties.getLoginUrl() + "?error=google_auth_failed");
+            return new ResponseEntity<>(headers, HttpStatus.FOUND);
+        }
+    }
+
+    @PostMapping("/google/setup-password")
+    public ApiResponse<Void> setupPasswordForGoogleUser(@RequestParam String email, @RequestParam String newPassword) {
+        authenticationService.setupPasswordForGoogleUser(email, newPassword);
+        return ApiResponse.<Void>builder().message("Password setup successful").build();
+    }
+
 }

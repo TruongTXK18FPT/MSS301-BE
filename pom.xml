@@ -80,6 +80,8 @@
                         </importOrder>
                     </java>
                 </configuration>
+                <!-- Temporarily disabled to prevent auto-formatting issues -->
+                <!--
                 <executions>
                     <execution>
                         <phase>compile</phase>
@@ -88,6 +90,7 @@
                         </goals>
                     </execution>
                 </executions>
+                -->
             </plugin>
         </plugins>
         <pluginManagement>

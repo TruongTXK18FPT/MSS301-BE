@@ -31,11 +31,17 @@ public class UserAccount {
     @Column(name = "status", nullable = false)
     private UserStatus status;
 
-    @Column(name = "username", nullable = false, unique = true)
-    private String username;
-
-    @Column(name = "password", nullable = false)
+    @Column(name = "password")
     private String password;
+
+    @Column(name = "is_google_user", nullable = false)
+    private Boolean isGoogleUser = false;
+
+    @Column(name = "google_id")
+    private String googleId;
+
+    @Column(name = "password_setup_required", nullable = false)
+    private Boolean passwordSetupRequired = false;
 
     @Column(name = "email_verified", nullable = false)
     private Boolean emailVerified = false;

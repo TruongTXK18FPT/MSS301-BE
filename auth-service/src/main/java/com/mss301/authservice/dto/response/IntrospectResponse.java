@@ -12,6 +12,5 @@ public class IntrospectResponse {
     boolean valid;
     String id;
     String email;
-    String username;
     String role;
 }

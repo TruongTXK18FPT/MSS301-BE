@@ -25,6 +25,7 @@ public class UserCreatedListener {
     /**
      * Consumer function to handle CreatedUserEvent
      * Creates user profile when user is created in auth-service
+     *
      * @return Consumer bean for Spring Cloud Stream
      */
     @Bean
@@ -32,7 +33,11 @@ public class UserCreatedListener {
         return event -> {
             try {
                 log.info("Received CreatedUserEvent for user ID: {}", event.getId());
-                log.debug("Creating profile for user: {}", event.getFullName());
+                log.debug(
+                        "Creating profile for user: {} ({}) - {}",
+                        event.getId(),
+                        event.getEmail(),
+                        event.getFullName());
 
                 // Create user profile using the profile service
                 profileService.createProfileFromUserEvent(event);

@@ -1,9 +1,14 @@
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka
+      defaultZone: http://localhost:8761/eureka/
   instance:
     prefer-ip-address: true
+    hostname: localhost
+    ip-address: 127.0.0.1
+    instance-id: ${spring.application.name}:${server.port}
+    non-secure-port-enabled: true
+    secure-port-enabled: false
 
 spring:
   application:
@@ -19,7 +24,7 @@ spring:
     password: 12345
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     show-sql: true
 
   cloud:
@@ -59,6 +64,13 @@ jwt:
 # Replace these placeholder values with your actual Google OAuth2 credentials
 google:
   oauth:
-    client-id: "YOUR_GOOGLE_CLIENT_ID"
-    client-secret: "YOUR_GOOGLE_CLIENT_SECRET"
-    redirect-uri: "http://localhost:3000/auth/google/callback" # Frontend callback URL
+    client-id: "181485009607-c3b1e446gvumdg6g7q3r2821ovr8f6n8.apps.googleusercontent.com"
+    client-secret: "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"
+    redirect-uri: "http://localhost:8080/api/v1/authenticate/auth/google/callback" # Backend callback URL
+
+# Frontend URLs Configuration
+frontend:
+  base-url: "http://localhost:9002"
+  dashboard-url: "${frontend.base-url}/"
+  password-setup-url: "${frontend.base-url}/auth/password-setup"
+  login-url: "${frontend.base-url}/auth/login"

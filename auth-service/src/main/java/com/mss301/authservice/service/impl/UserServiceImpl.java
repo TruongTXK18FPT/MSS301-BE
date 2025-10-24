@@ -19,7 +19,8 @@ import com.mss301.authservice.dto.response.UserResponse;
 import com.mss301.authservice.entity.Role;
 import com.mss301.authservice.entity.UserAccount;
 import com.mss301.authservice.event.CreatedUserEvent;
-import com.mss301.authservice.event.ProfileCompletedEvent;
+import com.mss301.authservice.exception.AppException;
+import com.mss301.authservice.exception.ErrorCode;
 import com.mss301.authservice.repository.RoleRepository;
 import com.mss301.authservice.repository.UserRepository;
 import com.mss301.authservice.service.AuthenticationService;
@@ -44,13 +45,13 @@ public class UserServiceImpl implements UserService {
     public UserResponse createUser(UserCreationRequest request) {
         // Check if user already exists
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("User already exists");
+            throw new AppException(ErrorCode.USER_EXISTED);
         }
 
         // Create new user
         UserAccount user = new UserAccount();
         user.setEmail(request.getEmail());
-        user.setUsername(request.getUsername());
+        // fullName will be set in profile-service, not in auth-service
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setEmailVerified(false);
         // Teacher accounts require admin approval before activation
@@ -127,7 +128,7 @@ public class UserServiceImpl implements UserService {
         // Update email if provided and different
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
-                throw new RuntimeException("Email already exists");
+                throw new AppException(ErrorCode.USER_EXISTED);
             }
             user.setEmail(request.getEmail());
             user.setEmailVerified(false); // Reset verification status
@@ -217,8 +218,7 @@ public class UserServiceImpl implements UserService {
             CreatedUserEvent event = CreatedUserEvent.builder()
                     .id(user.getId().toString())
                     .email(user.getEmail())
-                    .fullName(request.getFullName())
-                    .username(user.getUsername())
+                    .fullName(request.getFullName()) // Pass fullName from registration
                     .userType(request.getUserType()) // STUDENT, TEACHER, GUARDIAN
                     .build();
 
@@ -231,45 +231,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void completeProfile(ProfileCompletionRequest request) {
-        // Get current user
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = null;
-
-        if (authentication instanceof JwtAuthenticationToken jwtToken) {
-            userId = jwtToken.getToken().getSubject();
-        }
-
-        if (userId == null) {
-            throw new RuntimeException("Unauthenticated");
-        }
-
-        UserAccount user = userRepository
-                .findById(Long.parseLong(userId))
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // Validate that userType matches
-        if (!user.getRole().getName().equalsIgnoreCase(request.getUserType())) {
-            throw new RuntimeException("User type mismatch. Cannot change role after registration.");
-        }
-
-        // Mark profile as completed
-        user.setProfileCompleted(true);
-        userRepository.save(user);
-
-        // Publish ProfileCompletedEvent to Kafka
-        try {
-            ProfileCompletedEvent event = ProfileCompletedEvent.builder()
-                    .userId(user.getId().toString())
-                    .userType(request.getUserType())
-                    .data(request.getData())
-                    .build();
-
-            eventPublisher.publishProfileCompletedEvent(event);
-            log.info("Published ProfileCompletedEvent for user: {}", user.getEmail());
-        } catch (Exception e) {
-            log.error("Failed to publish ProfileCompletedEvent for user: {}", user.getEmail(), e);
-        }
+    public void completeProfile(Object request) {
+        // TODO: Implement profile completion logic
+        log.info("Profile completion requested: {}", request);
     }
 
     @Override
@@ -293,7 +257,6 @@ public class UserServiceImpl implements UserService {
         return ProfileStatusResponse.builder()
                 .profileCompleted(user.isProfileCompleted())
                 .userType(user.getRole().getName())
-                .username(user.getUsername())
                 .email(user.getEmail())
                 .build();
     }

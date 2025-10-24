@@ -1,29 +1,35 @@
 package com.mss301.classroomservice.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Min;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ClassroomRequest {
+public class AssignmentRequest {
     @NotBlank
     @Size(max = 255)
-    private String name;
+    private String title;
 
-    @Size(max = 1000)
+    @Size(max = 2000)
     private String description;
 
-    private Boolean isPublic = false;
-    
-    @Size(max = 255)
-    private String password; // Mật khẩu để vào lớp
-    
-    private Integer maxStudents = 50; // Số học sinh tối đa
+    @NotNull
+    @Min(1)
+    private Integer points;
+
+    @NotNull
+    private LocalDateTime dueDate;
+
+    private Boolean isPublished = false;
 }

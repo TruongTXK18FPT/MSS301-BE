@@ -100,7 +100,7 @@ spring:
                 - RewritePath=${app.api.prefix}/profile/(?<segment>.*), /profile/${segment}
                 - RewritePath=${app.api.prefix}/profile/addresses/(?<segment>.*), /addresses/${segment}
 
-            - id: classroom-service #8090
+            - id: classroom-service #8094
               uri: lb://classroom-service
               predicates:
                 - Path=${app.api.prefix}${app.service-prefix.classroom}/**

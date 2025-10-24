@@ -10,7 +10,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import com.mss301.classroomservice.dto.request.ClassroomRequest;
+import com.mss301.classroomservice.dto.request.JoinClassroomRequest;
 import com.mss301.classroomservice.dto.response.ClassroomResponse;
+import com.mss301.classroomservice.dto.response.StudentResponse;
 import com.mss301.classroomservice.service.ClassroomService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -82,5 +84,38 @@ public class ClassroomController {
     public ResponseEntity<ClassroomResponse> join(@PathVariable("code") String code, Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());
         return ResponseEntity.ok(classroomService.joinByCode(code, userId));
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "Search classrooms")
+    public ResponseEntity<List<ClassroomResponse>> searchClassrooms(
+            @RequestParam String keyword, Authentication authentication) {
+        Long userId = Long.parseLong(authentication.getName());
+        return ResponseEntity.ok(classroomService.searchClassrooms(keyword));
+    }
+
+    @PostMapping("/join")
+    @Operation(summary = "Join classroom with password")
+    public ResponseEntity<ClassroomResponse> joinClassroom(
+            @Valid @RequestBody JoinClassroomRequest request, Authentication authentication) {
+        Long userId = Long.parseLong(authentication.getName());
+        return ResponseEntity.ok(classroomService.joinClassroom(request.getClassroomCode(), request.getPassword(), userId));
+    }
+
+    @GetMapping("/{id}/students")
+    @Operation(summary = "Get classroom students")
+    public ResponseEntity<List<StudentResponse>> getClassroomStudents(
+            @PathVariable Long id, Authentication authentication) {
+        Long teacherId = Long.parseLong(authentication.getName());
+        return ResponseEntity.ok(classroomService.getClassroomStudents(id, teacherId));
+    }
+
+    @DeleteMapping("/{id}/students/{studentId}")
+    @Operation(summary = "Remove student from classroom")
+    public ResponseEntity<Void> removeStudent(
+            @PathVariable Long id, @PathVariable Long studentId, Authentication authentication) {
+        Long teacherId = Long.parseLong(authentication.getName());
+        classroomService.removeStudentFromClassroom(id, studentId, teacherId);
+        return ResponseEntity.noContent().build();
     }
 }

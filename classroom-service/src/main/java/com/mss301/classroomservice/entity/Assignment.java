@@ -11,37 +11,38 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "classrooms")
+@Table(name = "assignments")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Classroom {
+public class Assignment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 255)
-    private String name;
+    @Column(nullable = false)
+    private Long classroomId;
 
-    @Column(length = 1000)
+    @Column(nullable = false, length = 255)
+    private String title;
+
+    @Column(length = 2000)
     private String description;
 
     @Column(nullable = false)
-    private Long ownerId; // teacher userId
+    private Integer points;
 
     @Column(nullable = false)
-    private Boolean isPublic = false;
+    private LocalDateTime dueDate;
 
-    private String joinCode;
-    
-    @Column(length = 255)
-    private String password; // Mật khẩu để vào lớp
-    
     @Column(nullable = false)
-    private Integer maxStudents = 50; // Số học sinh tối đa
+    private Boolean isPublished = false;
+
+    @Column(nullable = false)
+    private Long createdBy; // teacher userId
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

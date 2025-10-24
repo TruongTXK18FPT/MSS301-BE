@@ -7,13 +7,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.mss301.authservice.config.FrontendProperties;
 import com.mss301.authservice.dto.ApiResponse;
 import com.mss301.authservice.dto.request.*;
 import com.mss301.authservice.dto.response.AuthenticationResponse;
 import com.mss301.authservice.dto.response.IntrospectResponse;
 import com.mss301.authservice.service.AuthenticationService;
 import com.mss301.authservice.service.GoogleOAuthService;
-import com.mss301.authservice.config.FrontendProperties;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -105,8 +105,7 @@ public class AuthenticationController {
 
     @GetMapping("/google/callback")
     public ResponseEntity<Void> handleGoogleCallback(
-            @RequestParam("code") String code,
-            @RequestParam("state") String state) {
+            @RequestParam("code") String code, @RequestParam("state") String state) {
         try {
             // Process Google OAuth callback
             AuthenticationResponse authResponse = authenticationService.authenticateWithGoogle(code);
@@ -137,5 +136,4 @@ public class AuthenticationController {
         authenticationService.setupPasswordForGoogleUser(email, newPassword);
         return ApiResponse.<Void>builder().message("Password setup successful").build();
     }
-
 }

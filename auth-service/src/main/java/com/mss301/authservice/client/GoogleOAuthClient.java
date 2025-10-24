@@ -21,6 +21,9 @@ public interface GoogleOAuthClient {
      * @param formData Form data containing OAuth parameters
      * @return GoogleOAuthTokenResponse containing access token
      */
-    @PostMapping(value = "/token", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(
+            value = "/token",
+            consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     GoogleOAuthTokenResponse exchangeToken(@RequestBody MultiValueMap<String, String> formData);
 }

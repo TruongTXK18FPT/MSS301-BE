@@ -1,26 +1,27 @@
 package com.mss301.classroomservice.dto.response;
 
-import java.time.LocalDateTime;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ClassroomResponse {
+public class QuizResponse {
     private Long id;
-    private String name;
+    private Long classroomId;
+    private String title;
     private String description;
-    private Boolean isPublic;
-    private String joinCode;
-    private String password;
-    private Integer maxStudents;
-    private Integer currentStudents;
-    private Long ownerId;
+    private Integer timeLimit;
+    private Integer points;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
+    private Boolean isPublished;
+    private Long createdBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

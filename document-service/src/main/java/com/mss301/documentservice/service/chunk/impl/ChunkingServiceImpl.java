@@ -182,8 +182,11 @@ public class ChunkingServiceImpl implements ChunkingService {
     @Override
     public List<Chunk> findByDocumentIdAndStructure_ChapterNumberAndStructure_LessonNumber(
             String documentId, Integer chapterNumber, Integer lessonNumber) {
-        log.debug("Finding chunks by documentId: {}, chapterNumber: {}, lessonNumber: {}",
-                documentId, chapterNumber, lessonNumber);
+        log.debug(
+                "Finding chunks by documentId: {}, chapterNumber: {}, lessonNumber: {}",
+                documentId,
+                chapterNumber,
+                lessonNumber);
         return chunkRepository.findByDocumentIdAndStructure_ChapterNumberAndStructure_LessonNumber(
                 documentId, chapterNumber, lessonNumber);
     }

@@ -77,11 +77,21 @@ public class UserServiceImpl implements UserService {
 
         user = userRepository.save(user);
 
-        // Send verification email
-        authenticationService.sendEmailVerification(user.getEmail());
+        try {
+            // Send verification email
+            authenticationService.sendEmailVerification(user.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to send verification email for user: {}", user.getEmail(), e);
+            // Don't fail the registration if email sending fails
+        }
 
-        // Publish user created event via Kafka
-        publishUserCreatedEvent(user, request);
+        try {
+            // Publish user created event via Kafka
+            publishUserCreatedEvent(user, request);
+        } catch (Exception e) {
+            log.error("Failed to publish user created event for user: {}", user.getEmail(), e);
+            // Don't fail the registration if event publishing fails
+        }
 
         return mapToUserResponse(user);
     }

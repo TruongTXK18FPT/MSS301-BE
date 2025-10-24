@@ -1,12 +1,13 @@
 package com.mss301.documentservice.dto.response;
 
+import java.time.LocalDateTime;
+
 import com.mss301.documentservice.entity.Document;
 import com.mss301.documentservice.entity.ProcessingJob;
 import com.mss301.documentservice.entity.enums.DocumentStatus;
 import com.mss301.documentservice.entity.enums.JobStatus;
-import lombok.Data;
 
-import java.time.LocalDateTime;
+import lombok.Data;
 
 @Data
 public class DocumentResponseDto {

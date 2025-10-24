@@ -1,15 +1,17 @@
 package com.mss301.ragservice.strategy.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Component;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mss301.ragservice.dto.external.RetrievalResponse;
 import com.mss301.ragservice.dto.response.MindmapResponse;
 import com.mss301.ragservice.strategy.ResponseStrategy;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Slf4j
 @Component

@@ -1,13 +1,15 @@
 package com.mss301.ragservice.strategy.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Component;
+
 import com.mss301.ragservice.dto.external.RetrievalResponse;
 import com.mss301.ragservice.dto.response.ChatResponse;
 import com.mss301.ragservice.strategy.ResponseStrategy;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component

@@ -1,8 +1,9 @@
 package com.mss301.ragservice.service;
 
+import org.springframework.stereotype.Service;
+
 import com.mss301.ragservice.dto.request.TtsRequest;
 import com.mss301.ragservice.dto.response.TtsResponse;
-import org.springframework.stereotype.Service;
 
 @Service
 public interface TtsService {

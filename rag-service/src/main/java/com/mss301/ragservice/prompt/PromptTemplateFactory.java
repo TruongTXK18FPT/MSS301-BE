@@ -1,14 +1,15 @@
 package com.mss301.ragservice.prompt;
 
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
@@ -29,8 +30,7 @@ public class PromptTemplateFactory {
             PromptTemplate promptTemplate = new PromptTemplate(template);
             return promptTemplate.render(Map.of(
                     "context", context,
-                    "question", question
-            ));
+                    "question", question));
 
         } catch (Exception e) {
             log.error("Error creating chat prompt", e);
@@ -47,8 +47,7 @@ public class PromptTemplateFactory {
             PromptTemplate promptTemplate = new PromptTemplate(template);
             return promptTemplate.render(Map.of(
                     "context", context,
-                    "question", question
-            ));
+                    "question", question));
 
         } catch (Exception e) {
             log.error("Error creating mindmap prompt", e);

@@ -1,6 +1,9 @@
 package com.mss301.ragservice.exception;
 
-import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -8,17 +11,14 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidationExceptions(
-            MethodArgumentNotValidException ex) {
+    public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
 
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach((error) -> {
@@ -37,8 +37,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(UnsupportedLLMException.class)
-    public ResponseEntity<Map<String, Object>> handleUnsupportedLLMException(
-            UnsupportedLLMException ex) {
+    public ResponseEntity<Map<String, Object>> handleUnsupportedLLMException(UnsupportedLLMException ex) {
 
         log.error("Unsupported LLM provider: {}", ex.getMessage());
 
@@ -52,8 +51,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(RagServiceException.class)
-    public ResponseEntity<Map<String, Object>> handleRagServiceException(
-            RagServiceException ex) {
+    public ResponseEntity<Map<String, Object>> handleRagServiceException(RagServiceException ex) {
 
         log.error("RAG service error: {}", ex.getMessage(), ex);
 

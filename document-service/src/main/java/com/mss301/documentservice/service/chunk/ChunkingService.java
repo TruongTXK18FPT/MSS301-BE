@@ -3,8 +3,6 @@ package com.mss301.documentservice.service.chunk;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.stereotype.Service;
-
 import com.mss301.documentservice.entity.Chunk;
 
 public interface ChunkingService {

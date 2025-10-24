@@ -20,9 +20,7 @@ public class FeignClientConfig {
         return template -> {
             // Only add header if this is for embedding service
             if (template.url().contains("/embeddings")) {
-                log.info("🔑 Full API Key length: {}, Value: [{}]",
-                        apiKey != null ? apiKey.length() : 0,
-                        apiKey);
+                log.info("🔑 Full API Key length: {}, Value: [{}]", apiKey != null ? apiKey.length() : 0, apiKey);
                 log.info("🔑 Authorization header will be: [Bearer {}]", apiKey);
                 template.header("Authorization", "Bearer " + apiKey);
             }

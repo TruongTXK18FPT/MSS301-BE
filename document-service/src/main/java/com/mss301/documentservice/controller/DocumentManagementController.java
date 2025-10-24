@@ -1,5 +1,16 @@
 package com.mss301.documentservice.controller;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.mss301.documentservice.dto.ApiResponse;
 import com.mss301.documentservice.dto.response.*;
 import com.mss301.documentservice.entity.Chunk;
@@ -8,20 +19,10 @@ import com.mss301.documentservice.entity.ProcessingJob;
 import com.mss301.documentservice.entity.enums.DocumentStatus;
 import com.mss301.documentservice.service.chunk.ChunkingService;
 import com.mss301.documentservice.service.document.DocumentService;
-import io.swagger.v3.oas.annotations.Operation;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/documents")
@@ -34,13 +35,11 @@ public class DocumentManagementController {
     private final ChunkingService chunkingService;
 
     @PostMapping("/upload")
-    @Operation(summary = "Upload a PDF document",
-            description = "Uploads a PDF document and initiates processing.")
+    @Operation(summary = "Upload a PDF document", description = "Uploads a PDF document and initiates processing.")
     public ResponseEntity<ApiResponse<DocumentResponseDto>> uploadPdf(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "title", required = false) String title,
-            @RequestParam(value = "" +
-                    "", required = false) String description) {
+            @RequestParam(value = "" + "", required = false) String description) {
 
         try {
             Document document = documentService.uploadPdf(file, title, description);
@@ -58,9 +57,11 @@ public class DocumentManagementController {
     }
 
     @PostMapping("/{documentId}/process")
-    @Operation(summary = "Trigger document processing",
+    @Operation(
+            summary = "Trigger document processing",
             description = "Triggers processing for the specified document by its ID.")
-    public ResponseEntity<ApiResponse<DocumentResponseDto.ProcessingJobDto>> triggerProcessing(@PathVariable String documentId) {
+    public ResponseEntity<ApiResponse<DocumentResponseDto.ProcessingJobDto>> triggerProcessing(
+            @PathVariable String documentId) {
         try {
             ProcessingJob job = documentService.triggerProcessing(documentId);
             DocumentResponseDto.ProcessingJobDto jobDto = DocumentResponseDto.fromEntity(job);
@@ -77,8 +78,7 @@ public class DocumentManagementController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all documents",
-            description = "Retrieves all documents, optionally filtered by status.")
+    @Operation(summary = "Get all documents", description = "Retrieves all documents, optionally filtered by status.")
     public ResponseEntity<ApiResponse<DocumentListDto>> getAllDocuments(
             @RequestParam(value = "status", required = false) String status) {
 
@@ -92,17 +92,16 @@ public class DocumentManagementController {
                 documents = documentService.getAllDocuments();
             }
 
-            List<DocumentResponseDto> documentDtos = documents.stream()
-                    .map(DocumentResponseDto::fromEntity)
-                    .collect(Collectors.toList());
+            List<DocumentResponseDto> documentDtos =
+                    documents.stream().map(DocumentResponseDto::fromEntity).collect(Collectors.toList());
 
             DocumentListDto documentListDto = DocumentListDto.of(documentDtos);
             return ResponseEntity.ok(ApiResponse.success(documentListDto));
 
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(
-                    "Invalid status: " + status + ". Valid values: " + String.join(", ", getStatusNames())
-            ));
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(
+                            "Invalid status: " + status + ". Valid values: " + String.join(", ", getStatusNames())));
         } catch (Exception e) {
             log.error("Error fetching documents", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -111,7 +110,8 @@ public class DocumentManagementController {
     }
 
     @GetMapping("/{documentId}/status")
-    @Operation(summary = "Get document processing status",
+    @Operation(
+            summary = "Get document processing status",
             description = "Retrieves the processing status for the specified document by its ID.")
     public ResponseEntity<ApiResponse<ProcessingStatusDto>> getProcessingStatus(@PathVariable String documentId) {
         try {
@@ -136,7 +136,8 @@ public class DocumentManagementController {
     }
 
     @DeleteMapping("/{documentId}")
-    @Operation(summary = "Delete a document",
+    @Operation(
+            summary = "Delete a document",
             description = "Deletes the specified document and all associated data by its ID.")
     public ResponseEntity<ApiResponse<Void>> deleteDocument(@PathVariable String documentId) {
         try {
@@ -153,14 +154,14 @@ public class DocumentManagementController {
     }
 
     @GetMapping("/statuses")
-    @Operation(summary = "Get available document statuses",
-            description = "Retrieves all possible document statuses.")
+    @Operation(summary = "Get available document statuses", description = "Retrieves all possible document statuses.")
     public ResponseEntity<ApiResponse<String[]>> getAvailableStatuses() {
         return ResponseEntity.ok(ApiResponse.success(getStatusNames()));
     }
 
     @GetMapping("/{documentId}")
-    @Operation(summary = "Get document by ID",
+    @Operation(
+            summary = "Get document by ID",
             description = "Retrieves the specified document by its ID, including processing status if available.")
     public ResponseEntity<ApiResponse<DocumentResponseDto>> getDocumentById(@PathVariable String documentId) {
         try {
@@ -188,8 +189,10 @@ public class DocumentManagementController {
     }
 
     @GetMapping("/{documentId}/chunks")
-    @Operation(summary = "Get document chunks",
-            description = "Retrieves chunks for the specified document by its ID, with optional filtering by chapter and lesson, and pagination.")
+    @Operation(
+            summary = "Get document chunks",
+            description =
+                    "Retrieves chunks for the specified document by its ID, with optional filtering by chapter and lesson, and pagination.")
     public ResponseEntity<ApiResponse<PaginatedChunksDto>> getDocumentChunks(
             @PathVariable String documentId,
             @RequestParam(value = "chapter", required = false) Integer chapterNumber,
@@ -213,9 +216,8 @@ public class DocumentManagementController {
             int end = Math.min(start + size, chunks.size());
             List<Chunk> paginatedChunks = chunks.subList(start, end);
 
-            List<ChunkDto> chunkDtos = paginatedChunks.stream()
-                    .map(ChunkDto::fromEntity)
-                    .collect(Collectors.toList());
+            List<ChunkDto> chunkDtos =
+                    paginatedChunks.stream().map(ChunkDto::fromEntity).collect(Collectors.toList());
 
             PaginationDto pagination = PaginationDto.of(page, size, chunks.size());
 
@@ -230,8 +232,10 @@ public class DocumentManagementController {
     }
 
     @GetMapping("/{documentId}/structure")
-    @Operation(summary = "Get document structure",
-            description = "Retrieves the hierarchical structure of the specified document by its ID, including chapters and lessons.")
+    @Operation(
+            summary = "Get document structure",
+            description =
+                    "Retrieves the hierarchical structure of the specified document by its ID, including chapters and lessons.")
     public ResponseEntity<ApiResponse<DocumentStructureDto>> getDocumentStructure(@PathVariable String documentId) {
         try {
             List<Chunk> chunks = chunkingService.findByDocumentIdOrderByChunkIndex(documentId);
@@ -250,8 +254,9 @@ public class DocumentManagementController {
 
                     if (chunk.getStructure().getLessonNumber() != null) {
                         @SuppressWarnings("unchecked")
-                        Map<Integer, Map<String, Object>> lessons =
-                                (Map<Integer, Map<String, Object>>) chapters.get(chunk.getStructure().getChapterNumber()).get("lessons");
+                        Map<Integer, Map<String, Object>> lessons = (Map<Integer, Map<String, Object>>)
+                                chapters.get(chunk.getStructure().getChapterNumber())
+                                        .get("lessons");
 
                         lessons.computeIfAbsent(chunk.getStructure().getLessonNumber(), k -> {
                             Map<String, Object> lesson = new HashMap<>();
@@ -262,7 +267,8 @@ public class DocumentManagementController {
                             return lesson;
                         });
 
-                        Map<String, Object> lesson = lessons.get(chunk.getStructure().getLessonNumber());
+                        Map<String, Object> lesson =
+                                lessons.get(chunk.getStructure().getLessonNumber());
                         lesson.put("chunkCount", (Integer) lesson.get("chunkCount") + 1);
                     }
                 }
@@ -309,8 +315,7 @@ public class DocumentManagementController {
     }
 
     @GetMapping("/chunks/{chunkId}")
-    @Operation(summary = "Get chunk by ID",
-            description = "Retrieves the specified chunk by its ID.")
+    @Operation(summary = "Get chunk by ID", description = "Retrieves the specified chunk by its ID.")
     public ResponseEntity<ApiResponse<ChunkDto>> getChunkById(@PathVariable String chunkId) {
         try {
             Optional<Chunk> chunkOpt = chunkingService.findById(chunkId);
@@ -332,11 +337,11 @@ public class DocumentManagementController {
     }
 
     @GetMapping("/{documentId}/chunks/search")
-    @Operation(summary = "Search document chunks",
+    @Operation(
+            summary = "Search document chunks",
             description = "Searches for chunks within the specified document by its ID that match the given query.")
     public ResponseEntity<ApiResponse<ChunkSearchDto>> searchChunks(
-            @PathVariable String documentId,
-            @RequestParam("q") String query) {
+            @PathVariable String documentId, @RequestParam("q") String query) {
 
         try {
             List<Chunk> allChunks = chunkingService.findByDocumentIdOrderByChunkIndex(documentId);
@@ -356,9 +361,9 @@ public class DocumentManagementController {
         }
     }
 
-
     @GetMapping("/{documentId}/toc-analysis")
-    @Operation(summary = "Analyze Table of Contents",
+    @Operation(
+            summary = "Analyze Table of Contents",
             description = "Analyzes the document to extract and summarize its table of contents.")
     public ResponseEntity<ApiResponse<TocAnalysisDto>> getTableOfContentsAnalysis(@PathVariable String documentId) {
         try {
@@ -369,12 +374,9 @@ public class DocumentManagementController {
                 return ResponseEntity.ok(ApiResponse.success("No content found for this document", emptyAnalysis));
             }
 
-            String fullContent = chunks.stream()
-                    .map(Chunk::getContent)
-                    .collect(Collectors.joining("\n\n"));
+            String fullContent = chunks.stream().map(Chunk::getContent).collect(Collectors.joining("\n\n"));
 
-            String preview = fullContent.length() > 1000 ?
-                    fullContent.substring(0, 1000) + "..." : fullContent;
+            String preview = fullContent.length() > 1000 ? fullContent.substring(0, 1000) + "..." : fullContent;
 
             TocAnalysisDto analysisDto = TocAnalysisDto.of(documentId, fullContent.length(), preview);
             return ResponseEntity.ok(ApiResponse.success(analysisDto));

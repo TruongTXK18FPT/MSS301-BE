@@ -1,8 +1,8 @@
 package com.mss301.ragservice.strategy;
 
-import com.mss301.ragservice.dto.external.RetrievalResponse;
-
 import java.util.List;
+
+import com.mss301.ragservice.dto.external.RetrievalResponse;
 
 public interface ResponseStrategy {
 

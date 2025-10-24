@@ -1,8 +1,9 @@
 package com.mss301.ragservice.service.llm.impl;
 
+import org.springframework.stereotype.Service;
+
 import com.mss301.ragservice.enums.ResponseMode;
 import com.mss301.ragservice.service.llm.LLMService;
-import org.springframework.stereotype.Service;
 
 @Service
 public class N8NService implements LLMService {

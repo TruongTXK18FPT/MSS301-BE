@@ -1,5 +1,10 @@
 package com.mss301.ragservice.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
 import com.mss301.ragservice.client.RetrievalServiceClient;
 import com.mss301.ragservice.dto.external.RetrievalRequest;
 import com.mss301.ragservice.dto.external.RetrievalResponse;
@@ -10,12 +15,9 @@ import com.mss301.ragservice.service.llm.LLMService;
 import com.mss301.ragservice.service.llm.LLMServiceFactory;
 import com.mss301.ragservice.strategy.ResponseStrategy;
 import com.mss301.ragservice.strategy.ResponseStrategyFactory;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -27,9 +29,9 @@ public class RagService {
     private final ResponseStrategyFactory strategyFactory;
     private final DocumentContextService contextService;
 
-
     public RagResponse processQuery(RagRequest request) {
-        log.info("Processing RAG query - Mode: {}, Provider: {}, Query: '{}'",
+        log.info(
+                "Processing RAG query - Mode: {}, Provider: {}, Query: '{}'",
                 request.getMode(),
                 request.getLlmProvider(),
                 request.getQueryText());
@@ -41,11 +43,7 @@ public class RagService {
 
             LLMService llmService = llmServiceFactory.getLLMService(request.getLlmProvider());
 
-            String llmResponse = llmService.generateResponse(
-                    request.getQueryText(),
-                    context,
-                    request.getMode()
-            );
+            String llmResponse = llmService.generateResponse(request.getQueryText(), context, request.getMode());
 
             ResponseStrategy strategy = strategyFactory.getStrategy(request.getMode());
             Object formattedResponse = strategy.formatResponse(llmResponse, retrievalResponse.getResults());
@@ -56,11 +54,9 @@ public class RagService {
                     request.getQueryText(),
                     formattedResponse,
                     LocalDateTime.now(),
-                    retrievalResponse.getTotalResults()
-            );
-
-            log.info("RAG query processed successfully. Results used: {}",
                     retrievalResponse.getTotalResults());
+
+            log.info("RAG query processed successfully. Results used: {}", retrievalResponse.getTotalResults());
 
             return response;
 

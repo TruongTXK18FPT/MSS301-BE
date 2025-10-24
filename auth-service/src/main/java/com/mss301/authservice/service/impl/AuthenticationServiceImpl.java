@@ -185,18 +185,42 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     @Transactional
     public void verifyEmail(VerifyEmailRequest request) {
+        log.info("Verifying email: {} with OTP: {}", request.getEmail(), request.getOtpCode());
+
+        // Debug: Check all OTPs for this email
+        var allOtps = otpRepository.findAllByEmail(request.getEmail());
+        log.info(
+                "All OTPs for email {}: {}",
+                request.getEmail(),
+                allOtps.stream()
+                        .map(o -> String.format(
+                                "OTP=%s, Used=%s, Purpose=%s, Expiry=%s",
+                                o.getOtp(), o.isUsed(), o.getPurpose(), o.getExpiryTime()))
+                        .toList());
+
+        // Use explicit query method to avoid Spring Data JPA naming issues
         var otp = otpRepository
-                .findByEmailAndOtpAndUsedFalseAndPurpose(
-                        request.getEmail(), request.getOtpCode(), OTP.OtpPurpose.EMAIL_VERIFICATION)
-                .orElseThrow(() -> new RuntimeException("Invalid OTP"));
+                .findValidOTP(request.getEmail(), request.getOtpCode(), OTP.OtpPurpose.EMAIL_VERIFICATION)
+                .orElseThrow(() -> {
+                    log.error("Invalid OTP for email: {} with OTP: {}", request.getEmail(), request.getOtpCode());
+                    return new RuntimeException("Invalid OTP");
+                });
+
+        log.info("Found OTP: {} for email: {}, expiry: {}", otp.getOtp(), otp.getEmail(), otp.getExpiryTime());
 
         if (otp.getExpiryTime().isBefore(LocalDateTime.now())) {
+            log.error(
+                    "OTP expired for email: {}, expiry: {}, current: {}",
+                    request.getEmail(),
+                    otp.getExpiryTime(),
+                    LocalDateTime.now());
             throw new RuntimeException("OTP expired");
         }
 
         // Mark OTP as used
         otp.setUsed(true);
         otpRepository.save(otp);
+        log.info("Marked OTP as used for email: {}", request.getEmail());
 
         // Update user email verification status
         var user = userRepository
@@ -205,6 +229,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         user.setEmailVerified(true);
         userRepository.save(user);
+        log.info("Updated email verification status for user: {}", request.getEmail());
 
         // Send welcome email after successful verification
         Map<String, Object> welcomeData = new HashMap<>();
@@ -224,18 +249,31 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
+        log.info("Resetting password for email: {} with OTP: {}", request.getEmail(), request.getOtpCode());
+
         var otp = otpRepository
-                .findByEmailAndOtpAndUsedFalseAndPurpose(
-                        request.getEmail(), request.getOtpCode(), OTP.OtpPurpose.PASSWORD_RESET)
-                .orElseThrow(() -> new RuntimeException("Invalid OTP"));
+                .findValidOTP(request.getEmail(), request.getOtpCode(), OTP.OtpPurpose.PASSWORD_RESET)
+                .orElseThrow(() -> {
+                    log.error(
+                            "Invalid OTP for password reset for email: {} with OTP: {}",
+                            request.getEmail(),
+                            request.getOtpCode());
+                    return new RuntimeException("Invalid OTP");
+                });
 
         if (otp.getExpiryTime().isBefore(LocalDateTime.now())) {
+            log.error(
+                    "OTP expired for password reset for email: {}, expiry: {}, current: {}",
+                    request.getEmail(),
+                    otp.getExpiryTime(),
+                    LocalDateTime.now());
             throw new RuntimeException("OTP expired");
         }
 
         // Mark OTP as used
         otp.setUsed(true);
         otpRepository.save(otp);
+        log.info("Marked password reset OTP as used for email: {}", request.getEmail());
 
         // Update user password
         var user = userRepository
@@ -244,6 +282,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+        log.info("Updated password for user: {}", request.getEmail());
     }
 
     @Override

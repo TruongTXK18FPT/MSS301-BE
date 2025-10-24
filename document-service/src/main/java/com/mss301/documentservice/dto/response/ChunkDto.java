@@ -1,12 +1,13 @@
 package com.mss301.documentservice.dto.response;
 
+import java.util.List;
+
 import com.mss301.documentservice.entity.Chunk;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
 
 @Data
 @Builder

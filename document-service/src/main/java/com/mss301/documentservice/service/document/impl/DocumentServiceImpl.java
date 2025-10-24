@@ -188,7 +188,8 @@ public class DocumentServiceImpl implements DocumentService {
         chunkRepository.deleteByDocumentId(documentId);
 
         // Xóa processing job nếu có
-        processingJobRepository.findByDocumentId(documentId)
+        processingJobRepository
+                .findByDocumentId(documentId)
                 .ifPresent(job -> processingJobRepository.deleteById(job.getId()));
 
         // Xóa document

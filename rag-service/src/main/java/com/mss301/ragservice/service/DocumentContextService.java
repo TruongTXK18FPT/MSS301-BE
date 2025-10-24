@@ -1,15 +1,16 @@
 package com.mss301.ragservice.service;
 
-import com.mss301.ragservice.dto.external.RetrievalResponse;
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import com.mss301.ragservice.dto.external.RetrievalResponse;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
 public class DocumentContextService {
-
 
     public String buildContext(List<RetrievalResponse.RetrievalResult> results) {
         if (results == null || results.isEmpty()) {
@@ -27,10 +28,16 @@ public class DocumentContextService {
 
             // Add metadata if available
             if (result.getChapterTitle() != null) {
-                contextBuilder.append("Chapter: ").append(result.getChapterTitle()).append("\n");
+                contextBuilder
+                        .append("Chapter: ")
+                        .append(result.getChapterTitle())
+                        .append("\n");
             }
             if (result.getLessonTitle() != null) {
-                contextBuilder.append("Lesson: ").append(result.getLessonTitle()).append("\n");
+                contextBuilder
+                        .append("Lesson: ")
+                        .append(result.getLessonTitle())
+                        .append("\n");
             }
             if (result.getPageNumber() != null) {
                 contextBuilder.append("Page: ").append(result.getPageNumber()).append("\n");

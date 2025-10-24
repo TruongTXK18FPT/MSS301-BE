@@ -5,9 +5,11 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.mss301.documentservice.service.chunk.ChunkSplitter;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import com.mss301.documentservice.service.chunk.ChunkSplitter;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor

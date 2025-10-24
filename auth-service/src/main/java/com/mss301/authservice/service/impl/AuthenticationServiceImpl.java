@@ -565,10 +565,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         UserAccount user = googleUserService.getUserByEmail(userInfo.getEmail());
         log.info("Existing user logged in with Google: {}", user.getEmail());
 
-        // Check if user role is allowed for Google login (only GUARDIAN and STUDENT)
-        if (!user.getRole().equals("GUARDIAN") && !user.getRole().equals("STUDENT")) {
-            log.warn("Google login not allowed for role: {} for user: {}", user.getRole(), user.getEmail());
-            throw new RuntimeException("Google login is only available for students and guardians");
+        // Check if user role is allowed for Google login (only STUDENT)
+        // GUARDIAN and TEACHER must use regular login, not Google OAuth
+        if (!user.getRole().getName().equals("STUDENT")) {
+            log.warn("Google login not allowed for role: {} for user: {}", user.getRole().getName(), user.getEmail());
+            throw new RuntimeException(
+                    "Google login is only available for students. Please use regular login for other roles.");
         }
 
         googleUserService.updateLastLogin(user);

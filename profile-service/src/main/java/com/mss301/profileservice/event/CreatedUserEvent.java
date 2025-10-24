@@ -11,7 +11,6 @@ import lombok.experimental.FieldDefaults;
 public class CreatedUserEvent {
     String id; // User ID from auth-service
     String email; // User email
-    String fullName; // User full name
-    String username; // User username
+    String fullName; // User full name from registration
     String userType; // STUDENT, TEACHER, GUARDIAN
 }

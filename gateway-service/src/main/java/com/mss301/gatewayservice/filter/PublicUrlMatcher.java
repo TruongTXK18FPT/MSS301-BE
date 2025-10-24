@@ -18,7 +18,9 @@ public class PublicUrlMatcher {
             "/authenticate/auth/refresh",
             "/authenticate/auth/verify-email",
             "/authenticate/auth/reset-password",
-            "/authenticate/auth/google",
+            "/authenticate/auth/google/redirect",
+            "/authenticate/auth/google/callback",
+            "/authenticate/auth/google/setup-password",
             "/authenticate/auth/send-email-verification",
             "/authenticate/auth/send-password-reset",
 

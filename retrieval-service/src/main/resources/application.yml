@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: retrieval-service
+
+  elasticsearch:
+    uris: ${elasticsearch.host}
+    connection-timeout: 10s
+    socket-timeout: 30s
+
+  data:
+    elasticsearch:
+      uris: http://localhost:9200
+
+logging:
+  level:
+    com.mss301.retrievalservice: DEBUG
+    feign: DEBUG
+    com.mss301.retrievalservice.service.EmbeddingClient: DEBUG
+
+elasticsearch:
+  host: http://localhost:9200
+
+feign:
+  client:
+    config:
+      embeddingService:
+        connectTimeout: 5000
+        readTimeout: 10000
+        loggerLevel: basic
+
+server:
+  port: 8092
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+embedding:
+  client:
+    url: https://aiportalapi.stu-platform.live/jpe/v1
+    api-key: sk-Z64PdmBB55a3eXZuLcM2zQ
+    model: text-embedding-3-small

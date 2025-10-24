@@ -1,7 +1,9 @@
 package com.mss301.profileservice.service.impl;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -13,6 +15,7 @@ import com.mss301.profileservice.dto.request.StudentProfileRequest;
 import com.mss301.profileservice.dto.response.ProfileCompletionStatusResponse;
 import com.mss301.profileservice.dto.response.StudentProfileResponse;
 import com.mss301.profileservice.entity.GuardianProfile;
+import com.mss301.profileservice.entity.StudentGuardian;
 import com.mss301.profileservice.entity.StudentProfile;
 import com.mss301.profileservice.entity.TeacherProfile;
 import com.mss301.profileservice.entity.UserProfile;
@@ -220,6 +223,21 @@ public class ProfileServiceImpl implements ProfileService {
             response.setDob(userProfile.getDob());
             response.setPhoneNumber(userProfile.getPhoneNumber());
             response.setAddress(userProfile.getAddress());
+            response.setEmail(userProfile.getEmail());
+            response.setProfileCompleted(userProfile.isProfileCompleted());
+            response.setUserType(userProfile.getUserType());
+
+            // Get user account info for Google user status
+            try {
+                // This would need to be injected or called via API
+                // For now, we'll set default values
+                response.setIsGoogleUser(false); // Will be updated when we have access to UserAccount
+                response.setPasswordSetupRequired(false);
+            } catch (Exception e) {
+                log.warn("Could not fetch user account info: {}", e.getMessage());
+                response.setIsGoogleUser(false);
+                response.setPasswordSetupRequired(false);
+            }
         }
 
         return response;
@@ -256,26 +274,30 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     private void createBaseUserProfile(Long userId, CreatedUserEvent event) {
-        // Check if user profile already exists
-        Optional<UserProfile> existingProfile = userProfileRepository.findByUserId(userId);
-        if (existingProfile.isPresent()) {
-            log.info("User profile already exists for user ID: {}", userId);
-            return;
+        try {
+            // Check if user profile already exists
+            Optional<UserProfile> existingProfile = userProfileRepository.findByUserId(userId);
+            if (existingProfile.isPresent()) {
+                log.info("User profile already exists for user ID: {}", userId);
+                return;
+            }
+
+            // Create new UserProfile with basic info from registration
+            UserProfile userProfile = new UserProfile();
+            userProfile.setUserId(userId);
+            userProfile.setEmail(event.getEmail());
+            userProfile.setFullName(event.getFullName()); // Get fullName from registration
+            userProfile.setUserType(event.getUserType());
+            userProfile.setProfileCompleted(false); // Default to false, will be set to true when profile is completed
+            userProfile.setCreatedAt(LocalDateTime.now());
+            userProfile.setUpdatedAt(LocalDateTime.now());
+
+            userProfileRepository.save(userProfile);
+            log.info("Empty base user profile created for user ID: {} with type: {}", userId, event.getUserType());
+        } catch (Exception e) {
+            log.error("Failed to create base user profile for user ID: {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Failed to create user profile: " + e.getMessage(), e);
         }
-
-        // Create new empty UserProfile with only basic info from registration
-        UserProfile userProfile = new UserProfile();
-        userProfile.setUserId(userId);
-        userProfile.setEmail(event.getEmail());
-        userProfile.setFullName(event.getFullName());
-        userProfile.setUsername(event.getUsername());
-        userProfile.setUserType(event.getUserType());
-        userProfile.setProfileCompleted(false); // Default to false, will be set to true when profile is completed
-        userProfile.setCreatedAt(LocalDateTime.now());
-        userProfile.setUpdatedAt(LocalDateTime.now());
-
-        userProfileRepository.save(userProfile);
-        log.info("Empty base user profile created for user ID: {} with type: {}", userId, event.getUserType());
     }
 
     private void autoCreateStudentProfile(Long userId) {
@@ -384,7 +406,7 @@ public class ProfileServiceImpl implements ProfileService {
         try {
             // Parse data as Map to extract fields
             @SuppressWarnings("unchecked")
-            java.util.Map<String, Object> studentData = (java.util.Map<String, Object>) data;
+            Map<String, Object> studentData = (Map<String, Object>) data;
 
             // Update UserProfile with common fields
             if (studentData.containsKey("phone")) {
@@ -393,7 +415,7 @@ public class ProfileServiceImpl implements ProfileService {
             if (studentData.containsKey("birthDate")) {
                 String birthDateStr = (String) studentData.get("birthDate");
                 if (birthDateStr != null && !birthDateStr.isEmpty()) {
-                    userProfile.setDob(java.time.LocalDate.parse(birthDateStr));
+                    userProfile.setDob(LocalDate.parse(birthDateStr));
                 }
             }
 
@@ -436,7 +458,7 @@ public class ProfileServiceImpl implements ProfileService {
 
         try {
             @SuppressWarnings("unchecked")
-            java.util.Map<String, Object> teacherData = (java.util.Map<String, Object>) data;
+            Map<String, Object> teacherData = (Map<String, Object>) data;
 
             // Update UserProfile with common fields
             if (teacherData.containsKey("phone")) {
@@ -445,7 +467,7 @@ public class ProfileServiceImpl implements ProfileService {
             if (teacherData.containsKey("birthDate")) {
                 String birthDateStr = (String) teacherData.get("birthDate");
                 if (birthDateStr != null && !birthDateStr.isEmpty()) {
-                    userProfile.setDob(java.time.LocalDate.parse(birthDateStr));
+                    userProfile.setDob(LocalDate.parse(birthDateStr));
                 }
             }
             if (teacherData.containsKey("bio")) {
@@ -494,7 +516,7 @@ public class ProfileServiceImpl implements ProfileService {
 
         try {
             @SuppressWarnings("unchecked")
-            java.util.Map<String, Object> guardianData = (java.util.Map<String, Object>) data;
+            Map<String, Object> guardianData = (Map<String, Object>) data;
 
             // Update UserProfile with common fields
             if (guardianData.containsKey("phone")) {
@@ -503,7 +525,7 @@ public class ProfileServiceImpl implements ProfileService {
             if (guardianData.containsKey("birthDate")) {
                 String birthDateStr = (String) guardianData.get("birthDate");
                 if (birthDateStr != null && !birthDateStr.isEmpty()) {
-                    userProfile.setDob(java.time.LocalDate.parse(birthDateStr));
+                    userProfile.setDob(LocalDate.parse(birthDateStr));
                 }
             }
 
@@ -570,8 +592,7 @@ public class ProfileServiceImpl implements ProfileService {
                             () -> new RuntimeException("Guardian profile not found for user ID: " + guardianUserId));
 
             // Create StudentGuardian link
-            com.mss301.profileservice.entity.StudentGuardian link =
-                    new com.mss301.profileservice.entity.StudentGuardian();
+            StudentGuardian link = new StudentGuardian();
             link.setStudentId(studentProfile.getId());
             link.setGuardianId(guardianProfile.getId());
 

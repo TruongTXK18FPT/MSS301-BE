@@ -35,6 +35,9 @@
         <module>notification-service</module>
         <module>chatbot-service</module>
         <module>classroom-service</module>
+        <module>document-service</module>
+        <module>rag-service</module>
+        <module>retrieval-service</module>
     </modules>
 
     <dependencyManagement>
@@ -77,6 +80,8 @@
                         </importOrder>
                     </java>
                 </configuration>
+                <!-- Temporarily disabled to prevent auto-formatting issues -->
+                <!--
                 <executions>
                     <execution>
                         <phase>compile</phase>
@@ -85,6 +90,7 @@
                         </goals>
                     </execution>
                 </executions>
+                -->
             </plugin>
         </plugins>
         <pluginManagement>

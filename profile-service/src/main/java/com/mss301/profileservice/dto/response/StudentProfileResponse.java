@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 public class StudentProfileResponse {
     private Long id;
     private Long userId;
+    private String email;
     private String fullName;
     private LocalDate dob;
     private String phoneNumber;
@@ -23,6 +24,10 @@ public class StudentProfileResponse {
     private String school;
     private String learningGoals;
     private String subjectsOfInterest;
+    private Boolean isGoogleUser;
+    private Boolean passwordSetupRequired;
+    private Boolean profileCompleted;
+    private String userType;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

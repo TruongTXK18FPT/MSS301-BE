@@ -32,7 +32,7 @@ public interface UserService {
 
     void sendVerificationEmail(Long userId);
 
-    void completeProfile(ProfileCompletionRequest request);
+    void completeProfile(Object request);
 
     ProfileStatusResponse getProfileStatus();
 }

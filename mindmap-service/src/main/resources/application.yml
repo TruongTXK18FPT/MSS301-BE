@@ -32,18 +32,18 @@ jwt:
 # AI Configuration
 ai:
   mistral:
-    api-key: "OYzJvGt3V4IA458SbOMGraxpBkwZyANg"
+    api-key: ${MISTRAL_API_KEY:OYzJvGt3V4IA458SbOMGraxpBkwZyANg}
     base-url: "https://api.mistral.ai/v1"
     model: "mistral-large-latest"
     timeout: 30000
     max-tokens: 4000
   
   gemini:
-    api-key: "AIzaSyDtwnAbU30A1r_ixXtuZLZusEcmLa8tzNg"
+    api-key: ${GEMINI_API_KEY:AIzaSyDtwnAbU30A1r_ixXtuZLZusEcmLa8tzNg}
     base-url: "https://generativelanguage.googleapis.com/v1beta"
     models:
-      primary: "gemini-2.5-flash-preview-09-2025"
-      fallback-1: "gemini-1.5-pro"
+      primary: "gemini-2.5-flash"
+      fallback-1: "gemini-1.5-flash"
       fallback-2: "gemini-2.0-flash"
     timeout: 30000
     max-tokens: 4000
@@ -62,3 +62,20 @@ mindmap:
   max-mindmaps-premium-user: 50
   default-node-color: "#4A90E2"
   default-edge-color: "#7ED321"
+
+# RAG Integration Configuration
+rag:
+  enabled: true
+  document-service:
+    url: http://localhost:8091
+    timeout: 30000
+  retrieval-service:
+    url: http://localhost:8092
+    timeout: 30000
+  rag-service:
+    url: http://localhost:8093
+    timeout: 60000
+  mindmap-generation:
+    max-documents: 5
+    context-length: 4000
+    similarity-threshold: 0.7

@@ -1,6 +1,7 @@
 server:
   port: 8080
   address: 0.0.0.0
+  forward-headers-strategy: framework
 
 app:
   api:
@@ -15,14 +16,36 @@ app:
     profile: /profile
     classroom: /classroom
     media: /media
+    document: /document
+    retrieval: /retrieval
+    rag: /rag
 
 spring:
   application:
     name: gateway-service
   cloud:
+    loadbalancer:
+      ribbon:
+        enabled: false
+    discovery:
+      client:
+        simple:
+          instances:
+            auth-service:
+              - uri: http://127.0.0.1:8081
     gateway:
       server:
         webflux:
+          httpclient:
+            connect-timeout: 1000
+            response-timeout: 5s
+            pool:
+              max-connections: 1000
+              max-idle-time: 30s
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
           routes:
             - id: auth-service #8081
               uri: lb://auth-service
@@ -87,6 +110,27 @@ spring:
               filters:
                 - RewritePath=${app.api.prefix}${app.service-prefix.media}/(?<segment>.*), /${segment}
 
+            - id: document-service #8091
+              uri: lb://document-service
+              predicates:
+                - Path=${app.api.prefix}${app.service-prefix.document}/**
+              filters:
+                - RewritePath=${app.api.prefix}${app.service-prefix.document}/(?<segment>.*), /${segment}
+
+            - id: retrieval-service #8092
+              uri: lb://retrieval-service
+              predicates:
+                - Path=${app.api.prefix}${app.service-prefix.retrieval}/**
+              filters:
+                - RewritePath=${app.api.prefix}${app.service-prefix.retrieval}/(?<segment>.*), /${segment}
+
+            - id: rag-service #8093
+              uri: lb://rag-service
+              predicates:
+                - Path=${app.api.prefix}${app.service-prefix.rag}/**
+              filters:
+                - RewritePath=${app.api.prefix}${app.service-prefix.rag}/(?<segment>.*), /${segment}
+
             - id: notification-service #8088
               uri: lb://notification-service
               predicates:
@@ -98,5 +142,9 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: false
   instance:
     prefer-ip-address: true
+    hostname: localhost
+    ip-address: 127.0.0.1

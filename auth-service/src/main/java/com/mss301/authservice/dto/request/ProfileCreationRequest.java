@@ -25,10 +25,6 @@ public class ProfileCreationRequest {
     String email;
 
     @NotNull
-    @Size(min = 1, max = 50, message = "Username must be between 1 and 50 characters")
-    String username;
-
-    @NotNull
     @Size(min = 1, max = 100, message = "First name must be between 1 and 100 characters")
     String firstName;
 

@@ -62,10 +62,10 @@ public class DataInitializer implements CommandLineRunner {
     private void createTestUsers(List<Role> roles) {
         // Test users data
         List<TestUserData> testUsers = Arrays.asList(
-                new TestUserData("mss301admin@gmail.com", "mss301admin", "ADMIN"),
-                new TestUserData("mss301student@gmail.com", "mss301student", "STUDENT"),
-                new TestUserData("mssguardian@gmail.com", "mssguardian", "GUARDIAN"),
-                new TestUserData("mss301teacher@gmail.com", "mss301teacher", "TEACHER"));
+                new TestUserData("mss301admin@gmail.com", "ADMIN"),
+                new TestUserData("mss301student@gmail.com", "STUDENT"),
+                new TestUserData("mssguardian@gmail.com", "GUARDIAN"),
+                new TestUserData("mss301teacher@gmail.com", "TEACHER"));
 
         for (TestUserData userData : testUsers) {
             if (!userRepository.existsByEmail(userData.email)) {
@@ -73,10 +73,13 @@ public class DataInitializer implements CommandLineRunner {
                 UserAccount user = new UserAccount();
                 user.setTenantId(null); // No tenant relationship for now
                 user.setEmail(userData.email);
-                user.setUsername(userData.username);
+                // fullName will be set in profile-service, not needed for test users
                 user.setPassword(passwordEncoder.encode("123456789"));
                 user.setStatus(UserAccount.UserStatus.ACTIVE);
                 user.setEmailVerified(true);
+                user.setIsGoogleUser(false); // Set required boolean fields
+                user.setPasswordSetupRequired(false);
+                user.setProfileCompleted(false);
                 user.setCreatedAt(LocalDateTime.now());
                 user.setUpdatedAt(LocalDateTime.now());
 
@@ -101,12 +104,10 @@ public class DataInitializer implements CommandLineRunner {
 
     private static class TestUserData {
         final String email;
-        final String username;
         final String roleName;
 
-        TestUserData(String email, String username, String roleName) {
+        TestUserData(String email, String roleName) {
             this.email = email;
-            this.username = username;
             this.roleName = roleName;
         }
     }

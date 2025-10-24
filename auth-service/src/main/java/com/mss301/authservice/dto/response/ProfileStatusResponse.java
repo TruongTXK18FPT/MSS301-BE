@@ -11,6 +11,5 @@ import lombok.experimental.FieldDefaults;
 public class ProfileStatusResponse {
     Boolean profileCompleted;
     String userType;
-    String username;
     String email;
 }

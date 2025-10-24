@@ -7,7 +7,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import com.mss301.authservice.dto.ApiResponse;
-import com.mss301.authservice.dto.request.ProfileCompletionRequest;
 import com.mss301.authservice.dto.request.UpdateUserStatusRequest;
 import com.mss301.authservice.dto.request.UserCreationRequest;
 import com.mss301.authservice.dto.request.UserUpdateRequest;
@@ -111,7 +110,7 @@ public class UserController {
     }
 
     @PostMapping("/complete-profile")
-    public ApiResponse<String> completeProfile(@RequestBody ProfileCompletionRequest request) {
+    public ApiResponse<String> completeProfile(@RequestBody Object request) {
         userService.completeProfile(request);
         return ApiResponse.<String>builder()
                 .result("Profile completed successfully")

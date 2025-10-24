@@ -11,7 +11,6 @@ import lombok.experimental.FieldDefaults;
 public class CreatedUserEvent {
     String id;
     String email;
-    String fullName;
-    String username;
+    String fullName; // User full name from registration
     String userType; // STUDENT, TEACHER, GUARDIAN
 }

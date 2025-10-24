@@ -1,0 +1,66 @@
+spring:
+  application:
+    name: document-service
+
+  server:
+    port: 8091
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+  task:
+    execution:
+      pool:
+        core-size: 2
+        max-size: 5
+        queue-capacity: 100
+      thread-name-prefix: doc-processing-
+
+  elasticsearch:
+    uris: http://localhost:9200
+    connection-timeout: 10s
+    socket-timeout: 30s
+
+logging:
+  level:
+    com.mss301.documentservice: INFO
+    org.elasticsearch: WARN
+
+app:
+  upload:
+    dir: ${UPLOAD_DIR:./uploads}
+
+  processing:
+    async: true
+    chunk-size: 1000
+    chunk-overlap: 200
+    min-chars-per-page: 20
+
+  ocr:
+    thread-pool-size: 2
+    confidence-threshold: 0.7
+
+embedding:
+  client:
+    url: https://aiportalapi.stu-platform.live/jpe/v1
+    api-key: ${AI_PORTAL_API_KEY:}
+    model: text-embedding-3-small
+
+chunking:
+  embedding:
+    log:
+      enabled: false
+      interval: 100
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+server:
+  port: 8089

@@ -66,7 +66,7 @@ public class AiServiceImpl implements AiService {
         log.info("Generating mindmap for user: {} with provider: {}", userId, request.getAiProvider());
 
         try {
-            String aiProvider = request.getAiProvider().name().toLowerCase();
+            String aiProvider = request.getAiProvider().name().toLowerCase(Locale.ROOT);
             String prompt = buildMindmapPrompt(request);
 
             String response = callAiService(aiProvider, prompt, request.getAiModel());
@@ -104,7 +104,8 @@ public class AiServiceImpl implements AiService {
 
         try {
             String prompt = buildNodesPrompt(request);
-            String response = callAiService(request.getAiProvider().name().toLowerCase(), prompt, request.getAiModel());
+            String response = callAiService(
+                    request.getAiProvider().name().toLowerCase(Locale.ROOT), prompt, request.getAiModel());
 
             return parseNodesFromResponse(response, mindmap.getId());
 
@@ -120,7 +121,8 @@ public class AiServiceImpl implements AiService {
 
         try {
             String prompt = buildEdgesPrompt(nodes, request);
-            String response = callAiService(request.getAiProvider().name().toLowerCase(), prompt, request.getAiModel());
+            String response = callAiService(
+                    request.getAiProvider().name().toLowerCase(Locale.ROOT), prompt, request.getAiModel());
 
             return parseEdgesFromResponse(response, mindmap.getId(), nodes);
 
@@ -170,8 +172,12 @@ public class AiServiceImpl implements AiService {
                     throw new IllegalArgumentException("Unsupported AI provider: " + provider);
                 }
             } catch (WebClientResponseException e) {
-                if (e.getStatusCode().is4xxClientError() && attempt < maxRetries) {
-                    log.warn("AI service call failed, retrying... Attempt: {}/{}", attempt, maxRetries);
+                if (e.getStatusCode().is5xxServerError() && attempt < maxRetries) {
+                    log.warn(
+                            "AI service call failed with {}. Retrying... Attempt: {}/{}",
+                            e.getStatusCode(),
+                            attempt,
+                            maxRetries);
                     try {
                         Thread.sleep(retryDelay);
                     } catch (InterruptedException ie) {

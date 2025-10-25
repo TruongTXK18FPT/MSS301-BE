@@ -136,4 +136,13 @@ public class AuthenticationController {
         authenticationService.setupPasswordForGoogleUser(email, newPassword);
         return ApiResponse.<Void>builder().message("Password setup successful").build();
     }
+
+    @GetMapping("/password-setup-status")
+    public ApiResponse<Boolean> getPasswordSetupStatus(@RequestParam String email) {
+        boolean passwordSetupRequired = authenticationService.getPasswordSetupStatus(email);
+        return ApiResponse.<Boolean>builder()
+                .result(passwordSetupRequired)
+                .message("Password setup status retrieved successfully")
+                .build();
+    }
 }

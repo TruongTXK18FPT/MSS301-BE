@@ -306,6 +306,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
+    public boolean getPasswordSetupStatus(String email) {
+        var user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return user.getPasswordSetupRequired();
+    }
+
+    @Override
     @Transactional
     public void createPassword(String userId, PasswordCreationRequest request) {
         var user = userRepository

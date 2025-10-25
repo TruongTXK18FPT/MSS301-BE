@@ -53,6 +53,13 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         log.info("isPathPublic: {}, isOriginalPathPublic: {}", isPathPublic, isOriginalPathPublic);
         log.info("Public URLs check: path='{}', originalPath='{}'", path, originalPath);
 
+        // Debug: Check if this specific path matches
+        if (path.contains("google/setup-password")) {
+            log.info("DEBUG: Checking google/setup-password path specifically");
+            log.info("DEBUG: path='{}', originalPath='{}'", path, originalPath);
+            log.info("DEBUG: isPathPublic={}, isOriginalPathPublic={}", isPathPublic, isOriginalPathPublic);
+        }
+
         if (isPathPublic || isOriginalPathPublic) {
             log.info("Path {} is public, allowing access", isPathPublic ? path : originalPath);
             return chain.filter(exchange);
@@ -81,8 +88,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                             .header("X-User-Email", email)
                             .build();
 
-                    ServerWebExchange mutatedExchange =
-                            exchange.mutate().request(request).build();
+                    ServerWebExchange mutatedExchange = exchange.mutate().request(request).build();
 
                     if (introspectResponse.getResult().isValid()) {
                         return chain.filter(mutatedExchange);
@@ -106,10 +112,9 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     private Mono<Void> unauthenticated(ServerHttpResponse response, String message) {
-        ApiResponse<?> apiResponse =
-                ApiResponse.builder().code(1401).message(message).build();
-        String body =
-                String.format("{\"code\":%d,\"message\":\"%s\"}", apiResponse.getCode(), apiResponse.getMessage());
+        ApiResponse<?> apiResponse = ApiResponse.builder().code(1401).message(message).build();
+        String body = String.format("{\"code\":%d,\"message\":\"%s\"}", apiResponse.getCode(),
+                apiResponse.getMessage());
 
         response.setStatusCode(HttpStatus.UNAUTHORIZED);
         response.getHeaders().add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);

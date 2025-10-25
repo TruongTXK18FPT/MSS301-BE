@@ -24,23 +24,23 @@ public class SecurityConfig {
     }
 
     private final String[] PUBLIC_ENDPOINTS = {
-        "/auth/login",
-        "/auth/introspect",
-        "/auth/logout",
-        "/auth/refresh",
-        "/auth/verify-email",
-        "/auth/reset-password",
-        "/auth/send-email-verification",
-        "/auth/send-password-reset",
-        "/auth/google/**",
-        "/auth/password/**",
-        "/users/register",
-        "/users/verify-otp",
-        "/users/resend-otp"
+            "/auth/login",
+            "/auth/introspect",
+            "/auth/logout",
+            "/auth/refresh",
+            "/auth/verify-email",
+            "/auth/reset-password",
+            "/auth/send-email-verification",
+            "/auth/send-password-reset",
+            "/auth/google/**",
+            "/auth/password-setup-status",
+            "/users/register",
+            "/users/verify-otp",
+            "/users/resend-otp"
     };
 
     private final String[] SWAGGER_ENDPOINTS = {
-        "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**"
+            "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**"
     };
 
     @Bean
@@ -53,8 +53,8 @@ public class SecurityConfig {
                 .authenticated());
 
         httpSecurity.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwtConfigurer -> jwtConfigurer
-                        .decoder(customJwtDecoder)
-                        .jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                .decoder(customJwtDecoder)
+                .jwtAuthenticationConverter(jwtAuthenticationConverter()))
                 .authenticationEntryPoint(new JwtAuthenticationEntryPoint()));
 
         httpSecurity.csrf(AbstractHttpConfigurer::disable);

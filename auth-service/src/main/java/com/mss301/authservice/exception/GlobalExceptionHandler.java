@@ -2,25 +2,40 @@ package com.mss301.authservice.exception;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.mss301.authservice.dto.ApiResponse;
 
 import lombok.extern.slf4j.Slf4j;
 
-@ControllerAdvice
+@RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(value = Exception.class)
+    @ExceptionHandler(value = RuntimeException.class)
     ResponseEntity<ApiResponse<Object>> handlingRuntimeException(RuntimeException exception) {
+        log.error("GlobalExceptionHandler caught RuntimeException: {}", exception.getMessage());
         log.error("Exception: ", exception);
         ApiResponse<Object> apiResponse = new ApiResponse<>();
 
-        apiResponse.setCode(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode());
-        apiResponse.setMessage(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage());
+        // Use specific error codes for common authentication errors
+        if ("Unauthenticated".equals(exception.getMessage())) {
+            log.info("Handling Unauthenticated exception - returning localized message");
+            apiResponse.setCode(ErrorCode.UNAUTHENTICATED.getCode());
+            apiResponse.setMessage("Email hoac mat khau khong dung");
+        } else if ("User is not active".equals(exception.getMessage())) {
+            log.info("Handling User is not active exception");
+            apiResponse.setCode(ErrorCode.USER_INACTIVE.getCode());
+            apiResponse.setMessage(ErrorCode.USER_INACTIVE.getMessage());
+        } else {
+            // Fallback to uncategorized for other runtime exceptions
+            log.info("Handling other RuntimeException: {}", exception.getMessage());
+            apiResponse.setCode(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode());
+            apiResponse.setMessage(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage());
+        }
 
+        log.info("Returning API response: code={}, message={}", apiResponse.getCode(), apiResponse.getMessage());
         return ResponseEntity.badRequest().body(apiResponse);
     }
 

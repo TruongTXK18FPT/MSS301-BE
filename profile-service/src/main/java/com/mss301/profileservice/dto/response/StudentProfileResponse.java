@@ -20,6 +20,7 @@ public class StudentProfileResponse {
     private LocalDate dob;
     private String phoneNumber;
     private String address;
+    private String bio;
     private String grade;
     private String school;
     private String learningGoals;

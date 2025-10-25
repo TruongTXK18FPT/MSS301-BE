@@ -24,11 +24,11 @@ public class StudentGuardian {
     @Column(name = "guardian_id")
     private Long guardianId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "student_id", insertable = false, updatable = false)
+    // Removed @ManyToOne relationships to avoid foreign key constraint issues
+    // Relationships are handled at application level via IDs
+    @Transient
     private StudentProfile studentProfile;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "guardian_id", insertable = false, updatable = false)
+    @Transient
     private GuardianProfile guardianProfile;
 }

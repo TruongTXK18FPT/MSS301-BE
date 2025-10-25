@@ -32,6 +32,7 @@ import com.mss301.profileservice.repository.StudentProfileRepository;
 import com.mss301.profileservice.repository.TeacherProfileRepository;
 import com.mss301.profileservice.repository.UserProfileRepository;
 import com.mss301.profileservice.service.ProfileService;
+import com.mss301.profileservice.service.ProfileValidationService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +49,7 @@ public class ProfileServiceImpl implements ProfileService {
     private final GuardianProfileRepository guardianProfileRepository;
     private final StudentGuardianRepository studentGuardianRepository;
     private final EventPublisher eventPublisher;
+    private final ProfileValidationService profileValidationService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -141,7 +143,7 @@ public class ProfileServiceImpl implements ProfileService {
             // Create StudentProfile
             StudentProfile studentProfile = new StudentProfile();
             studentProfile.setUserId(Long.valueOf(userId));
-            studentProfile.setUserProfile(userProfile);
+            // UserProfile relationship is now handled at application level via userId
             studentProfile.setGrade(request.getGrade());
             studentProfile.setSchool(request.getSchool());
             studentProfile.setLearningGoals(request.getLearningGoals());
@@ -237,14 +239,28 @@ public class ProfileServiceImpl implements ProfileService {
                         return studentProfileRepository.save(newProfile);
                     });
 
-            // Update UserProfile if it exists
-            if (existingProfile.getUserProfile() != null) {
-                UserProfile userProfile = existingProfile.getUserProfile();
+            // Update UserProfile if it exists (fetch by userId since relationship is now
+            // application-level)
+            UserProfile userProfile = userProfileRepository.findByUserId(Long.valueOf(userId)).orElse(null);
+            if (userProfile != null) {
                 userProfile.setFullName(request.getFullName());
-                userProfile.setDob(request.getDob());
+                // Handle both dob and birthDate for frontend compatibility
+                if (request.getDob() != null) {
+                    userProfile.setDob(request.getDob());
+                } else if (request.getBirthDate() != null && !request.getBirthDate().trim().isEmpty()) {
+                    userProfile.setDob(LocalDate.parse(request.getBirthDate()));
+                }
                 userProfile.setPhoneNumber(request.getPhoneNumber());
                 userProfile.setAddress(request.getAddress());
+                userProfile.setBio(request.getBio()); // Add bio update
                 userProfile.setUpdatedAt(LocalDateTime.now());
+
+                // Check if profile is now complete and mark as completed
+                if (isProfileComplete(userProfile, request)) {
+                    userProfile.setProfileCompleted(true);
+                    log.info("Profile marked as completed for user: {}", userId);
+                }
+
                 userProfileRepository.save(userProfile);
             }
 
@@ -294,13 +310,15 @@ public class ProfileServiceImpl implements ProfileService {
         response.setCreatedAt(profile.getCreatedAt());
         response.setUpdatedAt(profile.getUpdatedAt());
 
-        // Map UserProfile data if available
-        if (profile.getUserProfile() != null) {
-            UserProfile userProfile = profile.getUserProfile();
+        // Map UserProfile data if available (fetch by userId since relationship is now
+        // application-level)
+        UserProfile userProfile = userProfileRepository.findByUserId(profile.getUserId()).orElse(null);
+        if (userProfile != null) {
             response.setFullName(userProfile.getFullName());
             response.setDob(userProfile.getDob());
             response.setPhoneNumber(userProfile.getPhoneNumber());
             response.setAddress(userProfile.getAddress());
+            response.setBio(userProfile.getBio()); // Add bio mapping
             response.setEmail(userProfile.getEmail());
             response.setProfileCompleted(userProfile.isProfileCompleted());
             response.setUserType(userProfile.getUserType());
@@ -331,6 +349,9 @@ public class ProfileServiceImpl implements ProfileService {
 
             // Step 1: Create UserProfile in separate transaction
             createUserProfileInSeparateTransaction(userId, event);
+
+            // Add small delay to ensure UserProfile is committed
+            Thread.sleep(50);
 
             // Step 2: Create StudentProfile in separate transaction (if needed)
             if ("STUDENT".equalsIgnoreCase(event.getUserType())) {
@@ -462,9 +483,26 @@ public class ProfileServiceImpl implements ProfileService {
                 return;
             }
 
-            // Verify UserProfile exists
-            UserProfile userProfile = userProfileRepository.findByUserId(userId)
-                    .orElseThrow(() -> new RuntimeException("UserProfile not found for user ID: " + userId));
+            // Wait and retry to ensure UserProfile exists (with timeout)
+            UserProfile userProfile = null;
+            int maxRetries = 5;
+            int retryDelay = 100; // milliseconds
+
+            for (int i = 0; i < maxRetries; i++) {
+                userProfile = userProfileRepository.findByUserId(userId).orElse(null);
+                if (userProfile != null) {
+                    break;
+                }
+                log.warn("UserProfile not found for user ID: {}, retrying in {}ms (attempt {}/{})",
+                        userId, retryDelay, i + 1, maxRetries);
+                Thread.sleep(retryDelay);
+                retryDelay *= 2; // Exponential backoff
+            }
+
+            if (userProfile == null) {
+                throw new RuntimeException(
+                        "UserProfile not found for user ID: " + userId + " after " + maxRetries + " retries");
+            }
 
             // Create StudentProfile
             StudentProfile studentProfile = new StudentProfile();
@@ -513,8 +551,8 @@ public class ProfileServiceImpl implements ProfileService {
 
             // Create StudentProfile with proper relationship
             StudentProfile studentProfile = new StudentProfile();
-            studentProfile.setUserId(userId); // Set userId for foreign key
-            // Don't set userProfile - let Hibernate handle the relationship via userId
+            studentProfile.setUserId(userId); // Set userId for application-level relationship
+            // UserProfile relationship is now handled at application level via userId
             studentProfile.setCreatedAt(LocalDateTime.now());
             studentProfile.setUpdatedAt(LocalDateTime.now());
 
@@ -656,7 +694,7 @@ public class ProfileServiceImpl implements ProfileService {
                     .orElseGet(() -> {
                         StudentProfile newProfile = new StudentProfile();
                         newProfile.setUserId(userId);
-                        newProfile.setUserProfile(userProfile);
+                        // UserProfile relationship is now handled at application level via userId
                         newProfile.setCreatedAt(LocalDateTime.now());
                         return newProfile;
                     });
@@ -711,7 +749,7 @@ public class ProfileServiceImpl implements ProfileService {
                     .orElseGet(() -> {
                         TeacherProfile newProfile = new TeacherProfile();
                         newProfile.setUserId(userId);
-                        newProfile.setUserProfile(userProfile);
+                        // UserProfile relationship is now handled at application level via userId
                         newProfile.setCreatedAt(LocalDateTime.now());
                         return newProfile;
                     });
@@ -790,6 +828,25 @@ public class ProfileServiceImpl implements ProfileService {
         }
     }
 
+    /**
+     * Check if a profile is complete based on required fields
+     */
+    private boolean isProfileComplete(UserProfile userProfile, StudentProfileRequest request) {
+        // Check required UserProfile fields
+        boolean hasBasicInfo = userProfile.getFullName() != null && !userProfile.getFullName().trim().isEmpty()
+                && userProfile.getPhoneNumber() != null && !userProfile.getPhoneNumber().trim().isEmpty()
+                && userProfile.getDob() != null;
+
+        // Check required StudentProfile fields
+        boolean hasStudentInfo = request.getGrade() != null && !request.getGrade().trim().isEmpty()
+                && request.getSchool() != null && !request.getSchool().trim().isEmpty();
+
+        log.debug("Profile completion check for user {}: basicInfo={}, studentInfo={}",
+                userProfile.getUserId(), hasBasicInfo, hasStudentInfo);
+
+        return hasBasicInfo && hasStudentInfo;
+    }
+
     private void linkGuardianToStudent(Long guardianUserId, String studentEmail, String studentPhone) {
         log.info("Attempting to link guardian {} to student with email: {}", guardianUserId, studentEmail);
 
@@ -821,6 +878,10 @@ public class ProfileServiceImpl implements ProfileService {
                     .findByUserId(guardianUserId)
                     .orElseThrow(
                             () -> new RuntimeException("Guardian profile not found for user ID: " + guardianUserId));
+
+            // Application-level validation before creating relationship
+            profileValidationService.validateStudentGuardianLink(
+                    studentUserProfile.getUserId(), guardianUserId);
 
             // Create StudentGuardian link
             StudentGuardian link = new StudentGuardian();

@@ -6,52 +6,40 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.web.bind.annotation.*;
 
 import com.mss301.profileservice.dto.request.StudentProfileRequest;
+import com.mss301.profileservice.dto.response.ApiResponse;
 import com.mss301.profileservice.dto.response.ProfileCompletionStatusResponse;
 import com.mss301.profileservice.dto.response.StudentProfileResponse;
 import com.mss301.profileservice.service.ProfileService;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/profile")
 @RequiredArgsConstructor
-@Tag(name = "Profile Management", description = "APIs for managing current user profile")
-@SecurityRequirement(name = "bearerAuth")
 public class ProfileController {
 
     private final ProfileService profileService;
 
     @GetMapping("/me")
-    @Operation(summary = "Get Current User Profile", description = "Get the profile of the currently authenticated user")
-    @ApiResponse(responseCode = "200", description = "Profile retrieved successfully")
-    @ApiResponse(responseCode = "404", description = "Profile not found")
-    public ResponseEntity<StudentProfileResponse> getCurrentUserProfile() {
+    public ResponseEntity<ApiResponse<StudentProfileResponse>> getCurrentUserProfile() {
         String currentUserId = getCurrentUserId();
         StudentProfileResponse response = profileService.getCurrentUserProfile(currentUserId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PutMapping("/me")
-    @Operation(summary = "Update Current User Profile", description = "Update the profile of the currently authenticated user")
-    @ApiResponse(responseCode = "200", description = "Profile updated successfully")
-    @ApiResponse(responseCode = "404", description = "Profile not found")
-    public ResponseEntity<StudentProfileResponse> updateCurrentUserProfile(@RequestBody StudentProfileRequest request) {
+    public ResponseEntity<ApiResponse<StudentProfileResponse>> updateCurrentUserProfile(
+            @RequestBody StudentProfileRequest request) {
         String currentUserId = getCurrentUserId();
         StudentProfileResponse response = profileService.updateCurrentUserProfile(currentUserId, request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/completion-status")
-    @Operation(summary = "Get Profile Completion Status", description = "Check if the current user has completed their profile")
-    @ApiResponse(responseCode = "200", description = "Profile status retrieved successfully")
-    public ResponseEntity<ProfileCompletionStatusResponse> getProfileCompletionStatus() {
+    public ResponseEntity<ApiResponse<ProfileCompletionStatusResponse>> getProfileCompletionStatus() {
         String currentUserId = getCurrentUserId();
         ProfileCompletionStatusResponse response = profileService.getProfileCompletionStatus(currentUserId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     /**

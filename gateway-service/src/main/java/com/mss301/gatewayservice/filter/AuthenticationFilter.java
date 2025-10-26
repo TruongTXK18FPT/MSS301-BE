@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.server.ServerWebExchange;
 
-import com.mss301.gatewayservice.dto.ApiResponse;
+import com.mss301.common.dto.ApiResponse;
 import com.mss301.gatewayservice.service.AuthenticationService;
 
 import lombok.AccessLevel;

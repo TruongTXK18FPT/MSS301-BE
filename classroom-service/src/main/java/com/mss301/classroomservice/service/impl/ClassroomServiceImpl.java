@@ -52,8 +52,8 @@ public class ClassroomServiceImpl implements ClassroomService {
     @Override
     @Transactional
     public ClassroomResponse update(Long id, ClassroomRequest request, Long ownerId) {
-        Classroom classroom =
-                classroomRepository.findById(id).orElseThrow(() -> new RuntimeException("Classroom not found"));
+        Classroom classroom = classroomRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Classroom not found"));
         if (!classroom.getOwnerId().equals(ownerId)) {
             throw new RuntimeException("Forbidden");
         }
@@ -61,15 +61,16 @@ public class ClassroomServiceImpl implements ClassroomService {
         classroom.setDescription(request.getDescription());
         classroom.setIsPublic(Boolean.TRUE.equals(request.getIsPublic()));
         classroom.setPassword(request.getPassword());
-        classroom.setMaxStudents(request.getMaxStudents() != null ? request.getMaxStudents() : classroom.getMaxStudents());
+        classroom.setMaxStudents(
+                request.getMaxStudents() != null ? request.getMaxStudents() : classroom.getMaxStudents());
         return toResponse(classroomRepository.save(classroom));
     }
 
     @Override
     @Transactional
     public void delete(Long id, Long ownerId) {
-        Classroom classroom =
-                classroomRepository.findById(id).orElseThrow(() -> new RuntimeException("Classroom not found"));
+        Classroom classroom = classroomRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Classroom not found"));
         if (!classroom.getOwnerId().equals(ownerId)) {
             throw new RuntimeException("Forbidden");
         }
@@ -78,11 +79,10 @@ public class ClassroomServiceImpl implements ClassroomService {
 
     @Override
     public ClassroomResponse getById(Long id, Long userId) {
-        Classroom classroom =
-                classroomRepository.findById(id).orElseThrow(() -> new RuntimeException("Classroom not found"));
+        Classroom classroom = classroomRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Classroom not found"));
         // Simple access control: owner or public or member
-        boolean isMember =
-                classroomMemberRepository.findByClassroomIdAndUserId(id, userId).isPresent();
+        boolean isMember = classroomMemberRepository.findByClassroomIdAndUserId(id, userId).isPresent();
         if (!classroom.getOwnerId().equals(userId) && !Boolean.TRUE.equals(classroom.getIsPublic()) && !isMember) {
             throw new RuntimeException("Forbidden");
         }
@@ -106,8 +106,8 @@ public class ClassroomServiceImpl implements ClassroomService {
     @Override
     @Transactional
     public String generateJoinCode(Long id, Long ownerId) {
-        Classroom classroom =
-                classroomRepository.findById(id).orElseThrow(() -> new RuntimeException("Classroom not found"));
+        Classroom classroom = classroomRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Classroom not found"));
         if (!classroom.getOwnerId().equals(ownerId)) {
             throw new RuntimeException("Forbidden");
         }
@@ -122,8 +122,8 @@ public class ClassroomServiceImpl implements ClassroomService {
     @Override
     @Transactional
     public ClassroomResponse joinByCode(String joinCode, Long userId) {
-        Classroom classroom =
-                classroomRepository.findByJoinCode(joinCode).orElseThrow(() -> new RuntimeException("Invalid code"));
+        Classroom classroom = classroomRepository.findByJoinCode(joinCode)
+                .orElseThrow(() -> new RuntimeException("Invalid code"));
         classroomMemberRepository
                 .findByClassroomIdAndUserId(classroom.getId(), userId)
                 .ifPresent(cm -> {
@@ -149,25 +149,25 @@ public class ClassroomServiceImpl implements ClassroomService {
     public ClassroomResponse joinClassroom(String classroomCode, String password, Long userId) {
         Classroom classroom = classroomRepository.findByJoinCode(classroomCode)
                 .orElseThrow(() -> new RuntimeException("Invalid classroom code"));
-        
+
         // Check password if classroom has one
         if (classroom.getPassword() != null && !classroom.getPassword().equals(password)) {
             throw new RuntimeException("Invalid password");
         }
-        
+
         // Check if already a member
         classroomMemberRepository.findByClassroomIdAndUserId(classroom.getId(), userId)
                 .ifPresent(cm -> {
                     throw new RuntimeException("Already joined");
                 });
-        
+
         // Add as student
         classroomMemberRepository.save(ClassroomMember.builder()
                 .classroomId(classroom.getId())
                 .userId(userId)
                 .role(Role.STUDENT)
                 .build());
-        
+
         return toResponse(classroom);
     }
 
@@ -175,11 +175,11 @@ public class ClassroomServiceImpl implements ClassroomService {
     public List<StudentResponse> getClassroomStudents(Long classroomId, Long teacherId) {
         Classroom classroom = classroomRepository.findById(classroomId)
                 .orElseThrow(() -> new RuntimeException("Classroom not found"));
-        
+
         if (!classroom.getOwnerId().equals(teacherId)) {
             throw new RuntimeException("Forbidden");
         }
-        
+
         return classroomMemberRepository.findByClassroomIdAndRole(classroomId, Role.STUDENT).stream()
                 .map(this::toStudentResponse)
                 .collect(Collectors.toList());
@@ -190,21 +190,21 @@ public class ClassroomServiceImpl implements ClassroomService {
     public void removeStudentFromClassroom(Long classroomId, Long studentId, Long teacherId) {
         Classroom classroom = classroomRepository.findById(classroomId)
                 .orElseThrow(() -> new RuntimeException("Classroom not found"));
-        
+
         if (!classroom.getOwnerId().equals(teacherId)) {
             throw new RuntimeException("Forbidden");
         }
-        
+
         ClassroomMember member = classroomMemberRepository.findByClassroomIdAndUserId(classroomId, studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
-        
+
         classroomMemberRepository.delete(member);
     }
 
     private ClassroomResponse toResponse(Classroom classroom) {
         // Count current students
         long currentStudents = classroomMemberRepository.countByClassroomId(classroom.getId());
-        
+
         return ClassroomResponse.builder()
                 .id(classroom.getId())
                 .name(classroom.getName())
@@ -224,7 +224,6 @@ public class ClassroomServiceImpl implements ClassroomService {
         // In a real implementation, you would fetch user details from user service
         return StudentResponse.builder()
                 .userId(member.getUserId())
-                .username("User" + member.getUserId()) // Placeholder
                 .email("user" + member.getUserId() + "@example.com") // Placeholder
                 .fullName("Student " + member.getUserId()) // Placeholder
                 .joinedAt(member.getJoinedAt())

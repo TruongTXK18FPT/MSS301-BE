@@ -48,4 +48,13 @@ public interface AuthenticationService {
      * @return true if password setup is required, false otherwise
      */
     boolean getPasswordSetupStatus(String email);
+
+    /**
+     * Change password for a user
+     *
+     * @param email           User email
+     * @param currentPassword Current password
+     * @param newPassword     New password
+     */
+    void changePassword(String email, String currentPassword, String newPassword);
 }

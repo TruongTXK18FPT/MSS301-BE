@@ -52,8 +52,11 @@ public class UserProfile {
     @Column(name = "user_type")
     private String userType; // STUDENT, TEACHER, GUARDIAN
 
-    @Column(name = "username")
-    private String username;
+    @Column(name = "is_google_user", nullable = false)
+    private boolean isGoogleUser = false;
+
+    @Column(name = "password_setup_required", nullable = false)
+    private boolean passwordSetupRequired = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -70,5 +73,14 @@ public class UserProfile {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    // Manual getters for boolean fields (Lombok workaround)
+    public boolean getPasswordSetupRequired() {
+        return passwordSetupRequired;
+    }
+
+    public boolean getProfileCompleted() {
+        return profileCompleted;
     }
 }

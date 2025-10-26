@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.mss301.profileservice.event.CreatedUserEvent;
-import com.mss301.profileservice.service.ProfileService;
+import com.mss301.profileservice.service.EventProfileService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,7 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 public class UserCreatedListener {
 
     @Autowired
-    private ProfileService profileService;
+    private EventProfileService eventProfileService;
 
     /**
      * Consumer function to handle CreatedUserEvent
@@ -39,8 +39,8 @@ public class UserCreatedListener {
                         event.getEmail(),
                         event.getFullName());
 
-                // Create user profile using the profile service
-                profileService.createProfileFromUserEvent(event);
+                // Create user profile using the event profile service
+                eventProfileService.createProfileFromUserEvent(event);
 
                 log.info("Successfully processed CreatedUserEvent for user ID: {}", event.getId());
             } catch (Exception e) {

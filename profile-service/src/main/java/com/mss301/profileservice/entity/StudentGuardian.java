@@ -1,5 +1,7 @@
 package com.mss301.profileservice.entity;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.*;
 
 import lombok.AllArgsConstructor;
@@ -24,6 +26,12 @@ public class StudentGuardian {
     @Column(name = "guardian_id")
     private Long guardianId;
 
+    @Column(name = "relationship")
+    private String relationship;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
     // Removed @ManyToOne relationships to avoid foreign key constraint issues
     // Relationships are handled at application level via IDs
     @Transient
@@ -31,4 +39,9 @@ public class StudentGuardian {
 
     @Transient
     private GuardianProfile guardianProfile;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 }

@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class StudentResponse {
     private Long userId;
-    private String username;
     private String email;
     private String fullName;
     private LocalDateTime joinedAt;

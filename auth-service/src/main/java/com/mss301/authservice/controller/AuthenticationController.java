@@ -89,6 +89,18 @@ public class AuthenticationController {
         return ApiResponse.<Void>builder().message("Password reset OTP sent").build();
     }
 
+    @PostMapping("/resend-email-verification")
+    public ApiResponse<Void> resendEmailVerificationOTP(@RequestParam String email) {
+        authenticationService.resendOTP(email);
+        return ApiResponse.<Void>builder().message("Email verification OTP resent successfully").build();
+    }
+
+    @PostMapping("/resend-password-reset")
+    public ApiResponse<Void> resendPasswordResetOTP(@RequestParam String email) {
+        authenticationService.sendPasswordResetOTP(email);
+        return ApiResponse.<Void>builder().message("Password reset OTP resent successfully").build();
+    }
+
     @GetMapping("/google/redirect")
     public ResponseEntity<Void> redirectToGoogle() {
         try {
@@ -124,9 +136,28 @@ public class AuthenticationController {
             headers.add("Location", redirectUrl);
             return new ResponseEntity<>(headers, HttpStatus.FOUND);
         } catch (Exception e) {
-            // Redirect to error page
+            // Log the exception for debugging
+            System.err.println("Google OAuth callback error: " + e.getMessage());
+            e.printStackTrace();
+
+            // Redirect to error page with specific error message
+            String errorMessage = e.getMessage();
+            String redirectUrl;
+
+            if (errorMessage.contains("Google login is only available for students")) {
+                redirectUrl = frontendProperties.getLoginUrl() + "?error=google_role_restricted&message=" +
+                        java.net.URLEncoder.encode(
+                                "Đăng nhập Google chỉ dành cho học sinh. Vui lòng sử dụng đăng nhập thường với email và mật khẩu.",
+                                java.nio.charset.StandardCharsets.UTF_8);
+            } else {
+                redirectUrl = frontendProperties.getLoginUrl() + "?error=google_auth_failed&message=" +
+                        java.net.URLEncoder.encode("Đăng nhập Google thất bại. Vui lòng thử lại.",
+                                java.nio.charset.StandardCharsets.UTF_8);
+            }
+
+            System.out.println("Redirecting to: " + redirectUrl);
             HttpHeaders headers = new HttpHeaders();
-            headers.add("Location", frontendProperties.getLoginUrl() + "?error=google_auth_failed");
+            headers.add("Location", redirectUrl);
             return new ResponseEntity<>(headers, HttpStatus.FOUND);
         }
     }
@@ -143,6 +174,37 @@ public class AuthenticationController {
         return ApiResponse.<Boolean>builder()
                 .result(passwordSetupRequired)
                 .message("Password setup status retrieved successfully")
+                .build();
+    }
+
+    @PostMapping("/change-password")
+    public ApiResponse<Void> changePassword(@RequestBody ChangePasswordRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+        System.out.println("[DEBUG] Change password request received");
+        System.out.println("[DEBUG] Authorization header: " + authHeader);
+
+        // Extract token from Authorization header
+        String token = authHeader.replace("Bearer ", "");
+        System.out.println("[DEBUG] Extracted token: " + token.substring(0, Math.min(20, token.length())) + "...");
+
+        // Get user info from token
+        IntrospectResponse introspectResponse = authenticationService.introspect(new IntrospectRequest(token));
+        System.out.println("[DEBUG] Introspect response valid: " + introspectResponse.isValid());
+
+        if (!introspectResponse.isValid()) {
+            System.out.println("[DEBUG] Token is invalid, returning 401");
+            return ApiResponse.<Void>builder()
+                    .code(401)
+                    .message("Invalid token")
+                    .build();
+        }
+
+        // Use authenticated user's email instead of request email
+        String userEmail = introspectResponse.getEmail();
+        authenticationService.changePassword(userEmail, request.getCurrentPassword(), request.getNewPassword());
+
+        return ApiResponse.<Void>builder()
+                .message("Password changed successfully")
                 .build();
     }
 }

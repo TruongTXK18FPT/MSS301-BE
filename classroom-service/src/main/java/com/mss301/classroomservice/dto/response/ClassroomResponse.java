@@ -17,6 +17,9 @@ public class ClassroomResponse {
     private String description;
     private Boolean isPublic;
     private String joinCode;
+    private String password;
+    private Integer maxStudents;
+    private Integer currentStudents;
     private Long ownerId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

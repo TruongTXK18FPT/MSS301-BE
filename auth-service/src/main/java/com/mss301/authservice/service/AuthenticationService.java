@@ -40,4 +40,21 @@ public interface AuthenticationService {
      * @param newPassword New password
      */
     void setupPasswordForGoogleUser(String email, String newPassword);
+
+    /**
+     * Get password setup status for a user
+     *
+     * @param email User email
+     * @return true if password setup is required, false otherwise
+     */
+    boolean getPasswordSetupStatus(String email);
+
+    /**
+     * Change password for a user
+     *
+     * @param email           User email
+     * @param currentPassword Current password
+     * @param newPassword     New password
+     */
+    void changePassword(String email, String currentPassword, String newPassword);
 }

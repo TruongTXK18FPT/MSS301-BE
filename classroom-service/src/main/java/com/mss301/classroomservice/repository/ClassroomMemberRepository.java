@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.mss301.classroomservice.entity.ClassroomMember;
+import com.mss301.classroomservice.entity.ClassroomMember.Role;
 
 @Repository
 public interface ClassroomMemberRepository extends JpaRepository<ClassroomMember, Long> {
@@ -17,4 +18,6 @@ public interface ClassroomMemberRepository extends JpaRepository<ClassroomMember
     Optional<ClassroomMember> findByClassroomIdAndUserId(Long classroomId, Long userId);
 
     long countByClassroomId(Long classroomId);
+    
+    List<ClassroomMember> findByClassroomIdAndRole(Long classroomId, Role role);
 }

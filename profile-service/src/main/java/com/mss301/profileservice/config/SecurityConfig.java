@@ -29,7 +29,7 @@ public class SecurityConfig {
     private String jwtSecret;
 
     private final String[] PUBLIC_GET_ENDPOINTS = {
-        "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**", "/swagger.json/**", "/actuator/**"
+            "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**", "/swagger.json/**", "/actuator/**"
     };
 
     // No public POST endpoints for profile-service since all operations require
@@ -45,8 +45,8 @@ public class SecurityConfig {
                 .anyRequest()
                 .authenticated());
 
-        httpSecurity.oauth2ResourceServer(oauth2 ->
-                oauth2.jwt(jwt -> jwt.decoder(jwtDecoder()).jwtAuthenticationConverter(jwtAuthenticationConverter())));
+        httpSecurity.oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt.decoder(jwtDecoder()).jwtAuthenticationConverter(jwtAuthenticationConverter())));
 
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
 
@@ -72,17 +72,5 @@ public class SecurityConfig {
         return converter;
     }
 
-    @Bean
-    public FilterRegistrationBean<CorsFilter> corsFilterRegistration() {
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowCredentials(false);
-        config.addAllowedOrigin("*");
-        config.addAllowedHeader("*");
-        config.addAllowedMethod("*");
-        source.registerCorsConfiguration("/**", config);
-        FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(new CorsFilter(source));
-        bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
-        return bean;
-    }
+    // CORS is handled by Gateway service, no need for CORS filter here
 }

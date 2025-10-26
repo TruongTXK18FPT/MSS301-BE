@@ -36,6 +36,12 @@ public class Classroom {
     private Boolean isPublic = false;
 
     private String joinCode;
+    
+    @Column(length = 255)
+    private String password; // Mật khẩu để vào lớp
+    
+    @Column(nullable = false)
+    private Integer maxStudents = 50; // Số học sinh tối đa
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

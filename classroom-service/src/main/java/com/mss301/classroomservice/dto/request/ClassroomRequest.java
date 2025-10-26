@@ -21,4 +21,9 @@ public class ClassroomRequest {
     private String description;
 
     private Boolean isPublic = false;
+    
+    @Size(max = 255)
+    private String password; // Mật khẩu để vào lớp
+    
+    private Integer maxStudents = 50; // Số học sinh tối đa
 }

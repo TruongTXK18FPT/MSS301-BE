@@ -33,6 +33,8 @@ spring:
           instances:
             auth-service:
               - uri: http://127.0.0.1:8081
+            profile-service:
+              - uri: http://127.0.0.1:8087
     gateway:
       server:
         webflux:
@@ -92,11 +94,13 @@ spring:
             - id: profile-service #8087
               uri: lb://profile-service
               predicates:
-                - Path=${app.api.prefix}${app.service-prefix.profile}/**
+                - Path=${app.api.prefix}${app.service-prefix.profile}/**,${app.api.prefix}/profile/**,${app.api.prefix}/profile/addresses/**
               filters:
-                - RewritePath=${app.api.prefix}${app.service-prefix.profile}/(?<segment>.*), /${segment}
+                - RewritePath=${app.api.prefix}${app.service-prefix.profile}/(?<segment>.*), /profile/${segment}
+                - RewritePath=${app.api.prefix}/profile/(?<segment>.*), /profile/${segment}
+                - RewritePath=${app.api.prefix}/profile/addresses/(?<segment>.*), /addresses/${segment}
 
-            - id: classroom-service #8090
+            - id: classroom-service #8094
               uri: lb://classroom-service
               predicates:
                 - Path=${app.api.prefix}${app.service-prefix.classroom}/**

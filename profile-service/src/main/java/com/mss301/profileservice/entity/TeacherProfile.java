@@ -39,8 +39,9 @@ public class TeacherProfile {
     @Column(name = "bio", columnDefinition = "TEXT")
     private String bio;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    // Removed @OneToOne relationship to avoid foreign key constraint issues
+    // UserProfile relationship is handled at application level via userId
+    @Transient
     private UserProfile userProfile;
 
     @Column(name = "created_at", nullable = false, updatable = false)

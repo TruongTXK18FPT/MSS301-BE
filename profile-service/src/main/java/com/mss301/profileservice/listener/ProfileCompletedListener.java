@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.mss301.profileservice.event.ProfileCompletedEvent;
-import com.mss301.profileservice.service.ProfileService;
+import com.mss301.profileservice.service.EventProfileService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,11 +20,12 @@ import lombok.extern.slf4j.Slf4j;
 public class ProfileCompletedListener {
 
     @Autowired
-    private ProfileService profileService;
+    private EventProfileService eventProfileService;
 
     /**
      * Consumer function to handle ProfileCompletedEvent
      * Updates user profile when user completes their profile in auth-service
+     * 
      * @return Consumer bean for Spring Cloud Stream
      */
     @Bean
@@ -36,8 +37,8 @@ public class ProfileCompletedListener {
                         event.getUserId(),
                         event.getUserType());
 
-                // Update profile completion using the profile service
-                profileService.completeProfileFromEvent(event);
+                // Update profile completion using the event profile service
+                eventProfileService.completeProfileFromEvent(event);
 
                 log.info("Successfully processed ProfileCompletedEvent for user ID: {}", event.getUserId());
             } catch (Exception e) {

@@ -6,58 +6,93 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.web.bind.annotation.*;
 
 import com.mss301.profileservice.dto.request.StudentProfileRequest;
+import com.mss301.profileservice.dto.response.ApiResponse;
 import com.mss301.profileservice.dto.response.ProfileCompletionStatusResponse;
 import com.mss301.profileservice.dto.response.StudentProfileResponse;
-import com.mss301.profileservice.service.ProfileService;
+import com.mss301.profileservice.dto.response.GuardianProfileResponse;
+import com.mss301.profileservice.dto.response.GuardianProfileWithStudents;
+import com.mss301.profileservice.dto.response.StudentGuardianResponse;
+import com.mss301.profileservice.service.UserProfileService;
+import com.mss301.profileservice.service.GuardianProfileService;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/profile")
 @RequiredArgsConstructor
-@Tag(name = "Profile Management", description = "APIs for managing current user profile")
-@SecurityRequirement(name = "bearerAuth")
 public class ProfileController {
 
-    private final ProfileService profileService;
+    private final UserProfileService userProfileService;
+    private final GuardianProfileService guardianProfileService;
 
     @GetMapping("/me")
-    @Operation(
-            summary = "Get Current User Profile",
-            description = "Get the profile of the currently authenticated user")
-    @ApiResponse(responseCode = "200", description = "Profile retrieved successfully")
-    @ApiResponse(responseCode = "404", description = "Profile not found")
-    public ResponseEntity<StudentProfileResponse> getCurrentUserProfile() {
+    public ResponseEntity<ApiResponse<StudentProfileResponse>> getCurrentUserProfile() {
         String currentUserId = getCurrentUserId();
-        StudentProfileResponse response = profileService.getCurrentUserProfile(currentUserId);
-        return ResponseEntity.ok(response);
+        StudentProfileResponse response = userProfileService.getCurrentUserProfile(currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PutMapping("/me")
-    @Operation(
-            summary = "Update Current User Profile",
-            description = "Update the profile of the currently authenticated user")
-    @ApiResponse(responseCode = "200", description = "Profile updated successfully")
-    @ApiResponse(responseCode = "404", description = "Profile not found")
-    public ResponseEntity<StudentProfileResponse> updateCurrentUserProfile(@RequestBody StudentProfileRequest request) {
+    public ResponseEntity<ApiResponse<StudentProfileResponse>> updateCurrentUserProfile(
+            @RequestBody StudentProfileRequest request) {
         String currentUserId = getCurrentUserId();
-        StudentProfileResponse response = profileService.updateCurrentUserProfile(currentUserId, request);
-        return ResponseEntity.ok(response);
+        StudentProfileResponse response = userProfileService.updateCurrentUserProfile(currentUserId, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/completion-status")
-    @Operation(
-            summary = "Get Profile Completion Status",
-            description = "Check if the current user has completed their profile")
-    @ApiResponse(responseCode = "200", description = "Profile status retrieved successfully")
-    public ResponseEntity<ProfileCompletionStatusResponse> getProfileCompletionStatus() {
+    public ResponseEntity<ApiResponse<ProfileCompletionStatusResponse>> getProfileCompletionStatus() {
         String currentUserId = getCurrentUserId();
-        ProfileCompletionStatusResponse response = profileService.getProfileCompletionStatus(currentUserId);
-        return ResponseEntity.ok(response);
+        ProfileCompletionStatusResponse response = userProfileService.getProfileCompletionStatus(currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    // Guardian Profile Endpoints
+    @GetMapping("/guardian/me")
+    public ResponseEntity<ApiResponse<GuardianProfileResponse>> getGuardianProfile() {
+        String currentUserId = getCurrentUserId();
+        GuardianProfileResponse response = guardianProfileService.getGuardianProfile(currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/guardian/me/students")
+    public ResponseEntity<ApiResponse<GuardianProfileWithStudents>> getGuardianProfileWithStudents() {
+        String currentUserId = getCurrentUserId();
+        GuardianProfileWithStudents response = guardianProfileService.getGuardianProfileWithStudents(currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/guardian/{guardianId}/students")
+    public ResponseEntity<ApiResponse<java.util.List<StudentGuardianResponse>>> getStudentsByGuardian(
+            @PathVariable String guardianId) {
+        java.util.List<StudentGuardianResponse> response = guardianProfileService.getStudentsByGuardian(guardianId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/guardian/add-student")
+    public ResponseEntity<ApiResponse<Void>> addStudentToGuardian(
+            @RequestParam String studentEmail,
+            @RequestParam String relationship) {
+        String currentUserId = getCurrentUserId();
+        guardianProfileService.addStudentToGuardian(currentUserId, studentEmail, relationship);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PostMapping("/guardian/verify-student")
+    public ResponseEntity<ApiResponse<Void>> verifyStudentRelationship(
+            @RequestParam String studentEmail,
+            @RequestParam String verificationCode) {
+        String currentUserId = getCurrentUserId();
+        guardianProfileService.verifyStudentRelationship(currentUserId, studentEmail, verificationCode);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PostMapping("/guardian/resend-verification")
+    public ResponseEntity<ApiResponse<Void>> resendGuardianVerification(
+            @RequestParam String studentEmail) {
+        String currentUserId = getCurrentUserId();
+        guardianProfileService.resendGuardianVerification(currentUserId, studentEmail);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     /**

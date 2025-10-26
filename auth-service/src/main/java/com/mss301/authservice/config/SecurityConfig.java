@@ -2,7 +2,6 @@ package com.mss301.authservice.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -33,8 +32,9 @@ public class SecurityConfig {
             "/auth/reset-password",
             "/auth/send-email-verification",
             "/auth/send-password-reset",
-            "/auth/google/**",
-            "/auth/password/**",
+            "/auth/google/redirect",
+            "/auth/google/callback",
+            "/auth/password-setup-status",
             "/users/register",
             "/users/verify-otp",
             "/users/resend-otp"

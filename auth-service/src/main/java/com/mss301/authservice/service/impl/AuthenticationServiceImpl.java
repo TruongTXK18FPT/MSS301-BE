@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.mss301.authservice.config.EventPublisher;
+import com.mss301.authservice.event.PasswordResetOtpEventPublisher;
 import com.mss301.authservice.dto.request.*;
 import com.mss301.authservice.dto.response.AuthenticationResponse;
 import com.mss301.authservice.dto.response.GoogleOAuthTokenResponse;
@@ -47,6 +48,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final GoogleOAuthService googleOAuthService;
     private final GoogleUserService googleUserService;
     private final EventPublisher eventPublisher;
+    private final PasswordResetOtpEventPublisher passwordResetOtpEventPublisher;
 
     @Value("${jwt.signerKey:mySecretKey}")
     private String signerKey;
@@ -124,8 +126,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             SignedJWT signedJWT = SignedJWT.parse(token);
             JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
             role = claims.getStringClaim("role");
-        } catch (Exception ignored) {
+            log.info("Introspect - User: {}, Role from token: {}", email, role);
+        } catch (Exception e) {
+            log.error("Error parsing role from token: {}", e.getMessage());
         }
+
+        log.info("Introspect response for user {}: valid={}, id={}, email={}, role={}",
+                email, isValid, userId, email, role);
 
         return IntrospectResponse.builder()
                 .valid(isValid)
@@ -375,20 +382,17 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         otpRepository.save(otp);
 
-        // Send email notification via EventPublisher
-        Map<String, Object> templateData = new HashMap<>();
-        templateData.put("OTP", otpCode); // Capital letters
-        templateData.put("PURPOSE", "PASSWORD_RESET"); // Add PURPOSE
-
-        NotificationEvent notificationEvent = NotificationEvent.builder()
-                .recipient(email)
-                .subject("Mã đặt lại mật khẩu - MSS301")
-                .templateCode("otp_verified") // Use OTP template
-                .param(templateData)
-                .build();
-
-        eventPublisher.publishNotificationEvent(notificationEvent);
-        log.info("Sent password reset OTP to: {}", email);
+        // Send password reset OTP via dedicated event
+        try {
+            passwordResetOtpEventPublisher.publishPasswordResetOtpEvent(
+                    email,
+                    otpCode,
+                    5);
+            log.info("Password reset OTP event published for: {}", email);
+        } catch (Exception e) {
+            log.error("Failed to send password reset OTP event for email: {}", email, e);
+            // Don't fail the operation if event publishing fails
+        }
     }
 
     @Override
@@ -439,9 +443,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 Optional<Role> roleOpt = Optional.ofNullable(user.getRole());
                 if (roleOpt.isPresent()) {
                     roleName = roleOpt.get().getName();
+                    log.info("User {} has role: {}", user.getEmail(), roleName);
+                } else {
+                    log.warn("User {} has roleId {} but role is null", user.getEmail(), user.getRoleId());
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.error("Error getting role for user {}: {}", user.getEmail(), e.getMessage());
             }
+        } else {
+            log.warn("User {} has no roleId", user.getEmail());
         }
 
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
@@ -565,10 +575,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         UserAccount user = googleUserService.getUserByEmail(userInfo.getEmail());
         log.info("Existing user logged in with Google: {}", user.getEmail());
 
-        // Check if user role is allowed for Google login (only GUARDIAN and STUDENT)
-        if (!user.getRole().equals("GUARDIAN") && !user.getRole().equals("STUDENT")) {
-            log.warn("Google login not allowed for role: {} for user: {}", user.getRole(), user.getEmail());
-            throw new RuntimeException("Google login is only available for students and guardians");
+        // Check if user role is allowed for Google login (only STUDENT)
+        // GUARDIAN and TEACHER must use regular login, not Google OAuth
+        if (!user.getRole().getName().equals("STUDENT")) {
+            log.warn("Google login not allowed for role: {} for user: {}", user.getRole().getName(), user.getEmail());
+            throw new RuntimeException(
+                    "Google login is only available for students. Users with " + user.getRole().getName() +
+                            " role must use regular login with email and password.");
         }
 
         googleUserService.updateLastLogin(user);
@@ -597,6 +610,82 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             log.info("Published CreatedUserEvent for Google user: {}", user.getEmail());
         } catch (Exception e) {
             log.error("Failed to publish CreatedUserEvent for Google user: {}", user.getEmail(), e);
+        }
+    }
+
+    @Override
+    public boolean getPasswordSetupStatus(String email) {
+        log.info("Checking password setup status for email: {}", email);
+
+        try {
+            UserAccount user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+
+            // Check if user has a password set (not null and not empty)
+            boolean hasPassword = user.getPassword() != null && !user.getPassword().trim().isEmpty();
+
+            log.info("Password setup status for {}: {}", email, !hasPassword);
+            return !hasPassword; // Return true if password setup is required
+
+        } catch (Exception e) {
+            log.error("Failed to check password setup status for email: {}: {}", email, e.getMessage(), e);
+            return false; // Default to not requiring password setup on error
+        }
+    }
+
+    @Override
+    public void changePassword(String email, String currentPassword, String newPassword) {
+        log.info("Changing password for user: {}", email);
+        log.info("Current password provided: {}", currentPassword);
+        log.info("New password provided: {}", newPassword);
+
+        try {
+            // Find user by email
+            UserAccount user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+
+            log.info("User found: {}", user.getEmail());
+            log.info("User has password: {}", user.getPassword() != null);
+            if (user.getPassword() != null) {
+                log.info("Stored password hash: {}",
+                        user.getPassword().substring(0, Math.min(20, user.getPassword().length())) + "...");
+            }
+
+            // Check if user has a password set (for Google users who haven't setup password
+            // yet)
+            if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
+                log.warn("User {} has no password set. Please setup password first.", email);
+                throw new RuntimeException(
+                        "No password set. Please setup your password first using the setup password feature.");
+            }
+
+            // Verify current password
+            if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+                log.warn("Invalid current password for user: {}", email);
+                throw new RuntimeException("Current password is incorrect");
+            }
+
+            // Validate new password
+            if (newPassword == null || newPassword.trim().isEmpty()) {
+                throw new RuntimeException("New password cannot be empty");
+            }
+
+            if (newPassword.length() < 6) {
+                throw new RuntimeException("New password must be at least 6 characters long");
+            }
+
+            // Encode and set new password
+            String encodedNewPassword = passwordEncoder.encode(newPassword);
+            user.setPassword(encodedNewPassword);
+
+            // Save user
+            userRepository.save(user);
+
+            log.info("Password changed successfully for user: {}", email);
+
+        } catch (Exception e) {
+            log.error("Failed to change password for user: {}: {}", email, e.getMessage(), e);
+            throw new RuntimeException("Failed to change password: " + e.getMessage());
         }
     }
 }

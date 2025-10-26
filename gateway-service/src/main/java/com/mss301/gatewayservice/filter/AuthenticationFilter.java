@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.server.ServerWebExchange;
 
-import com.mss301.gatewayservice.dto.ApiResponse;
+import com.mss301.common.dto.ApiResponse;
 import com.mss301.gatewayservice.service.AuthenticationService;
 
 import lombok.AccessLevel;
@@ -52,6 +52,13 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
         log.info("isPathPublic: {}, isOriginalPathPublic: {}", isPathPublic, isOriginalPathPublic);
         log.info("Public URLs check: path='{}', originalPath='{}'", path, originalPath);
+
+        // Debug: Check if this specific path matches
+        if (path.contains("google/setup-password")) {
+            log.info("DEBUG: Checking google/setup-password path specifically");
+            log.info("DEBUG: path='{}', originalPath='{}'", path, originalPath);
+            log.info("DEBUG: isPathPublic={}, isOriginalPathPublic={}", isPathPublic, isOriginalPathPublic);
+        }
 
         if (isPathPublic || isOriginalPathPublic) {
             log.info("Path {} is public, allowing access", isPathPublic ? path : originalPath);

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OTP Verification - MSS301</title>
+    <title>Xác Thực OTP - MathMind</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -45,31 +45,31 @@
 </head>
 <body>
     <div class="container">
-        <h1 class="header">MSS301 - Verification Code</h1>
+        <h1 class="header">MathMind - Mã Xác Thực</h1>
         
         <div th:if="${PURPOSE == 'EMAIL_VERIFICATION'}">
-            <h2>Email Verification Required</h2>
-            <p>Thank you for signing up! Please use the verification code below to verify your email address:</p>
+            <h2>Xác Thực Email Cần Thiết</h2>
+            <p>Cảm ơn bạn đã đăng ký! Vui lòng sử dụng mã xác thực bên dưới để xác thực địa chỉ email của bạn:</p>
         </div>
         
         <div th:if="${PURPOSE == 'PASSWORD_RESET'}">
-            <h2>Password Reset Request</h2>
-            <p>You have requested to reset your password. Please use the verification code below to proceed:</p>
+            <h2>Yêu Cầu Đặt Lại Mật Khẩu</h2>
+            <p>Bạn đã yêu cầu đặt lại mật khẩu. Vui lòng sử dụng mã xác thực bên dưới để tiến hành:</p>
         </div>
         
         <div class="otp-code" th:text="${OTP}">123456</div>
         
-        <p><strong>Important:</strong></p>
+        <p><strong>Quan trọng:</strong></p>
         <ul>
-            <li>This code will expire in 10 minutes</li>
-            <li>For security reasons, do not share this code with anyone</li>
-            <li>If you didn't request this, please ignore this email</li>
+            <li>Mã này sẽ hết hạn trong 10 phút</li>
+            <li>Vì lý do bảo mật, không chia sẻ mã này với bất kỳ ai</li>
+            <li>Nếu bạn không yêu cầu điều này, vui lòng bỏ qua email này</li>
         </ul>
         
         <div class="footer">
-            <p>Best regards,<br>The MSS301 Team</p>
+            <p>Trân trọng,<br>Đội Ngũ MathMind</p>
             <hr>
-            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>Đây là thông báo tự động. Vui lòng không trả lời email này.</p>
         </div>
     </div>
 </body>

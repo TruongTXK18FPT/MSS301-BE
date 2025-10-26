@@ -52,6 +52,7 @@ public class GoogleUserServiceImpl implements GoogleUserService {
             // Set role based on user type
             Long roleId = getUserRoleId(userType);
             user.setRoleId(roleId);
+            log.info("Set roleId {} for Google user: {}", roleId, userInfo.getEmail());
 
             UserAccount savedUser = userRepository.save(user);
             log.info("Successfully created Google user: {}", savedUser.getEmail());
@@ -96,16 +97,21 @@ public class GoogleUserServiceImpl implements GoogleUserService {
      */
     private Long getUserRoleId(String userType) {
         try {
+            log.info("Looking for role with name: {}", userType.toUpperCase());
             Optional<Role> role = roleRepository.findByName(userType.toUpperCase());
             if (role.isPresent()) {
+                log.info("Found role: {} with ID: {}", role.get().getName(), role.get().getId());
                 return role.get().getId();
             } else {
                 log.warn("Role not found for userType: {}, defaulting to STUDENT", userType);
                 // Default to STUDENT if role not found
                 Optional<Role> defaultRole = roleRepository.findByName("STUDENT");
-                return defaultRole
-                        .orElseThrow(() -> new RuntimeException("Default STUDENT role not found"))
-                        .getId();
+                if (defaultRole.isPresent()) {
+                    log.info("Using default STUDENT role with ID: {}", defaultRole.get().getId());
+                    return defaultRole.get().getId();
+                } else {
+                    throw new RuntimeException("Default STUDENT role not found");
+                }
             }
         } catch (Exception e) {
             log.error("Error getting role ID for userType: {}", userType, e);

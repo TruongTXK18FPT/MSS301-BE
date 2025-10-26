@@ -4,6 +4,7 @@ import java.util.Objects;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -22,6 +23,9 @@ public class CustomJwtDecoder implements JwtDecoder {
     @Lazy
     private AuthenticationService authenticationService;
 
+    @Value("${jwt.signerKey}")
+    private String jwtSecret;
+
     private NimbusJwtDecoder nimbusJwtDecoder = null;
 
     @Override
@@ -38,7 +42,7 @@ public class CustomJwtDecoder implements JwtDecoder {
         }
 
         if (Objects.isNull(nimbusJwtDecoder)) {
-            SecretKeySpec secretKeySpec = new SecretKeySpec("8t7w!z%C*F-JaNdRfUjXn2r5u8x/A?D(".getBytes(), "HS512");
+            SecretKeySpec secretKeySpec = new SecretKeySpec(jwtSecret.getBytes(), "HS512");
             nimbusJwtDecoder = NimbusJwtDecoder.withSecretKey(secretKeySpec)
                     .macAlgorithm(MacAlgorithm.HS512)
                     .build();

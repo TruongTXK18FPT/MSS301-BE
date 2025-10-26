@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.mss301.classroomservice.dto.request.ClassroomRequest;
 import com.mss301.classroomservice.dto.response.ClassroomResponse;
+import com.mss301.classroomservice.dto.response.StudentResponse;
 
 public interface ClassroomService {
     ClassroomResponse create(ClassroomRequest request, Long ownerId);
@@ -21,4 +22,16 @@ public interface ClassroomService {
     String generateJoinCode(Long id, Long ownerId);
 
     ClassroomResponse joinByCode(String joinCode, Long userId);
+    
+    // Tìm kiếm lớp học cho học sinh
+    List<ClassroomResponse> searchClassrooms(String keyword);
+    
+    // Tham gia lớp học bằng mật khẩu
+    ClassroomResponse joinClassroom(String classroomCode, String password, Long userId);
+    
+    // Lấy danh sách học sinh trong lớp
+    List<StudentResponse> getClassroomStudents(Long classroomId, Long teacherId);
+    
+    // Xóa học sinh khỏi lớp
+    void removeStudentFromClassroom(Long classroomId, Long studentId, Long teacherId);
 }

@@ -57,8 +57,7 @@ class GoogleOAuthServiceTest {
     @Test
     void testExchangeToken_Success() {
         // Given
-        when(googleOAuthClient.exchangeToken(any()))
-                .thenReturn(tokenResponse);
+        when(googleOAuthClient.exchangeToken(any())).thenReturn(tokenResponse);
 
         // When
         GoogleOAuthTokenResponse result = googleOAuthService.exchangeToken(testCode);

@@ -52,7 +52,7 @@ public class WebClientConfiguration {
         corsConfiguration.setMaxAge(3600L);
 
         // Add exposed headers to allow frontend to read response headers
-        corsConfiguration.setExposedHeaders(List.of("Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
+        corsConfiguration.setExposedHeaders(List.of("Authorization", "Content-Type"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfiguration);
@@ -63,7 +63,7 @@ public class WebClientConfiguration {
     @Bean
     public AuthenticationClient authenticationClient(WebClient webClient) {
         HttpServiceProxyFactory httpServiceProxyFactory = HttpServiceProxyFactory.builderFor(
-                        WebClientAdapter.create(webClient))
+                WebClientAdapter.create(webClient))
                 .build();
 
         return httpServiceProxyFactory.createClient(AuthenticationClient.class);

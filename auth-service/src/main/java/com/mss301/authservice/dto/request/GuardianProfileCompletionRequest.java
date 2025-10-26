@@ -19,6 +19,4 @@ public class GuardianProfileCompletionRequest {
     LocalDate birthDate;
 
     String relationship;
-    String studentEmail; // Email of student to link with
-    String studentPhone; // Phone of student for verification
 }

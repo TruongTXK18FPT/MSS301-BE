@@ -28,6 +28,9 @@ import lombok.extern.slf4j.Slf4j;
 public class RagMindmapServiceImpl implements RagMindmapService {
 
     private final RagServiceClient ragServiceClient;
+    private final com.mss301.mindmapservice.repository.MindmapRepository mindmapRepository;
+    private final com.mss301.mindmapservice.repository.MindmapNodeRepository mindmapNodeRepository;
+    private final com.mss301.mindmapservice.repository.MindmapEdgeRepository mindmapEdgeRepository;
 
     @Value("${rag.mindmap-generation.max-documents:5}")
     private Integer maxDocuments;
@@ -48,17 +51,32 @@ public class RagMindmapServiceImpl implements RagMindmapService {
 
             // Create mindmap with RAG context
             Mindmap mindmap = createMindmapFromRagRequest(request, userId, ragContext);
+            
+            // SAVE mindmap first
+            Mindmap savedMindmap = mindmapRepository.save(mindmap);
+            log.info("Saved mindmap with ID: {}", savedMindmap.getId());
 
-            // Generate nodes and edges (simplified for now)
-            List<MindmapNode> nodes = generateNodes(mindmap, request, ragContext);
-            List<MindmapEdge> edges = generateEdges(mindmap, nodes, request);
+            // Generate nodes and edges
+            List<MindmapNode> nodes = generateNodes(savedMindmap, request, ragContext);
+            List<MindmapEdge> edges = generateEdges(savedMindmap, nodes, request);
+            
+            // SAVE nodes and edges
+            if (!nodes.isEmpty()) {
+                mindmapNodeRepository.saveAll(nodes);
+                log.info("Saved {} nodes", nodes.size());
+            }
+            
+            if (!edges.isEmpty()) {
+                mindmapEdgeRepository.saveAll(edges);
+                log.info("Saved {} edges", edges.size());
+            }
 
             long processingTime = System.currentTimeMillis() - startTime;
 
             return RagMindmapResponse.builder()
-                    .mindmapId(mindmap.getId())
-                    .title(mindmap.getTitle())
-                    .description(mindmap.getDescription())
+                    .mindmapId(savedMindmap.getId())
+                    .title(savedMindmap.getTitle())
+                    .description(savedMindmap.getDescription())
                     .aiProvider(request.getAiProvider().name().toLowerCase())
                     .aiModel(request.getAiModel())
                     .status("SUCCESS")
@@ -89,7 +107,7 @@ public class RagMindmapServiceImpl implements RagMindmapService {
             RagRequest ragRequest = RagRequest.builder()
                     .queryText(query)
                     .mode("CHAT")
-                    .llmProvider(request.getAiProvider().name().toLowerCase())
+                    .llmProvider(request.getAiProvider().name())
                     .useSemantic(true)
                     .topK(maxDocuments)
                     .build();

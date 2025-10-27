@@ -94,11 +94,9 @@ spring:
             - id: profile-service #8087
               uri: lb://profile-service
               predicates:
-                - Path=${app.api.prefix}${app.service-prefix.profile}/**,${app.api.prefix}/profile/**,${app.api.prefix}/profile/addresses/**
+                - Path=${app.api.prefix}${app.service-prefix.profile}/**
               filters:
-                - RewritePath=${app.api.prefix}${app.service-prefix.profile}/(?<segment>.*), /profile/${segment}
-                - RewritePath=${app.api.prefix}/profile/(?<segment>.*), /profile/${segment}
-                - RewritePath=${app.api.prefix}/profile/addresses/(?<segment>.*), /addresses/${segment}
+                - RewritePath=${app.api.prefix}${app.service-prefix.profile}/(?<segment>.*), /${segment}
 
             - id: classroom-service #8094
               uri: lb://classroom-service

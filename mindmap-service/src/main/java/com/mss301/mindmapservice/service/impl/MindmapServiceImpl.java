@@ -25,6 +25,9 @@ import com.mss301.mindmapservice.repository.MindmapRepository;
 import com.mss301.mindmapservice.repository.MindmapShareRepository;
 import com.mss301.mindmapservice.service.AiService;
 import com.mss301.mindmapservice.service.MindmapService;
+import com.mss301.mindmapservice.service.RagMindmapService;
+import com.mss301.mindmapservice.dto.request.RagMindmapRequest;
+import com.mss301.mindmapservice.dto.response.RagMindmapResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +42,7 @@ public class MindmapServiceImpl implements MindmapService {
     private final MindmapEdgeRepository mindmapEdgeRepository;
     private final MindmapShareRepository mindmapShareRepository;
     private final AiService aiService;
+    private final RagMindmapService ragMindmapService;
 
     @Value("${mindmap.max-mindmaps-free-user:1}")
     private int maxMindmapsFreeUser;
@@ -75,49 +79,59 @@ public class MindmapServiceImpl implements MindmapService {
 
     @Override
     public AiGenerateMindmapResponse generateMindmapWithAi(AiGenerateMindmapRequest request, Long userId) {
-        log.info("Generating mindmap with AI for user: {}", userId);
+        log.info("Generating mindmap with AI (RAG) for user: {}", userId);
 
         // Check if user can create more mindmaps
         if (!canUserCreateMindmap(userId, false)) { // TODO: Check premium status
             throw new RuntimeException("User has reached the maximum number of mindmaps");
         }
 
-        // Generate mindmap using AI
-        AiGenerateMindmapResponse aiResponse = aiService.generateMindmap(request, userId);
+        // Convert to RAG request - need to parse grade from String to Integer
+        Integer gradeInteger;
+        try {
+            gradeInteger = Integer.parseInt(request.getGrade());
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("Invalid grade format: " + request.getGrade());
+        }
+        
+        RagMindmapRequest ragRequest = RagMindmapRequest.builder()
+                .topic(request.getTopic())
+                .description(request.getDescription())
+                .grade(gradeInteger)
+                .subject(request.getSubject())
+                .aiProvider(request.getAiProvider())
+                .aiModel(request.getAiModel())
+                .build();
 
-        if ("SUCCESS".equals(aiResponse.getStatus())) {
-            // Create mindmap entity
-            Mindmap mindmap = new Mindmap();
-            mindmap.setTitle(request.getTopic());
-            mindmap.setDescription(request.getDescription());
-            mindmap.setUserId(userId);
-            mindmap.setGrade(request.getGrade());
-            mindmap.setSubject(request.getSubject());
-            mindmap.setIsPublic(false);
-            mindmap.setIsAiGenerated(true);
-            mindmap.setAiProvider(request.getAiProvider().name().toLowerCase());
-            mindmap.setAiModel(request.getAiModel());
-            mindmap.setCreatedAt(LocalDateTime.now());
-            mindmap.setUpdatedAt(LocalDateTime.now());
-
-            Mindmap savedMindmap = mindmapRepository.save(mindmap);
-
-            // Generate and save nodes
-            List<MindmapNode> nodes = aiService.generateNodes(savedMindmap, request);
-            if (!nodes.isEmpty()) {
-                mindmapNodeRepository.saveAll(nodes);
-            }
-
-            // Generate and save edges
-            List<MindmapEdge> edges = aiService.generateEdges(savedMindmap, nodes, request);
-            if (!edges.isEmpty()) {
-                mindmapEdgeRepository.saveAll(edges);
-            }
-
-            aiResponse.setMindmapId(savedMindmap.getId());
-            aiResponse.setMindmap(mapToResponse(savedMindmap));
+        // Generate mindmap using RAG
+        RagMindmapResponse ragResponse = ragMindmapService.generateRagMindmap(ragRequest, userId);
+        
+        // Check if RAG generation was successful
+        if (!"SUCCESS".equals(ragResponse.getStatus())) {
+            return AiGenerateMindmapResponse.builder()
+                    .status("FAILED")
+                    .errorMessage(ragResponse.getErrorMessage())
+                    .createdAt(LocalDateTime.now())
+                    .build();
         }
 
+        // Get the saved mindmap from database
+        Mindmap savedMindmap = mindmapRepository.findById(ragResponse.getMindmapId())
+                .orElseThrow(() -> new RuntimeException("Mindmap not found after RAG generation"));
+
+        // Return AI response with mindmap data
+        AiGenerateMindmapResponse aiResponse = new AiGenerateMindmapResponse();
+        aiResponse.setMindmapId(savedMindmap.getId());
+        aiResponse.setTitle(savedMindmap.getTitle());
+        aiResponse.setDescription(savedMindmap.getDescription());
+        aiResponse.setAiProvider(request.getAiProvider().name().toLowerCase());
+        aiResponse.setAiModel(request.getAiModel());
+        aiResponse.setStatus("SUCCESS");
+        aiResponse.setNodesGenerated(ragResponse.getNodesGenerated());
+        aiResponse.setEdgesGenerated(ragResponse.getEdgesGenerated());
+        aiResponse.setCreatedAt(LocalDateTime.now());
+        aiResponse.setMindmap(mapToResponse(savedMindmap));
+        
         return aiResponse;
     }
 

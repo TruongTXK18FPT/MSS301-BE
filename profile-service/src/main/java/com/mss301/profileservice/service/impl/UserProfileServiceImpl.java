@@ -2,6 +2,8 @@ package com.mss301.profileservice.service.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -229,15 +231,19 @@ public class UserProfileServiceImpl implements UserProfileService {
         log.info("Getting profile completion status for userId: {}", userId);
 
         try {
+            // Get role from JWT token
+            String userType = getRoleFromJwt();
+            log.info("User type from JWT: {}", userType);
+            
             UserProfile userProfile = userProfileRepository.findByUserId(Long.valueOf(userId))
                     .orElse(null);
 
             if (userProfile == null) {
                 log.warn("User profile not found for userId: {}, returning default status", userId);
-                // Return default status for users without profile (e.g., Google OAuth users)
+                // Return default status for users without profile with role from JWT
                 return ProfileCompletionStatusResponse.builder()
                         .profileCompleted(false)
-                        .userType("STUDENT") // Default type
+                        .userType(userType != null ? userType : "STUDENT") // Use role from JWT
                         .email("")
                         .build();
             }
@@ -261,6 +267,27 @@ public class UserProfileServiceImpl implements UserProfileService {
         } catch (Exception e) {
             log.error("Error getting profile completion status for userId {}: {}", userId, e.getMessage());
             throw new RuntimeException("Failed to get profile completion status: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Extract role from JWT token
+     */
+    private String getRoleFromJwt() {
+        try {
+            var authentication = SecurityContextHolder.getContext().getAuthentication();
+            
+            if (authentication instanceof JwtAuthenticationToken jwtToken) {
+                String role = jwtToken.getToken().getClaimAsString("role");
+                log.info("Extracted role from JWT: {}", role);
+                return role;
+            }
+            
+            log.warn("Unable to extract role from JWT - authentication is not JwtAuthenticationToken");
+            return null;
+        } catch (Exception e) {
+            log.error("Error extracting role from JWT: {}", e.getMessage());
+            return null;
         }
     }
 }

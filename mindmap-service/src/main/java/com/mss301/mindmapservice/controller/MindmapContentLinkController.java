@@ -19,7 +19,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/v1/mindmap/{mindmapId}/contents")
+@RequestMapping("/mindmap/{mindmapId}/contents")
 @RequiredArgsConstructor
 @Tag(name = "Mindmap Content Links")
 public class MindmapContentLinkController {

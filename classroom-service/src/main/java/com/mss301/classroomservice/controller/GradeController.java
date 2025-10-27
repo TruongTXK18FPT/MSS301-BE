@@ -19,7 +19,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/v1/submissions/{submissionId}/grade")
+@RequestMapping("/submissions/{submissionId}/grade")
 @RequiredArgsConstructor
 @Tag(name = "Grading Management")
 public class GradeController {

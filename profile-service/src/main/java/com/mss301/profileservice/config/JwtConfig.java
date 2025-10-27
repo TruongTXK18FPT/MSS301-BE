@@ -1,4 +1,4 @@
-package com.mss301.mindmapservice.config;
+package com.mss301.profileservice.config;
 
 import javax.crypto.spec.SecretKeySpec;
 

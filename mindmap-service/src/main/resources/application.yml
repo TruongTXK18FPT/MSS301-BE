@@ -25,7 +25,7 @@ spring:
     password: 12345
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -65,7 +65,7 @@ ai:
 # Mindmap Configuration
 mindmap:
   max-nodes-per-mindmap: 100
-  max-mindmaps-free-user: 1
+  max-mindmaps-free-user: 10
   max-mindmaps-premium-user: 50
   default-node-color: "#4A90E2"
   default-edge-color: "#7ED321"

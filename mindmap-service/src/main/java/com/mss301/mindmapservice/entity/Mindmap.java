@@ -40,8 +40,16 @@ public class Mindmap {
     @Column(name = "is_public", nullable = false)
     private Boolean isPublic = false;
 
+    @Column(name = "visibility")
+    @Enumerated(EnumType.STRING)
+    private Visibility visibility = Visibility.PRIVATE;
+
     @Column(name = "is_ai_generated", nullable = false)
     private Boolean isAiGenerated = false;
+
+    @Column(name = "owner_role")
+    @Enumerated(EnumType.STRING)
+    private OwnerRole ownerRole = OwnerRole.STUDENT;
 
     @Column(name = "ai_provider")
     private String aiProvider; // mistral, gemini
@@ -66,6 +74,24 @@ public class Mindmap {
 
     @Column(name = "share_count")
     private Integer shareCount = 0;
+
+    @Column(name = "color", length = 100)
+    private String color; // Theme color for UI (e.g., "from-purple-500 to-pink-500")
+
+    @Column(name = "difficulty")
+    private String difficulty; // easy, medium, hard, mixed
+
+    @Column(name = "cognitive_level")
+    private String cognitiveLevel; // nhan-biet, thong-hieu, van-dung, van-dung-cao
+
+    @Column(name = "estimated_time")
+    private String estimatedTime; // e.g., "30 phút"
+
+    @Column(name = "thumbnail_url")
+    private String thumbnailUrl;
+
+    @Column(name = "tags", columnDefinition = "TEXT")
+    private String tags; // Comma-separated tags
 
     @OneToMany(mappedBy = "mindmap", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<MindmapNode> nodes;
@@ -95,5 +121,36 @@ public class Mindmap {
 
     public void incrementShareCount() {
         this.shareCount++;
+    }
+
+    public enum Visibility {
+        PRIVATE("Riêng tư"),
+        PUBLIC("Công khai"),
+        CLASSROOM("Lớp học");
+
+        private final String displayName;
+
+        Visibility(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+    }
+
+    public enum OwnerRole {
+        STUDENT("Học sinh"),
+        TEACHER("Giáo viên");
+
+        private final String displayName;
+
+        OwnerRole(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
     }
 }

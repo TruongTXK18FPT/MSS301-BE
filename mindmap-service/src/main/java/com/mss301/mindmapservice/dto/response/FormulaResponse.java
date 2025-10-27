@@ -11,19 +11,19 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class MindmapEdgeResponse {
+public class FormulaResponse {
 
     private Long id;
-    private Long mindmapId;
-    private Long fromNodeId;
-    private Long toNodeId;
-    private String relationshipType;
-    private String label;
-    private String color;
-    private Integer thickness;
-    private String style;
-    private Boolean isDirected;
-    private Double weight;
+    private Long nodeId;
+    private String name;
+    private String formulaText;
+    private String formulaLatex;
+    private String description;
+    private String usageExample;
+    private String variables;
+    private String conditions;
+    private Integer orderIndex;
+    private Boolean isPrimary;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

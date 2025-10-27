@@ -118,9 +118,22 @@ public class UserProfileServiceImpl implements UserProfileService {
                 request.getFullName(), request.getBirthDate(), request.getPhoneNumber(), request.getAddress());
 
         try {
-            // Update user profile
+            // Get or create user profile
             UserProfile userProfile = userProfileRepository.findByUserId(Long.valueOf(userId))
-                    .orElseThrow(() -> new RuntimeException("User profile not found for userId: " + userId));
+                    .orElseGet(() -> {
+                        log.info("User profile not found for userId: {}, creating new profile", userId);
+                        UserProfile newProfile = new UserProfile();
+                        newProfile.setUserId(Long.valueOf(userId));
+                        newProfile.setProfileCompleted(false);
+                        newProfile.setPasswordSetupRequired(false);
+                        newProfile.setGoogleUser(false);
+                        newProfile.setUserType("STUDENT"); // Default user type
+                        newProfile.setEmail(""); // Will be updated later
+                        newProfile.setCreatedAt(LocalDateTime.now());
+                        newProfile.setUpdatedAt(LocalDateTime.now());
+                        log.info("Created new user profile for userId: {}", userId);
+                        return newProfile;
+                    });
 
             // Validate required fields
             if (request.getFullName() == null || request.getFullName().trim().isEmpty()) {
@@ -139,6 +152,7 @@ public class UserProfileServiceImpl implements UserProfileService {
                 throw new RuntimeException("Birth date is required");
             }
 
+            // Update or set user profile fields
             userProfile.setFullName(request.getFullName().trim());
             userProfile.setPhoneNumber(request.getPhoneNumber());
 
@@ -153,6 +167,15 @@ public class UserProfileServiceImpl implements UserProfileService {
             userProfile.setAddress(request.getAddress());
             userProfile.setBio(request.getBio());
             userProfile.setUpdatedAt(LocalDateTime.now());
+
+            // Set email if not already set (for newly created profiles)
+            // Use unique email based on userId to avoid conflicts
+            if (userProfile.getEmail() == null || userProfile.getEmail().isEmpty()) {
+                // Use unique email based on userId to avoid database conflicts
+                String uniqueEmail = userId + "_" + System.currentTimeMillis() + "@mss301.com";
+                userProfile.setEmail(uniqueEmail);
+                log.warn("Email not provided for userId: {}, using unique placeholder email: {}", userId, uniqueEmail);
+            }
 
             log.info("Saving user profile for userId: {}", userId);
             userProfileRepository.save(userProfile);

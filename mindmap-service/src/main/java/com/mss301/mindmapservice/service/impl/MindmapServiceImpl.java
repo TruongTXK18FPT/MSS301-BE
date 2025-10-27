@@ -15,6 +15,8 @@ import com.mss301.mindmapservice.dto.request.AiGenerateMindmapRequest;
 import com.mss301.mindmapservice.dto.request.MindmapRequest;
 import com.mss301.mindmapservice.dto.response.AiGenerateMindmapResponse;
 import com.mss301.mindmapservice.dto.response.MindmapResponse;
+import com.mss301.mindmapservice.dto.response.MindmapNodeResponse;
+import com.mss301.mindmapservice.dto.response.MindmapEdgeResponse;
 import com.mss301.mindmapservice.entity.Mindmap;
 import com.mss301.mindmapservice.entity.MindmapEdge;
 import com.mss301.mindmapservice.entity.MindmapNode;
@@ -294,6 +296,10 @@ public class MindmapServiceImpl implements MindmapService {
     }
 
     private MindmapResponse mapToResponse(Mindmap mindmap) {
+        // Load nodes and edges for the mindmap
+        List<MindmapNode> nodes = mindmapNodeRepository.findByMindmapId(mindmap.getId());
+        List<MindmapEdge> edges = mindmapEdgeRepository.findByMindmapId(mindmap.getId());
+        
         return MindmapResponse.builder()
                 .id(mindmap.getId())
                 .title(mindmap.getTitle())
@@ -311,6 +317,60 @@ public class MindmapServiceImpl implements MindmapService {
                 .accessCount(mindmap.getAccessCount())
                 .favoriteCount(mindmap.getFavoriteCount())
                 .shareCount(mindmap.getShareCount())
+                .color(mindmap.getColor())
+                .difficulty(mindmap.getDifficulty())
+                .cognitiveLevel(mindmap.getCognitiveLevel())
+                .estimatedTime(mindmap.getEstimatedTime())
+                .thumbnailUrl(mindmap.getThumbnailUrl())
+                .tags(mindmap.getTags())
+                .nodes(nodes.stream().map(this::mapNodeToResponse).collect(Collectors.toList()))
+                .edges(edges.stream().map(this::mapEdgeToResponse).collect(Collectors.toList()))
+                .build();
+    }
+
+    private MindmapNodeResponse mapNodeToResponse(MindmapNode node) {
+        return MindmapNodeResponse.builder()
+                .id(node.getId())
+                .mindmapId(node.getMindmapId())
+                .title(node.getTitle())
+                .content(node.getContent())
+                .nodeType(node.getNodeType())
+                .positionX(node.getPositionX())
+                .positionY(node.getPositionY())
+                .width(node.getWidth())
+                .height(node.getHeight())
+                .color(node.getColor())
+                .backgroundColor(node.getBackgroundColor())
+                .borderColor(node.getBorderColor())
+                .fontSize(node.getFontSize())
+                .fontFamily(node.getFontFamily())
+                .isBold(node.getIsBold())
+                .isItalic(node.getIsItalic())
+                .isUnderline(node.getIsUnderline())
+                .parentNodeId(node.getParentNodeId())
+                .level(node.getLevel())
+                .orderIndex(node.getOrderIndex())
+                .isCollapsed(node.getIsCollapsed())
+                .createdAt(node.getCreatedAt())
+                .updatedAt(node.getUpdatedAt())
+                .build();
+    }
+
+    private MindmapEdgeResponse mapEdgeToResponse(MindmapEdge edge) {
+        return MindmapEdgeResponse.builder()
+                .id(edge.getId())
+                .mindmapId(edge.getMindmapId())
+                .fromNodeId(edge.getFromNodeId())
+                .toNodeId(edge.getToNodeId())
+                .relationshipType(edge.getRelationshipType())
+                .label(edge.getLabel())
+                .color(edge.getColor())
+                .thickness(edge.getThickness())
+                .style(edge.getStyle())
+                .isDirected(edge.getIsDirected())
+                .weight(edge.getWeight())
+                .createdAt(edge.getCreatedAt())
+                .updatedAt(edge.getUpdatedAt())
                 .build();
     }
 

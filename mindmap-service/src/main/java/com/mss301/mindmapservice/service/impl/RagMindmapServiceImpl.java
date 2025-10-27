@@ -44,20 +44,16 @@ public class RagMindmapServiceImpl implements RagMindmapService {
             // Get relevant documents using RAG
             String ragContext = getRelevantDocuments(request);
 
-            if (ragContext == null || ragContext.trim().isEmpty()) {
-                log.warn("No relevant documents found for topic: {}", request.getTopic());
-                return createErrorResponse("No relevant documents found for the given topic");
-            }
-
-            // Create mindmap with RAG context
-            Mindmap mindmap = createMindmapFromRagRequest(request, userId, ragContext);
+            // Always create mindmap, even if no documents found
+            // RAG service will still generate content based on topic
+            Mindmap mindmap = createMindmapFromRagRequest(request, userId, ragContext != null ? ragContext : "");
             
             // SAVE mindmap first
             Mindmap savedMindmap = mindmapRepository.save(mindmap);
             log.info("Saved mindmap with ID: {}", savedMindmap.getId());
 
             // Generate nodes and edges
-            List<MindmapNode> nodes = generateNodes(savedMindmap, request, ragContext);
+            List<MindmapNode> nodes = generateNodes(savedMindmap, request, ragContext != null ? ragContext : "");
             List<MindmapEdge> edges = generateEdges(savedMindmap, nodes, request);
             
             // SAVE nodes and edges
@@ -82,9 +78,9 @@ public class RagMindmapServiceImpl implements RagMindmapService {
                     .status("SUCCESS")
                     .nodesGenerated(nodes.size())
                     .edgesGenerated(edges.size())
-                    .documentsUsed(maxDocuments)
-                    .ragContext(ragContext)
-                    .averageRelevanceScore(0.85)
+                    .documentsUsed(ragContext != null ? maxDocuments : 0)
+                    .ragContext(ragContext != null ? ragContext : "")
+                    .averageRelevanceScore(ragContext != null ? 0.85 : 0.0)
                     .createdAt(LocalDateTime.now())
                     .processingTimeMs(processingTime)
                     .build();

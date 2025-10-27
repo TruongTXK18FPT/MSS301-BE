@@ -44,6 +44,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final UserRepository userRepository;
     private final OTPRepository otpRepository;
     private final InvalidatedTokenRepository invalidatedTokenRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final GoogleOAuthService googleOAuthService;
     private final GoogleUserService googleUserService;
@@ -440,15 +441,29 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String roleName = null;
         if (user.getRoleId() != null) {
             try {
-                Optional<Role> roleOpt = Optional.ofNullable(user.getRole());
-                if (roleOpt.isPresent()) {
-                    roleName = roleOpt.get().getName();
-                    log.info("User {} has role: {}", user.getEmail(), roleName);
+                // First try to get role from the user object (if already loaded)
+                Role role = user.getRole();
+
+                // If role is null (lazy loading not initialized), fetch from repository
+                if (role == null) {
+                    log.info("Role is null for user {}, fetching from repository with roleId: {}",
+                            user.getEmail(), user.getRoleId());
+                    Optional<Role> roleOpt = roleRepository.findById(user.getRoleId());
+                    if (roleOpt.isPresent()) {
+                        role = roleOpt.get();
+                        roleName = role.getName();
+                        log.info("Successfully fetched role from repository for user {}: {}",
+                                user.getEmail(), roleName);
+                    } else {
+                        log.warn("Role not found in repository for roleId: {} for user: {}",
+                                user.getRoleId(), user.getEmail());
+                    }
                 } else {
-                    log.warn("User {} has roleId {} but role is null", user.getEmail(), user.getRoleId());
+                    roleName = role.getName();
+                    log.info("User {} has role: {}", user.getEmail(), roleName);
                 }
             } catch (Exception e) {
-                log.error("Error getting role for user {}: {}", user.getEmail(), e.getMessage());
+                log.error("Error getting role for user {}: {}", user.getEmail(), e.getMessage(), e);
             }
         } else {
             log.warn("User {} has no roleId", user.getEmail());

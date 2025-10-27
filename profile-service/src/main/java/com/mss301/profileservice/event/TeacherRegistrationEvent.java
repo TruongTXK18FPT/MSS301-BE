@@ -1,21 +1,22 @@
-package com.mss301.authservice.dto.request;
+package com.mss301.profileservice.event;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+/**
+ * Event received when a teacher registers
+ * Contains all teacher-specific registration data
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UserCreationRequest {
-    String fullName;
+public class TeacherRegistrationEvent {
+    String id; // User ID
     String email;
-    String password;
-    String confirmPassword;
-    String userType; // STUDENT, TEACHER, GUARDIAN
+    String fullName;
 
-    // Teacher-specific fields (optional, only for TEACHER userType)
+    // Teacher-specific fields
     String department;
     String specialization;
     Integer yearsOfExperience;

@@ -26,7 +26,7 @@ spring:
           writetimeout: 5000
   cloud:
     function:
-      definition: notificationDelivery;guardianVerificationDelivery;passwordResetOtpDelivery
+      definition: notificationDelivery;guardianVerificationDelivery;passwordResetOtpDelivery;teacherApprovalDelivery
     stream:
       bindings:
         notificationDelivery-in-0:
@@ -35,6 +35,8 @@ spring:
           destination: guardian-verification-topic
         passwordResetOtpDelivery-in-0:
           destination: password-reset-otp-topic
+        teacherApprovalDelivery-in-0:
+          destination: teacher-approval-topic
       kafka:
         binder:
           brokers: localhost:9092

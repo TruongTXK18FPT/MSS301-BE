@@ -2,6 +2,8 @@ package com.mss301.profileservice.service;
 
 import com.mss301.profileservice.event.CreatedUserEvent;
 import com.mss301.profileservice.event.ProfileCompletedEvent;
+import com.mss301.profileservice.event.TeacherRegistrationEvent;
+import com.mss301.profileservice.event.TeacherApprovalEvent;
 
 /**
  * Service interface for event-driven profile operations
@@ -39,4 +41,14 @@ public interface EventProfileService {
      * @param event The profile completion event
      */
     void completeProfileFromEvent(ProfileCompletedEvent event);
+
+    /**
+     * Create teacher profile from TeacherRegistrationEvent
+     * Populates all teacher-specific fields with PENDING approval status
+     *
+     * @param event The teacher registration event
+     */
+    void createTeacherProfileFromEvent(TeacherRegistrationEvent event);
+
+    void updateTeacherApprovalStatus(TeacherApprovalEvent event);
 }

@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 import com.mss301.authservice.event.CreatedUserEvent;
 import com.mss301.authservice.event.NotificationEvent;
 import com.mss301.authservice.event.ProfileCompletedEvent;
+import com.mss301.authservice.event.TeacherApprovalEvent;
+import com.mss301.authservice.event.TeacherRegistrationEvent;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -72,6 +74,42 @@ public class EventPublisher {
             }
         } catch (Exception e) {
             log.error("Error publishing ProfileCompletedEvent for user ID: {}", event.getUserId(), e);
+        }
+    }
+
+    /**
+     * Publishes TeacherRegistrationEvent when a teacher registers
+     *
+     * @param event The event to publish containing teacher registration details
+     */
+    public void publishTeacherRegistrationEvent(TeacherRegistrationEvent event) {
+        try {
+            boolean result = streamBridge.send("teacherRegistration-out-0", event);
+            if (result) {
+                log.info("Successfully published TeacherRegistrationEvent for user ID: {}", event.getId());
+            } else {
+                log.error("Failed to publish TeacherRegistrationEvent for user ID: {}", event.getId());
+            }
+        } catch (Exception e) {
+            log.error("Error publishing TeacherRegistrationEvent for user ID: {}", event.getId(), e);
+        }
+    }
+
+    /**
+     * Publishes TeacherApprovalEvent when admin approves/rejects teacher
+     *
+     * @param event The event to publish containing teacher approval details
+     */
+    public void publishTeacherApprovalEvent(TeacherApprovalEvent event) {
+        try {
+            boolean result = streamBridge.send("teacherApproval-out-0", event);
+            if (result) {
+                log.info("Successfully published TeacherApprovalEvent for user ID: {}", event.getUserId());
+            } else {
+                log.error("Failed to publish TeacherApprovalEvent for user ID: {}", event.getUserId());
+            }
+        } catch (Exception e) {
+            log.error("Error publishing TeacherApprovalEvent for user ID: {}", event.getUserId(), e);
         }
     }
 }

@@ -39,10 +39,23 @@ public class TeacherProfile {
     @Column(name = "bio", columnDefinition = "TEXT")
     private String bio;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "approval_status", nullable = false)
+    private ApprovalStatus approvalStatus = ApprovalStatus.PENDING;
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
     // Removed @OneToOne relationship to avoid foreign key constraint issues
     // UserProfile relationship is handled at application level via userId
     @Transient
     private UserProfile userProfile;
+
+    public enum ApprovalStatus {
+        PENDING, // Waiting for admin approval
+        APPROVED, // Admin approved, can login
+        REJECTED // Admin rejected, account marked inactive
+    }
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

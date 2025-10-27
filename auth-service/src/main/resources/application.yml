@@ -38,6 +38,10 @@ spring:
           destination: user-created-topic
         userCreated-out-0:
           destination: user-created-topic
+        teacherRegistration-out-0:
+          destination: teacher-registration-topic
+        teacherApproval-out-0:
+          destination: teacher-approval-topic
         profileCreationFailed-in-0:
           destination: profile-creation-failed-topic
       kafka:

@@ -35,4 +35,19 @@ public interface UserService {
     void completeProfile(Object request);
 
     ProfileStatusResponse getProfileStatus();
+
+    /**
+     * Process teacher approval/rejection by admin
+     *
+     * @param userId  User ID of the teacher
+     * @param request Approval request with action and optional rejection reason
+     */
+    void processTeacherApproval(Long userId, TeacherApprovalRequest request);
+
+    /**
+     * Get all pending teacher registrations
+     *
+     * @return List of pending teacher users
+     */
+    List<UserResponse> getPendingTeachers();
 }

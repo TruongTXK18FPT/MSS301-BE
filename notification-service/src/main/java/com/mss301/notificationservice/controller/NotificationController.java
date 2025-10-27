@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import com.mss301.notificationservice.dto.request.EmailRequest;
 import com.mss301.notificationservice.event.NotificationEvent;
 import com.mss301.notificationservice.event.PasswordResetOtpEvent;
+import com.mss301.notificationservice.event.TeacherApprovalEvent;
 import com.mss301.notificationservice.service.EmailService;
 
 import lombok.AccessLevel;
@@ -71,6 +72,33 @@ public class NotificationController {
                     .to(event.getUserEmail())
                     .subject(event.getSubject())
                     .templateName("password_reset_otp")
+                    .templateData(templateData)
+                    .build());
+        };
+    }
+
+    @Bean
+    public Consumer<TeacherApprovalEvent> teacherApprovalDelivery() {
+        return event -> {
+            log.info("Received teacher approval event: {}", event);
+
+            Map<String, Object> templateData = new HashMap<>();
+            templateData.put("email", event.getEmail());
+            templateData.put("approvalStatus", event.getApprovalStatus());
+            templateData.put("rejectionReason", event.getRejectionReason());
+
+            String templateName = "APPROVED".equals(event.getApprovalStatus())
+                    ? "teacher_approval_approved"
+                    : "teacher_approval_rejected";
+
+            String subject = "APPROVED".equals(event.getApprovalStatus())
+                    ? "Đơn đăng ký giáo viên đã được duyệt - MathMind"
+                    : "Đơn đăng ký giáo viên đã bị từ chối - MathMind";
+
+            emailService.sendEmail(EmailRequest.builder()
+                    .to(event.getEmail())
+                    .subject(subject)
+                    .templateName(templateName)
                     .templateData(templateData)
                     .build());
         };

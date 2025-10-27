@@ -82,7 +82,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             throw new RuntimeException("Unauthenticated");
         }
 
+        // Check if user is active - for teachers, they need admin approval
         if (user.getStatus() != UserAccount.UserStatus.ACTIVE) {
+            // Special message for teacher accounts
+            if ("TEACHER".equalsIgnoreCase(user.getRole().getName())) {
+                throw new RuntimeException(
+                        "Tài khoản giáo viên của bạn đang chờ quản trị viên duyệt. Bạn sẽ nhận được email khi tài khoản được duyệt.");
+            }
             throw new RuntimeException("User is not active");
         }
 
@@ -237,19 +243,23 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         userRepository.save(user);
         log.info("Updated email verification status for user: {}", request.getEmail());
 
-        // Send welcome email after successful verification
-        Map<String, Object> welcomeData = new HashMap<>();
-        welcomeData.put("fullName", "User"); // Use generic name for personalization
+        // Send welcome email after successful verification (skip for TEACHER role)
+        if (!"TEACHER".equalsIgnoreCase(user.getRole().getName())) {
+            Map<String, Object> welcomeData = new HashMap<>();
+            welcomeData.put("fullName", "User"); // Use generic name for personalization
 
-        NotificationEvent welcomeEvent = NotificationEvent.builder()
-                .recipient(user.getEmail())
-                .subject("Welcome to MSS301!")
-                .templateCode("welcome_email") // Now use welcome template
-                .param(welcomeData)
-                .build();
+            NotificationEvent welcomeEvent = NotificationEvent.builder()
+                    .recipient(user.getEmail())
+                    .subject("Welcome to MSS301!")
+                    .templateCode("welcome_email") // Now use welcome template
+                    .param(welcomeData)
+                    .build();
 
-        eventPublisher.publishNotificationEvent(welcomeEvent);
-        log.info("Sent welcome email to verified user: {}", user.getEmail());
+            eventPublisher.publishNotificationEvent(welcomeEvent);
+            log.info("Sent welcome email to verified user: {}", user.getEmail());
+        } else {
+            log.info("Skipped welcome email for TEACHER role: {}", user.getEmail());
+        }
     }
 
     @Override

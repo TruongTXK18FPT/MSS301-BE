@@ -12,10 +12,14 @@ import com.mss301.profileservice.dto.response.StudentProfileResponse;
 import com.mss301.profileservice.dto.response.GuardianProfileResponse;
 import com.mss301.profileservice.dto.response.GuardianProfileWithStudents;
 import com.mss301.profileservice.dto.response.StudentGuardianResponse;
+import com.mss301.profileservice.dto.response.TeacherProfileResponse;
 import com.mss301.profileservice.service.UserProfileService;
 import com.mss301.profileservice.service.GuardianProfileService;
+import com.mss301.profileservice.service.TeacherProfileService;
 
 import lombok.RequiredArgsConstructor;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/")
@@ -24,6 +28,7 @@ public class ProfileController {
 
     private final UserProfileService userProfileService;
     private final GuardianProfileService guardianProfileService;
+    private final TeacherProfileService teacherProfileService;
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<StudentProfileResponse>> getCurrentUserProfile() {
@@ -93,6 +98,35 @@ public class ProfileController {
         String currentUserId = getCurrentUserId();
         guardianProfileService.resendGuardianVerification(currentUserId, studentEmail);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    // Teacher Profile Endpoints
+    @GetMapping("/me/teacher")
+    public ResponseEntity<ApiResponse<TeacherProfileResponse>> getCurrentTeacherProfile() {
+        String currentUserId = getCurrentUserId();
+        TeacherProfileResponse response = teacherProfileService.getTeacherProfileByUserId(Long.valueOf(currentUserId));
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/admin/teachers/{userId}/details")
+    public ResponseEntity<ApiResponse<TeacherProfileResponse>> getTeacherProfileDetails(
+            @PathVariable Long userId) {
+        TeacherProfileResponse response = teacherProfileService.getTeacherProfileByUserId(userId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    // Debug endpoint to check teacher status
+    @GetMapping("/debug/teacher-status/{userId}")
+    public ResponseEntity<ApiResponse<Object>> debugTeacherStatus(@PathVariable Long userId) {
+        try {
+            TeacherProfileResponse response = teacherProfileService.getTeacherProfileByUserId(userId);
+            return ResponseEntity.ok(ApiResponse.success(Map.of(
+                    "teacherProfile", response,
+                    "approvalStatus", response.getApprovalStatus(),
+                    "userId", response.getUserId())));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error(500, "Error: " + e.getMessage()));
+        }
     }
 
     /**

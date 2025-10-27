@@ -19,6 +19,8 @@ import com.mss301.authservice.dto.response.UserResponse;
 import com.mss301.authservice.entity.Role;
 import com.mss301.authservice.entity.UserAccount;
 import com.mss301.authservice.event.CreatedUserEvent;
+import com.mss301.authservice.event.TeacherApprovalEvent;
+import com.mss301.authservice.event.TeacherRegistrationEvent;
 import com.mss301.authservice.exception.AppException;
 import com.mss301.authservice.exception.ErrorCode;
 import com.mss301.authservice.repository.RoleRepository;
@@ -87,10 +89,16 @@ public class UserServiceImpl implements UserService {
         }
 
         try {
-            // Publish user created event via Kafka
-            publishUserCreatedEvent(user, request);
+            // Publish appropriate event based on user type
+            if ("TEACHER".equalsIgnoreCase(request.getUserType())) {
+                // Publish TeacherRegistrationEvent for teachers
+                publishTeacherRegistrationEvent(user, request);
+            } else {
+                // Publish CreatedUserEvent for students and guardians
+                publishUserCreatedEvent(user, request);
+            }
         } catch (Exception e) {
-            log.error("Failed to publish user created event for user: {}", user.getEmail(), e);
+            log.error("Failed to publish registration event for user: {}", user.getEmail(), e);
             // Don't fail the registration if event publishing fails
         }
 
@@ -229,6 +237,29 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    private void publishTeacherRegistrationEvent(UserAccount user, UserCreationRequest request) {
+        try {
+            // Create TeacherRegistrationEvent with teacher-specific details
+            TeacherRegistrationEvent event = TeacherRegistrationEvent
+                    .builder()
+                    .id(user.getId().toString())
+                    .email(user.getEmail())
+                    .fullName(request.getFullName())
+                    .department(request.getDepartment())
+                    .specialization(request.getSpecialization())
+                    .yearsOfExperience(request.getYearsOfExperience())
+                    .qualifications(request.getQualifications())
+                    .bio(request.getBio())
+                    .phone(request.getPhone())
+                    .build();
+
+            eventPublisher.publishTeacherRegistrationEvent(event);
+            log.info("Published TeacherRegistrationEvent for user: {}", user.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to publish TeacherRegistrationEvent for user: {}", user.getEmail(), e);
+        }
+    }
+
     @Override
     @Transactional
     public void completeProfile(Object request) {
@@ -259,5 +290,74 @@ public class UserServiceImpl implements UserService {
                 .userType(user.getRole().getName())
                 .email(user.getEmail())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public void processTeacherApproval(Long userId, TeacherApprovalRequest request) {
+        log.info("Processing teacher approval for userId: {} with action: {}", userId, request.getAction());
+
+        UserAccount user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Verify this is a teacher
+        if (!"TEACHER".equalsIgnoreCase(user.getRole().getName())) {
+            throw new RuntimeException("User is not a teacher");
+        }
+
+        if ("APPROVE".equalsIgnoreCase(request.getAction())) {
+            // Approve teacher
+            user.setStatus(UserAccount.UserStatus.ACTIVE);
+            user.setUpdatedAt(LocalDateTime.now());
+            userRepository.save(user);
+
+            // Publish approval event
+            publishTeacherApprovalEvent(user, "APPROVED", null);
+
+            log.info("Teacher approved successfully for userId: {}", userId);
+        } else if ("REJECT".equalsIgnoreCase(request.getAction())) {
+            // Reject teacher
+            user.setStatus(UserAccount.UserStatus.INACTIVE);
+            user.setUpdatedAt(LocalDateTime.now());
+            userRepository.save(user);
+
+            // Publish rejection event
+            publishTeacherApprovalEvent(user, "REJECTED", request.getRejectionReason());
+
+            log.info("Teacher rejected for userId: {} with reason: {}", userId, request.getRejectionReason());
+        } else {
+            throw new RuntimeException("Invalid action. Must be APPROVE or REJECT");
+        }
+    }
+
+    @Override
+    public List<UserResponse> getPendingTeachers() {
+        log.info("Getting pending teacher registrations");
+
+        // Get all INACTIVE users with TEACHER role
+        List<UserAccount> pendingTeachers = userRepository.findByStatusAndRoleName(
+                UserAccount.UserStatus.INACTIVE, "TEACHER");
+
+        return pendingTeachers.stream()
+                .map(this::mapToUserResponse)
+                .collect(Collectors.toList());
+    }
+
+    private void publishTeacherApprovalEvent(UserAccount user, String approvalStatus, String rejectionReason) {
+        try {
+            // Create TeacherApprovalEvent
+            TeacherApprovalEvent event = TeacherApprovalEvent
+                    .builder()
+                    .userId(user.getId().toString())
+                    .email(user.getEmail())
+                    .approvalStatus(approvalStatus)
+                    .rejectionReason(rejectionReason)
+                    .build();
+
+            eventPublisher.publishTeacherApprovalEvent(event);
+            log.info("Published TeacherApprovalEvent for user: {} with status: {}", user.getEmail(), approvalStatus);
+        } catch (Exception e) {
+            log.error("Failed to publish TeacherApprovalEvent for user: {}", user.getEmail(), e);
+        }
     }
 }

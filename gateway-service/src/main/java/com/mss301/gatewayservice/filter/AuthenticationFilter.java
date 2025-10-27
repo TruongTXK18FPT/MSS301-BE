@@ -74,6 +74,9 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
         String token = authHeader.get(0).replace("Bearer ", "");
         log.info("Token: {}", token);
+        
+        // Get full Authorization header value
+        String authorizationHeader = authHeader.get(0);
 
         return authenticationService
                 .introspect(token)
@@ -82,10 +85,12 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                     String email = introspectResponse.getResult().getEmail();
                     String id = introspectResponse.getResult().getId();
 
+                    // Important: Keep the Authorization header when forwarding to downstream services
                     ServerHttpRequest request = exchange.getRequest()
                             .mutate()
                             .header("X-User-Id", id)
                             .header("X-User-Email", email)
+                            .header(HttpHeaders.AUTHORIZATION, authorizationHeader)
                             .build();
 
                     ServerWebExchange mutatedExchange = exchange.mutate().request(request).build();

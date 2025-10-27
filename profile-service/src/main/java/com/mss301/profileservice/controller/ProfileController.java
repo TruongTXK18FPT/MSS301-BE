@@ -18,7 +18,7 @@ import com.mss301.profileservice.service.GuardianProfileService;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/profile")
+@RequestMapping("/")
 @RequiredArgsConstructor
 public class ProfileController {
 

@@ -26,6 +26,6 @@ public class SwaggerConfig {
                                 .email("support@mss301.com")
                                 .url("https://mss301.com"))
                         .license(new License().name("MIT License").url("https://opensource.org/licenses/MIT")))
-                .servers(List.of(new Server().url("http://localhost:8086").description("Development server")));
+                .servers(List.of(new Server().url("http://localhost:8094").description("Development server")));
     }
 }

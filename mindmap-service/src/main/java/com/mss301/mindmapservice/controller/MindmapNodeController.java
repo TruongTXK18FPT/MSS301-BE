@@ -20,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping("/api/v1/mindmap/{mindmapId}/node")
+@RequestMapping("/mindmap/{mindmapId}/node")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Mindmap Node Management", description = "APIs for managing mindmap nodes")

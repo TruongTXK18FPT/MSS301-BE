@@ -1,0 +1,13 @@
+package com.mss301.premiumservice.repository; 
+ 
+import com.mss301.premiumservice.model.Entitlement;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository; 
+ 
+import java.util.List; 
+ 
+@Repository 
+public interface EntitlementRepository extends JpaRepository<Entitlement, Long> { 
+   Entitlement findByEntitlementId(Long entitlementId);
+   List<Entitlement> findAll();
+} 

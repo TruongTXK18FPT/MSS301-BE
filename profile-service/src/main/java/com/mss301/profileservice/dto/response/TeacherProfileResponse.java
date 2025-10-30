@@ -19,11 +19,14 @@ public class TeacherProfileResponse {
     private LocalDate dob;
     private String phoneNumber;
     private String address;
+    private String email;
     private String department;
     private String specialization;
     private Integer yearsOfExperience;
     private String qualifications;
     private String bio;
+    private String approvalStatus;
+    private String rejectionReason;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

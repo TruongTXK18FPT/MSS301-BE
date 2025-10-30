@@ -22,6 +22,7 @@ public class ContentItemResponse {
     private String grade;
     private String tags;
     private Boolean isPublic;
+    private Long classroomId;  // Classroom association
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

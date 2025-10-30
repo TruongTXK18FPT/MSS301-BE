@@ -12,14 +12,14 @@ import lombok.NoArgsConstructor;
 public class ApiResponse<T> {
     private String code;
     private String message;
-    private T data;
+    private T result; // Changed from 'data' to 'result' for consistency
     private Long timestamp;
 
     public static <T> ApiResponse<T> success(T data) {
         return ApiResponse.<T>builder()
                 .code("200")
                 .message("Success")
-                .data(data)
+                .result(data)
                 .timestamp(System.currentTimeMillis())
                 .build();
     }
@@ -28,7 +28,7 @@ public class ApiResponse<T> {
         return ApiResponse.<T>builder()
                 .code("200")
                 .message(message)
-                .data(data)
+                .result(data)
                 .timestamp(System.currentTimeMillis())
                 .build();
     }

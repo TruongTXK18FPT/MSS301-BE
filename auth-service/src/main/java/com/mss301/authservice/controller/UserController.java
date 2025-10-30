@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import com.mss301.authservice.dto.ApiResponse;
+import com.mss301.authservice.dto.request.TeacherApprovalRequest;
 import com.mss301.authservice.dto.request.UpdateUserStatusRequest;
 import com.mss301.authservice.dto.request.UserCreationRequest;
 import com.mss301.authservice.dto.request.UserUpdateRequest;
@@ -121,6 +122,25 @@ public class UserController {
     public ApiResponse<ProfileStatusResponse> getProfileStatus() {
         return ApiResponse.<ProfileStatusResponse>builder()
                 .result(userService.getProfileStatus())
+                .build();
+    }
+
+    // Admin endpoint to approve/reject teacher registration
+    @PostMapping("/{userId}/teacher-approval")
+    public ApiResponse<Void> approveTeacherRegistration(
+            @PathVariable Long userId,
+            @RequestBody TeacherApprovalRequest request) {
+        userService.processTeacherApproval(userId, request);
+        return ApiResponse.<Void>builder()
+                .message("Teacher registration processed successfully")
+                .build();
+    }
+
+    // Admin endpoint to get pending teacher registrations
+    @GetMapping("/pending-teachers")
+    public ApiResponse<List<UserResponse>> getPendingTeachers() {
+        return ApiResponse.<List<UserResponse>>builder()
+                .result(userService.getPendingTeachers())
                 .build();
     }
 }

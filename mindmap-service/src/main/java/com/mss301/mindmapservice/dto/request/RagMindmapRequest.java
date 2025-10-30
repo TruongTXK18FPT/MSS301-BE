@@ -67,4 +67,12 @@ public class RagMindmapRequest {
 
     @Builder.Default
     private Double similarityThreshold = 0.7;
+
+    // Document-based mindmap fields
+    @Builder.Default
+    private Boolean useDocuments = false;
+    
+    private Long documentId;
+    private Long chapterId;
+    private Long lessonId;
 }

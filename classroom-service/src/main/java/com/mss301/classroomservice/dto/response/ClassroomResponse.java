@@ -20,6 +20,9 @@ public class ClassroomResponse {
     private String password;
     private Integer maxStudents;
     private Integer currentStudents;
+    private Integer assignmentCount;
+    private Integer quizCount;
+    private Integer contentCount; // For lessons/mindmaps
     private Long ownerId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

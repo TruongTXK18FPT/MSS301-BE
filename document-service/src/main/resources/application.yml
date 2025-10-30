@@ -24,6 +24,20 @@ spring:
     connection-timeout: 10s
     socket-timeout: 30s
 
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    hostname: localhost
+    ip-address: 127.0.0.1
+    instance-id: ${spring.application.name}:${server.port}
+    non-secure-port-enabled: true
+    secure-port-enabled: false
+
 logging:
   level:
     com.mss301.documentservice: INFO

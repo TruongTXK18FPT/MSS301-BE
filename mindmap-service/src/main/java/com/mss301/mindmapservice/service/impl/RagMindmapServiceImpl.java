@@ -41,29 +41,34 @@ public class RagMindmapServiceImpl implements RagMindmapService {
         log.info("Generating RAG mindmap for user: {} with topic: {}", userId, request.getTopic());
 
         try {
-            // Get relevant documents using RAG
-            String ragContext = getRelevantDocuments(request);
-
-            if (ragContext == null || ragContext.trim().isEmpty()) {
-                log.warn("No relevant documents found for topic: {}", request.getTopic());
-                return createErrorResponse("No relevant documents found for the given topic");
+            // Get relevant documents using RAG (optional for general mindmap)
+            String ragContext = null;
+            if (Boolean.TRUE.equals(request.getUseDocuments())) {
+                ragContext = getRelevantDocuments(request);
             }
 
-            // Create mindmap with RAG context
-            Mindmap mindmap = createMindmapFromRagRequest(request, userId, ragContext);
+            // Create mindmap entity
+            Mindmap mindmap = createMindmapFromRagRequest(request, userId, ragContext != null ? ragContext : "");
             
-            // SAVE mindmap first
+            // SAVE mindmap first to get ID
             Mindmap savedMindmap = mindmapRepository.save(mindmap);
             log.info("Saved mindmap with ID: {}", savedMindmap.getId());
 
-            // Generate nodes and edges
-            List<MindmapNode> nodes = generateNodes(savedMindmap, request, ragContext);
-            List<MindmapEdge> edges = generateEdges(savedMindmap, nodes, request);
+            // Call RAG service to generate mindmap structure with AI
+            String aiGeneratedJson = callRagServiceForMindmapGeneration(request, ragContext);
+            
+            // Parse JSON and generate nodes
+            List<MindmapNode> nodes = parseNodesFromAiResponse(savedMindmap, aiGeneratedJson);
+            
+            // Generate edges based on node hierarchy
+            List<MindmapEdge> edges = generateEdgesFromNodes(savedMindmap, nodes);
             
             // SAVE nodes and edges
             if (!nodes.isEmpty()) {
                 mindmapNodeRepository.saveAll(nodes);
                 log.info("Saved {} nodes", nodes.size());
+            } else {
+                log.warn("No nodes generated from AI response");
             }
             
             if (!edges.isEmpty()) {
@@ -82,9 +87,9 @@ public class RagMindmapServiceImpl implements RagMindmapService {
                     .status("SUCCESS")
                     .nodesGenerated(nodes.size())
                     .edgesGenerated(edges.size())
-                    .documentsUsed(maxDocuments)
-                    .ragContext(ragContext)
-                    .averageRelevanceScore(0.85)
+                    .documentsUsed(ragContext != null ? maxDocuments : 0)
+                    .ragContext(ragContext != null ? ragContext : "")
+                    .averageRelevanceScore(ragContext != null ? 0.85 : 0.0)
                     .createdAt(LocalDateTime.now())
                     .processingTimeMs(processingTime)
                     .build();
@@ -168,10 +173,8 @@ public class RagMindmapServiceImpl implements RagMindmapService {
 
     @SuppressWarnings("unused")
     private List<MindmapNode> generateNodes(Mindmap mindmap, RagMindmapRequest request, String ragContext) {
-        // Simplified node generation - in real implementation, this would call AI service
+        // Deprecated: Use parseNodesFromAiResponse instead
         List<MindmapNode> nodes = new ArrayList<>();
-
-        // Create a basic root node
         MindmapNode rootNode = new MindmapNode();
         rootNode.setMindmapId(mindmap.getId());
         rootNode.setTitle(request.getTopic());
@@ -182,16 +185,264 @@ public class RagMindmapServiceImpl implements RagMindmapService {
         rootNode.setPositionY(0.0);
         rootNode.setCreatedAt(LocalDateTime.now());
         rootNode.setUpdatedAt(LocalDateTime.now());
-
         nodes.add(rootNode);
-
         return nodes;
     }
 
-    @SuppressWarnings("unused")
-    private List<MindmapEdge> generateEdges(Mindmap mindmap, List<MindmapNode> nodes, RagMindmapRequest request) {
-        // Simplified edge generation - in real implementation, this would call AI service
-        return new ArrayList<>();
+    /**
+     * Call RAG service to generate mindmap structure with AI
+     */
+    private String callRagServiceForMindmapGeneration(RagMindmapRequest request, String ragContext) {
+        log.info("Calling RAG service to generate mindmap for topic: {}", request.getTopic());
+
+        try {
+            String query = String.format(
+                "Create a detailed mindmap about '%s' for grade %s in Vietnamese. " +
+                "Include concepts, formulas, examples, and exercises.",
+                request.getTopic(),
+                request.getGrade()
+            );
+
+            RagRequest ragRequest = RagRequest.builder()
+                    .queryText(query)
+                    .mode("MINDMAP")  // Use MINDMAP mode
+                    .llmProvider(request.getAiProvider().name())
+                    .useDocuments(request.getUseDocuments())
+                    .documentId(request.getDocumentId() != null ? request.getDocumentId().toString() : null)
+                    .chapterId(request.getChapterId() != null ? request.getChapterId().toString() : null)
+                    .lessonId(request.getLessonId() != null ? request.getLessonId().toString() : null)
+                    .build();
+
+            RagResponse ragResponse = ragServiceClient.processRagQuery(ragRequest);
+
+            if (ragResponse != null && ragResponse.getResponse() != null) {
+                // Extract mindmap content from response
+                Object responseObj = ragResponse.getResponse();
+                
+                // Try to extract mindmap content from response
+                if (responseObj instanceof java.util.Map) {
+                    @SuppressWarnings("unchecked")
+                    java.util.Map<String, Object> responseMap = (java.util.Map<String, Object>) responseObj;
+                    Object mindmapContent = responseMap.get("mindmapContent");
+                    if (mindmapContent != null) {
+                        return mindmapContent.toString();
+                    }
+                }
+                
+                // If response is already a string (JSON), return it
+                if (responseObj instanceof String) {
+                    return (String) responseObj;
+                }
+                
+                // Try to convert object to JSON string
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                return mapper.writeValueAsString(responseObj);
+            }
+
+            throw new RuntimeException("RAG service returned null or invalid response");
+
+        } catch (Exception e) {
+            log.error("Failed to call RAG service for mindmap generation: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to generate mindmap with AI: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Parse AI-generated JSON into MindmapNode entities
+     */
+    private List<MindmapNode> parseNodesFromAiResponse(Mindmap mindmap, String aiJsonResponse) {
+        List<MindmapNode> nodes = new ArrayList<>();
+        
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(aiJsonResponse);
+
+            // Create central topic node
+            MindmapNode centralNode = new MindmapNode();
+            centralNode.setMindmapId(mindmap.getId());
+            centralNode.setTitle(root.path("centralTopic").asText(mindmap.getTitle()));
+            centralNode.setContent("Central topic of the mindmap");
+            centralNode.setNodeType(MindmapNode.NodeType.CONCEPT);
+            centralNode.setLevel(0);
+            centralNode.setPositionX(0.0);
+            centralNode.setPositionY(0.0);
+            centralNode.setCreatedAt(LocalDateTime.now());
+            centralNode.setUpdatedAt(LocalDateTime.now());
+            nodes.add(centralNode);
+
+            // Parse branches (main nodes)
+            com.fasterxml.jackson.databind.JsonNode branches = root.path("branches");
+            if (branches.isArray()) {
+                int branchIndex = 0;
+                for (com.fasterxml.jackson.databind.JsonNode branch : branches) {
+                    MindmapNode branchNode = parseBranchNode(mindmap, branch, 1, branchIndex);
+                    nodes.add(branchNode);
+
+                    // Parse sub-branches
+                    com.fasterxml.jackson.databind.JsonNode subBranches = branch.path("subBranches");
+                    if (subBranches.isArray()) {
+                        int subIndex = 0;
+                        for (com.fasterxml.jackson.databind.JsonNode subBranch : subBranches) {
+                            MindmapNode subNode = parseSubBranchNode(mindmap, subBranch, 2, branchIndex, subIndex);
+                            nodes.add(subNode);
+                            subIndex++;
+                        }
+                    }
+                    branchIndex++;
+                }
+            }
+
+            log.info("Parsed {} nodes from AI response", nodes.size());
+            return nodes;
+
+        } catch (Exception e) {
+            log.error("Failed to parse AI response: {}", e.getMessage(), e);
+            // Return fallback with single root node
+            return createFallbackNodes(mindmap);
+        }
+    }
+
+    private MindmapNode parseBranchNode(Mindmap mindmap, com.fasterxml.jackson.databind.JsonNode branch, int level, int index) {
+        MindmapNode node = new MindmapNode();
+        node.setMindmapId(mindmap.getId());
+        node.setTitle(branch.path("title").asText("Branch " + index));
+        node.setContent(branch.path("description").asText(""));
+        node.setNodeType(parseNodeType(branch.path("nodeType").asText("concept")));
+        node.setLevel(level);
+        
+        // Position nodes in a circle around center
+        double angle = (2 * Math.PI * index) / 8.0; // Assume max 8 branches
+        double radius = 300.0;
+        node.setPositionX(radius * Math.cos(angle));
+        node.setPositionY(radius * Math.sin(angle));
+        
+        node.setCreatedAt(LocalDateTime.now());
+        node.setUpdatedAt(LocalDateTime.now());
+        
+        return node;
+    }
+
+    private MindmapNode parseSubBranchNode(Mindmap mindmap, com.fasterxml.jackson.databind.JsonNode subBranch, 
+                                           int level, int branchIndex, int subIndex) {
+        MindmapNode node = new MindmapNode();
+        node.setMindmapId(mindmap.getId());
+        node.setTitle(subBranch.path("title").asText("Sub-branch " + subIndex));
+        node.setContent(subBranch.path("content").asText(""));
+        node.setNodeType(parseNodeType(subBranch.path("nodeType").asText("concept")));
+        node.setLevel(level);
+        
+        // Position sub-nodes around their parent
+        double parentAngle = (2 * Math.PI * branchIndex) / 8.0;
+        double subAngle = parentAngle + (subIndex - 1) * 0.3; // Spread around parent
+        double radius = 500.0;
+        node.setPositionX(radius * Math.cos(subAngle));
+        node.setPositionY(radius * Math.sin(subAngle));
+        
+        node.setCreatedAt(LocalDateTime.now());
+        node.setUpdatedAt(LocalDateTime.now());
+        
+        return node;
+    }
+
+    private MindmapNode.NodeType parseNodeType(String typeStr) {
+        try {
+            return MindmapNode.NodeType.valueOf(typeStr.toUpperCase());
+        } catch (Exception e) {
+            return MindmapNode.NodeType.CONCEPT;
+        }
+    }
+
+    private List<MindmapNode> createFallbackNodes(Mindmap mindmap) {
+        List<MindmapNode> nodes = new ArrayList<>();
+        MindmapNode rootNode = new MindmapNode();
+        rootNode.setMindmapId(mindmap.getId());
+        rootNode.setTitle(mindmap.getTitle());
+        rootNode.setContent("AI generation failed, using fallback node");
+        rootNode.setNodeType(MindmapNode.NodeType.CONCEPT);
+        rootNode.setLevel(0);
+        rootNode.setPositionX(0.0);
+        rootNode.setPositionY(0.0);
+        rootNode.setCreatedAt(LocalDateTime.now());
+        rootNode.setUpdatedAt(LocalDateTime.now());
+        nodes.add(rootNode);
+        return nodes;
+    }
+
+    /**
+     * Generate edges based on node hierarchy
+     */
+    private List<MindmapEdge> generateEdgesFromNodes(Mindmap mindmap, List<MindmapNode> nodes) {
+        List<MindmapEdge> edges = new ArrayList<>();
+        
+        if (nodes.isEmpty()) {
+            return edges;
+        }
+
+        // Root node is always first
+        MindmapNode rootNode = nodes.get(0);
+        
+        // Connect all level 1 nodes to root
+        List<MindmapNode> level1Nodes = nodes.stream()
+            .filter(n -> n.getLevel() == 1)
+            .toList();
+        
+        for (MindmapNode node : level1Nodes) {
+            MindmapEdge edge = new MindmapEdge();
+            edge.setMindmapId(mindmap.getId());
+            edge.setFromNodeId(rootNode.getId());
+            edge.setToNodeId(node.getId());
+            edge.setLabel("");
+            edge.setCreatedAt(LocalDateTime.now());
+            edges.add(edge);
+        }
+
+        // Connect level 2 nodes to their level 1 parents
+        // For simplicity, connect each level 2 node to the nearest level 1 node
+        List<MindmapNode> level2Nodes = nodes.stream()
+            .filter(n -> n.getLevel() == 2)
+            .toList();
+        
+        for (MindmapNode level2Node : level2Nodes) {
+            // Find closest level 1 node by position
+            MindmapNode closestParent = findClosestNode(level2Node, level1Nodes);
+            if (closestParent != null) {
+                MindmapEdge edge = new MindmapEdge();
+                edge.setMindmapId(mindmap.getId());
+                edge.setFromNodeId(closestParent.getId());
+                edge.setToNodeId(level2Node.getId());
+                edge.setLabel("");
+                edge.setCreatedAt(LocalDateTime.now());
+                edges.add(edge);
+            }
+        }
+
+        log.info("Generated {} edges from node hierarchy", edges.size());
+        return edges;
+    }
+
+    private MindmapNode findClosestNode(MindmapNode target, List<MindmapNode> candidates) {
+        if (candidates.isEmpty()) {
+            return null;
+        }
+
+        MindmapNode closest = candidates.get(0);
+        double minDistance = calculateDistance(target, closest);
+
+        for (MindmapNode candidate : candidates) {
+            double distance = calculateDistance(target, candidate);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closest = candidate;
+            }
+        }
+
+        return closest;
+    }
+
+    private double calculateDistance(MindmapNode node1, MindmapNode node2) {
+        double dx = node1.getPositionX() - node2.getPositionX();
+        double dy = node1.getPositionY() - node2.getPositionY();
+        return Math.sqrt(dx * dx + dy * dy);
     }
 
     private RagMindmapResponse createErrorResponse(String errorMessage) {

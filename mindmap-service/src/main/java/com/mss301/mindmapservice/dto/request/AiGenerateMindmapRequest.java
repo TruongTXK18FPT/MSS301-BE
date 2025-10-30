@@ -38,11 +38,23 @@ public class AiGenerateMindmapRequest {
     @Size(max = 2000, message = "Additional context must not exceed 2000 characters")
     private String additionalContext;
 
+    @Builder.Default
     private Integer maxNodes = 20;
+    @Builder.Default
     private Integer maxDepth = 3;
+    @Builder.Default
     private Boolean includeExamples = true;
+    @Builder.Default
     private Boolean includeExercises = true;
+    @Builder.Default
     private Boolean includeFormulas = true;
+
+    // Document-based mindmap fields
+    @Builder.Default
+    private Boolean useDocuments = false;
+    private Long documentId;
+    private Long chapterId;
+    private Long lessonId;
 
     public enum AiProvider {
         MISTRAL("Mistral"),

@@ -44,6 +44,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final UserRepository userRepository;
     private final OTPRepository otpRepository;
     private final InvalidatedTokenRepository invalidatedTokenRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final GoogleOAuthService googleOAuthService;
     private final GoogleUserService googleUserService;
@@ -81,7 +82,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             throw new RuntimeException("Unauthenticated");
         }
 
+        // Check if user is active - for teachers, they need admin approval
         if (user.getStatus() != UserAccount.UserStatus.ACTIVE) {
+            // Special message for teacher accounts
+            if ("TEACHER".equalsIgnoreCase(user.getRole().getName())) {
+                throw new RuntimeException(
+                        "Tài khoản giáo viên của bạn đang chờ quản trị viên duyệt. Bạn sẽ nhận được email khi tài khoản được duyệt.");
+            }
             throw new RuntimeException("User is not active");
         }
 
@@ -236,19 +243,23 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         userRepository.save(user);
         log.info("Updated email verification status for user: {}", request.getEmail());
 
-        // Send welcome email after successful verification
-        Map<String, Object> welcomeData = new HashMap<>();
-        welcomeData.put("fullName", "User"); // Use generic name for personalization
+        // Send welcome email after successful verification (skip for TEACHER role)
+        if (!"TEACHER".equalsIgnoreCase(user.getRole().getName())) {
+            Map<String, Object> welcomeData = new HashMap<>();
+            welcomeData.put("fullName", "User"); // Use generic name for personalization
 
-        NotificationEvent welcomeEvent = NotificationEvent.builder()
-                .recipient(user.getEmail())
-                .subject("Welcome to MSS301!")
-                .templateCode("welcome_email") // Now use welcome template
-                .param(welcomeData)
-                .build();
+            NotificationEvent welcomeEvent = NotificationEvent.builder()
+                    .recipient(user.getEmail())
+                    .subject("Welcome to MSS301!")
+                    .templateCode("welcome_email") // Now use welcome template
+                    .param(welcomeData)
+                    .build();
 
-        eventPublisher.publishNotificationEvent(welcomeEvent);
-        log.info("Sent welcome email to verified user: {}", user.getEmail());
+            eventPublisher.publishNotificationEvent(welcomeEvent);
+            log.info("Sent welcome email to verified user: {}", user.getEmail());
+        } else {
+            log.info("Skipped welcome email for TEACHER role: {}", user.getEmail());
+        }
     }
 
     @Override
@@ -440,15 +451,29 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String roleName = null;
         if (user.getRoleId() != null) {
             try {
-                Optional<Role> roleOpt = Optional.ofNullable(user.getRole());
-                if (roleOpt.isPresent()) {
-                    roleName = roleOpt.get().getName();
-                    log.info("User {} has role: {}", user.getEmail(), roleName);
+                // First try to get role from the user object (if already loaded)
+                Role role = user.getRole();
+
+                // If role is null (lazy loading not initialized), fetch from repository
+                if (role == null) {
+                    log.info("Role is null for user {}, fetching from repository with roleId: {}",
+                            user.getEmail(), user.getRoleId());
+                    Optional<Role> roleOpt = roleRepository.findById(user.getRoleId());
+                    if (roleOpt.isPresent()) {
+                        role = roleOpt.get();
+                        roleName = role.getName();
+                        log.info("Successfully fetched role from repository for user {}: {}",
+                                user.getEmail(), roleName);
+                    } else {
+                        log.warn("Role not found in repository for roleId: {} for user: {}",
+                                user.getRoleId(), user.getEmail());
+                    }
                 } else {
-                    log.warn("User {} has roleId {} but role is null", user.getEmail(), user.getRoleId());
+                    roleName = role.getName();
+                    log.info("User {} has role: {}", user.getEmail(), roleName);
                 }
             } catch (Exception e) {
-                log.error("Error getting role for user {}: {}", user.getEmail(), e.getMessage());
+                log.error("Error getting role for user {}: {}", user.getEmail(), e.getMessage(), e);
             }
         } else {
             log.warn("User {} has no roleId", user.getEmail());

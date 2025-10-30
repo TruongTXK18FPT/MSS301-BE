@@ -14,4 +14,12 @@ public class UserCreationRequest {
     String password;
     String confirmPassword;
     String userType; // STUDENT, TEACHER, GUARDIAN
+
+    // Teacher-specific fields (optional, only for TEACHER userType)
+    String department;
+    String specialization;
+    Integer yearsOfExperience;
+    String qualifications;
+    String bio;
+    String phone;
 }

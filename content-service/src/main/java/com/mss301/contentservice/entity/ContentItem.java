@@ -57,6 +57,15 @@ public class ContentItem {
 
     private Boolean isPublic = false;
 
+    // Classroom association
+    private Long classroomId;
+
+    // For assignments
+    private LocalDateTime dueDate;
+    
+    @Column(nullable = true)
+    private Integer totalPoints;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

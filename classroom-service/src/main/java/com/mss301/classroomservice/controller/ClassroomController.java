@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.mss301.classroomservice.dto.ApiResponse;
 import com.mss301.classroomservice.dto.request.ClassroomRequest;
 import com.mss301.classroomservice.dto.request.JoinClassroomRequest;
 import com.mss301.classroomservice.dto.response.ClassroomResponse;
@@ -29,93 +30,102 @@ public class ClassroomController {
 
     @PostMapping
     @Operation(summary = "Create classroom")
-    public ResponseEntity<ClassroomResponse> create(
+    public ResponseEntity<ApiResponse<ClassroomResponse>> create(
             @Valid @RequestBody ClassroomRequest request, Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());
         ClassroomResponse response = classroomService.create(request, userId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Classroom created successfully", response));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update classroom")
-    public ResponseEntity<ClassroomResponse> update(
+    public ResponseEntity<ApiResponse<ClassroomResponse>> update(
             @PathVariable Long id, @Valid @RequestBody ClassroomRequest request, Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());
-        return ResponseEntity.ok(classroomService.update(id, request, userId));
+        ClassroomResponse response = classroomService.update(id, request, userId);
+        return ResponseEntity.ok(ApiResponse.success("Classroom updated successfully", response));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete classroom")
-    public ResponseEntity<Void> delete(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id, Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());
         classroomService.delete(id, userId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.success("Classroom deleted successfully", null));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get classroom by id")
-    public ResponseEntity<ClassroomResponse> getById(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<ApiResponse<ClassroomResponse>> getById(@PathVariable Long id, Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());
-        return ResponseEntity.ok(classroomService.getById(id, userId));
+        ClassroomResponse response = classroomService.getById(id, userId);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/me")
     @Operation(summary = "My classrooms")
-    public ResponseEntity<List<ClassroomResponse>> myClassrooms(Authentication authentication) {
+    public ResponseEntity<ApiResponse<List<ClassroomResponse>>> myClassrooms(Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());
-        return ResponseEntity.ok(classroomService.getMyClassrooms(userId));
+        List<ClassroomResponse> classrooms = classroomService.getMyClassrooms(userId);
+        return ResponseEntity.ok(ApiResponse.success(classrooms));
     }
 
     @GetMapping("/public")
     @Operation(summary = "Public classrooms")
-    public ResponseEntity<List<ClassroomResponse>> publicClassrooms() {
-        return ResponseEntity.ok(classroomService.getPublicClassrooms());
+    public ResponseEntity<ApiResponse<List<ClassroomResponse>>> publicClassrooms() {
+        List<ClassroomResponse> classrooms = classroomService.getPublicClassrooms();
+        return ResponseEntity.ok(ApiResponse.success(classrooms));
     }
 
     @PostMapping("/{id}/join-code")
     @Operation(summary = "Generate join code")
-    public ResponseEntity<String> generateJoinCode(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<ApiResponse<String>> generateJoinCode(@PathVariable Long id, Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());
-        return ResponseEntity.ok(classroomService.generateJoinCode(id, userId));
+        String joinCode = classroomService.generateJoinCode(id, userId);
+        return ResponseEntity.ok(ApiResponse.success("Join code generated successfully", joinCode));
     }
 
     @PostMapping("/join/{code}")
     @Operation(summary = "Join classroom by code")
-    public ResponseEntity<ClassroomResponse> join(@PathVariable("code") String code, Authentication authentication) {
+    public ResponseEntity<ApiResponse<ClassroomResponse>> join(@PathVariable("code") String code, Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());
-        return ResponseEntity.ok(classroomService.joinByCode(code, userId));
+        ClassroomResponse response = classroomService.joinByCode(code, userId);
+        return ResponseEntity.ok(ApiResponse.success("Joined classroom successfully", response));
     }
 
     @GetMapping("/search")
     @Operation(summary = "Search classrooms")
-    public ResponseEntity<List<ClassroomResponse>> searchClassrooms(
+    public ResponseEntity<ApiResponse<List<ClassroomResponse>>> searchClassrooms(
             @RequestParam String keyword, Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());
-        return ResponseEntity.ok(classroomService.searchClassrooms(keyword));
+        List<ClassroomResponse> classrooms = classroomService.searchClassrooms(keyword);
+        return ResponseEntity.ok(ApiResponse.success(classrooms));
     }
 
     @PostMapping("/join")
     @Operation(summary = "Join classroom with password")
-    public ResponseEntity<ClassroomResponse> joinClassroom(
+    public ResponseEntity<ApiResponse<ClassroomResponse>> joinClassroom(
             @Valid @RequestBody JoinClassroomRequest request, Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());
-        return ResponseEntity.ok(classroomService.joinClassroom(request.getClassroomCode(), request.getPassword(), userId));
+        ClassroomResponse response = classroomService.joinClassroom(request.getClassroomCode(), request.getPassword(), userId);
+        return ResponseEntity.ok(ApiResponse.success("Joined classroom successfully", response));
     }
 
     @GetMapping("/{id}/students")
     @Operation(summary = "Get classroom students")
-    public ResponseEntity<List<StudentResponse>> getClassroomStudents(
+    public ResponseEntity<ApiResponse<List<StudentResponse>>> getClassroomStudents(
             @PathVariable Long id, Authentication authentication) {
         Long teacherId = Long.parseLong(authentication.getName());
-        return ResponseEntity.ok(classroomService.getClassroomStudents(id, teacherId));
+        List<StudentResponse> students = classroomService.getClassroomStudents(id, teacherId);
+        return ResponseEntity.ok(ApiResponse.success(students));
     }
 
     @DeleteMapping("/{id}/students/{studentId}")
     @Operation(summary = "Remove student from classroom")
-    public ResponseEntity<Void> removeStudent(
+    public ResponseEntity<ApiResponse<Void>> removeStudent(
             @PathVariable Long id, @PathVariable Long studentId, Authentication authentication) {
         Long teacherId = Long.parseLong(authentication.getName());
         classroomService.removeStudentFromClassroom(id, studentId, teacherId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.success("Student removed successfully", null));
     }
 }

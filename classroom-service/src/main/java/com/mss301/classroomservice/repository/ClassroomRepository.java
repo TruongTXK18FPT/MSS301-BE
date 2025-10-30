@@ -16,5 +16,7 @@ public interface ClassroomRepository extends JpaRepository<Classroom, Long> {
 
     Optional<Classroom> findByJoinCode(String joinCode);
     
+    Optional<Classroom> findByJoinCodeIgnoreCase(String joinCode);
+    
     List<Classroom> findByIsPublicTrueAndNameContainingIgnoreCase(String keyword);
 }

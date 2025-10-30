@@ -157,6 +157,91 @@ public class ContentItemServiceImpl implements ContentItemService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional
+    public ContentItemResponse create(ContentItemRequest request, Long ownerId, Long classroomId) {
+        ContentItem item = ContentItem.builder()
+                .ownerId(ownerId)
+                .type(Type.valueOf(request.getType()))
+                .title(request.getTitle())
+                .description(request.getDescription())
+                .content(request.getContent())
+                .subject(request.getSubject())
+                .grade(request.getGrade())
+                .tags(request.getTags())
+                .isPublic(Boolean.TRUE.equals(request.getIsPublic()))
+                .classroomId(classroomId)
+                .build();
+        item = repository.save(item);
+        final Long contentId = item.getId();
+        // Save type-specific details
+        if (item.getType() == Type.QUIZ && request.getQuiz() != null) {
+            saveQuiz(contentId, request.getQuiz());
+        } else if (item.getType() == Type.ASSIGNMENT && request.getAssignment() != null) {
+            saveAssignment(
+                    contentId,
+                    request.getAssignment().getInstructions(),
+                    request.getAssignment().getSubmissionType(),
+                    request.getAssignment().getAttachmentFileIds());
+        }
+        return toResponseWithDetails(item);
+    }
+
+    @Override
+    public List<ContentItemResponse> getMyContents(Long ownerId, Long classroomId, String type) {
+        List<ContentItem> items = repository.findByOwnerId(ownerId);
+        
+        return items.stream()
+                .filter(item -> {
+                    boolean matchesClassroom = classroomId == null || 
+                            (item.getClassroomId() != null && item.getClassroomId().equals(classroomId));
+                    boolean matchesType = type == null || item.getType().name().equalsIgnoreCase(type);
+                    return matchesClassroom && matchesType;
+                })
+                .map(this::toResponseWithDetails)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ContentItemResponse> getPublicContents(String type, String subject, String grade) {
+        List<ContentItem> items = repository.findByIsPublicTrue();
+        
+        return items.stream()
+                .filter(item -> {
+                    boolean matchesType = type == null || item.getType().name().equalsIgnoreCase(type);
+                    boolean matchesSubject = subject == null || 
+                            (item.getSubject() != null && item.getSubject().equalsIgnoreCase(subject));
+                    boolean matchesGrade = grade == null || 
+                            (item.getGrade() != null && item.getGrade().equalsIgnoreCase(grade));
+                    return matchesType && matchesSubject && matchesGrade;
+                })
+                .map(this::toResponseWithDetails)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ContentItemResponse> searchPublic(String subject, String grade, String keyword, String type) {
+        List<ContentItem> items = repository.searchPublic(subject, grade, keyword);
+        
+        return items.stream()
+                .filter(item -> type == null || item.getType().name().equalsIgnoreCase(type))
+                .map(this::toResponseWithDetails)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ContentItemResponse> getByClassroom(Long classroomId, String type, Long userId) {
+        List<ContentItem> items = repository.findAll().stream()
+                .filter(item -> item.getClassroomId() != null && item.getClassroomId().equals(classroomId))
+                .filter(item -> item.getOwnerId().equals(userId) || Boolean.TRUE.equals(item.getIsPublic()))
+                .filter(item -> type == null || item.getType().name().equalsIgnoreCase(type))
+                .collect(Collectors.toList());
+        
+        return items.stream()
+                .map(this::toResponseWithDetails)
+                .collect(Collectors.toList());
+    }
+
     private ContentItemResponse toResponseWithDetails(ContentItem item) {
         ContentItemResponse.ContentItemResponseBuilder builder = ContentItemResponse.builder()
                 .id(item.getId())
@@ -169,6 +254,7 @@ public class ContentItemServiceImpl implements ContentItemService {
                 .grade(item.getGrade())
                 .tags(item.getTags())
                 .isPublic(item.getIsPublic())
+                .classroomId(item.getClassroomId())  // Include classroom association
                 .createdAt(item.getCreatedAt())
                 .updatedAt(item.getUpdatedAt());
 

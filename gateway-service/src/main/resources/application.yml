@@ -14,7 +14,7 @@ app:
     content: /content
     chatbot: /chatbot
     profile: /profile
-    classroom: /classroom
+    classroom: /classrooms
     media: /media
     document: /document
     retrieval: /retrieval
@@ -80,9 +80,9 @@ spring:
             - id: content-service #8085
               uri: lb://content-service
               predicates:
-                - Path=${app.api.prefix}${app.service-prefix.content}/**
+                - Path=${app.api.prefix}${app.service-prefix.content}/**,${app.api.prefix}/submissions/**,${app.api.prefix}/quiz-attempts/**
               filters:
-                - RewritePath=${app.api.prefix}${app.service-prefix.content}/(?<segment>.*), /${segment}
+                - StripPrefix=3
 
             - id: chatbot-service #8086
               uri: lb://chatbot-service
@@ -103,7 +103,7 @@ spring:
               predicates:
                 - Path=${app.api.prefix}${app.service-prefix.classroom}/**
               filters:
-                - RewritePath=/api/v1/classroom/(?<segment>.*), /classrooms/\${segment}
+                - StripPrefix=2
 
             - id: media-service #8089
               uri: lb://media-service

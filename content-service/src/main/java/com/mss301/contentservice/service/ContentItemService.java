@@ -7,6 +7,8 @@ import com.mss301.contentservice.dto.response.ContentItemResponse;
 
 public interface ContentItemService {
     ContentItemResponse create(ContentItemRequest request, Long ownerId);
+    
+    ContentItemResponse create(ContentItemRequest request, Long ownerId, Long classroomId);
 
     ContentItemResponse update(Long id, ContentItemRequest request, Long ownerId);
 
@@ -15,8 +17,16 @@ public interface ContentItemService {
     ContentItemResponse getById(Long id, Long userId);
 
     List<ContentItemResponse> getMyContents(Long ownerId);
+    
+    List<ContentItemResponse> getMyContents(Long ownerId, Long classroomId, String type);
 
     List<ContentItemResponse> getPublicContents();
+    
+    List<ContentItemResponse> getPublicContents(String type, String subject, String grade);
 
     List<ContentItemResponse> searchPublic(String subject, String grade, String keyword);
+    
+    List<ContentItemResponse> searchPublic(String subject, String grade, String keyword, String type);
+    
+    List<ContentItemResponse> getByClassroom(Long classroomId, String type, Long userId);
 }

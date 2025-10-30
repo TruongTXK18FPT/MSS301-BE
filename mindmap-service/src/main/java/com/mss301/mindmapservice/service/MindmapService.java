@@ -9,6 +9,7 @@ import com.mss301.mindmapservice.dto.request.AiGenerateMindmapRequest;
 import com.mss301.mindmapservice.dto.request.MindmapRequest;
 import com.mss301.mindmapservice.dto.response.AiGenerateMindmapResponse;
 import com.mss301.mindmapservice.dto.response.MindmapResponse;
+import com.mss301.mindmapservice.dto.response.MindmapNodeResponse;
 
 public interface MindmapService {
 
@@ -26,6 +27,11 @@ public interface MindmapService {
      * Get mindmap by ID
      */
     MindmapResponse getMindmapById(Long id, Long userId);
+
+    /**
+     * Get nodes for a mindmap
+     */
+    List<MindmapNodeResponse> getMindmapNodes(Long mindmapId, Long userId);
 
     /**
      * Get all mindmaps for a user

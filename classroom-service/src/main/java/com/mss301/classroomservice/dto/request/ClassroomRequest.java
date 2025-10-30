@@ -25,5 +25,8 @@ public class ClassroomRequest {
     @Size(max = 255)
     private String password; // Mật khẩu để vào lớp
     
+    @Size(min = 4, max = 8)
+    private String joinCode; // Mã tham gia lớp học
+    
     private Integer maxStudents = 50; // Số học sinh tối đa
 }

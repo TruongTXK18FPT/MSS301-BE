@@ -103,6 +103,10 @@ public class MindmapServiceImpl implements MindmapService {
                 .subject(request.getSubject())
                 .aiProvider(request.getAiProvider())
                 .aiModel(request.getAiModel())
+                .useDocuments(request.getUseDocuments() != null ? request.getUseDocuments() : false)
+                .documentId(request.getDocumentId())
+                .chapterId(request.getChapterId())
+                .lessonId(request.getLessonId())
                 .build();
 
         // Generate mindmap using RAG
@@ -151,6 +155,24 @@ public class MindmapServiceImpl implements MindmapService {
         mindmapRepository.save(mindmap);
 
         return mapToResponse(mindmap);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MindmapNodeResponse> getMindmapNodes(Long mindmapId, Long userId) {
+        log.info("Getting nodes for mindmap: {} by user: {}", mindmapId, userId);
+
+        // Verify mindmap exists and belongs to user
+        Mindmap mindmap = mindmapRepository
+                .findByIdAndUserId(mindmapId, userId)
+                .orElseThrow(() -> new RuntimeException("Mindmap not found"));
+
+        // Get all nodes for this mindmap
+        List<MindmapNode> nodes = mindmapNodeRepository.findByMindmapIdOrderByLevelAndOrderIndex(mindmapId);
+        
+        return nodes.stream()
+                .map(this::mapNodeToResponse)
+                .collect(Collectors.toList());
     }
 
     @Override

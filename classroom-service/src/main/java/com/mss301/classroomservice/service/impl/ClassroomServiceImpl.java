@@ -14,8 +14,11 @@ import com.mss301.classroomservice.dto.response.StudentResponse;
 import com.mss301.classroomservice.entity.Classroom;
 import com.mss301.classroomservice.entity.ClassroomMember;
 import com.mss301.classroomservice.entity.ClassroomMember.Role;
+import com.mss301.classroomservice.repository.AssignmentRepository;
+import com.mss301.classroomservice.repository.ClassroomContentRepository;
 import com.mss301.classroomservice.repository.ClassroomMemberRepository;
 import com.mss301.classroomservice.repository.ClassroomRepository;
+import com.mss301.classroomservice.repository.QuizRepository;
 import com.mss301.classroomservice.service.ClassroomService;
 
 import lombok.RequiredArgsConstructor;
@@ -26,15 +29,26 @@ public class ClassroomServiceImpl implements ClassroomService {
 
     private final ClassroomRepository classroomRepository;
     private final ClassroomMemberRepository classroomMemberRepository;
+    private final AssignmentRepository assignmentRepository;
+    private final QuizRepository quizRepository;
+    private final ClassroomContentRepository classroomContentRepository;
 
     @Override
     @Transactional
     public ClassroomResponse create(ClassroomRequest request, Long ownerId) {
+        // Generate joinCode if not provided
+        String joinCode = request.getJoinCode();
+        if (joinCode == null || joinCode.trim().isEmpty()) {
+            joinCode = generateJoinCode();
+            System.out.println("Auto-generated joinCode: " + joinCode);
+        }
+        
         Classroom classroom = Classroom.builder()
                 .name(request.getName())
                 .description(request.getDescription())
                 .isPublic(Boolean.TRUE.equals(request.getIsPublic()))
                 .password(request.getPassword())
+                .joinCode(joinCode)
                 .maxStudents(request.getMaxStudents() != null ? request.getMaxStudents() : 50)
                 .ownerId(ownerId)
                 .build();
@@ -46,7 +60,30 @@ public class ClassroomServiceImpl implements ClassroomService {
                 .role(Role.TEACHER)
                 .build());
 
+        System.out.println("Created classroom: " + classroom.getName() + " with joinCode: " + classroom.getJoinCode());
         return toResponse(classroom);
+    }
+    
+    // Helper method to generate random join code
+    private String generateJoinCode() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder code = new StringBuilder();
+        java.util.Random random = new java.util.Random();
+        for (int i = 0; i < 6; i++) {
+            code.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        
+        // Check if code already exists, regenerate if needed
+        String generatedCode = code.toString();
+        while (classroomRepository.findByJoinCodeIgnoreCase(generatedCode).isPresent()) {
+            code = new StringBuilder();
+            for (int i = 0; i < 6; i++) {
+                code.append(chars.charAt(random.nextInt(chars.length())));
+            }
+            generatedCode = code.toString();
+        }
+        
+        return generatedCode;
     }
 
     @Override
@@ -61,6 +98,7 @@ public class ClassroomServiceImpl implements ClassroomService {
         classroom.setDescription(request.getDescription());
         classroom.setIsPublic(Boolean.TRUE.equals(request.getIsPublic()));
         classroom.setPassword(request.getPassword());
+        classroom.setJoinCode(request.getJoinCode());
         classroom.setMaxStudents(
                 request.getMaxStudents() != null ? request.getMaxStudents() : classroom.getMaxStudents());
         return toResponse(classroomRepository.save(classroom));
@@ -90,8 +128,26 @@ public class ClassroomServiceImpl implements ClassroomService {
     }
 
     @Override
-    public List<ClassroomResponse> getMyClassrooms(Long ownerId) {
-        return classroomRepository.findByOwnerId(ownerId).stream()
+    public List<ClassroomResponse> getMyClassrooms(Long userId) {
+        // Get classrooms where user is owner
+        List<Classroom> ownedClassrooms = classroomRepository.findByOwnerId(userId);
+        
+        // Get classrooms where user is a member (student)
+        List<Long> memberClassroomIds = classroomMemberRepository.findByUserId(userId).stream()
+                .map(ClassroomMember::getClassroomId)
+                .collect(Collectors.toList());
+        
+        List<Classroom> memberClassrooms = classroomRepository.findAllById(memberClassroomIds);
+        
+        // Combine both lists and remove duplicates
+        List<Classroom> allClassrooms = new java.util.ArrayList<>(ownedClassrooms);
+        for (Classroom classroom : memberClassrooms) {
+            if (!allClassrooms.contains(classroom)) {
+                allClassrooms.add(classroom);
+            }
+        }
+        
+        return allClassrooms.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -147,11 +203,21 @@ public class ClassroomServiceImpl implements ClassroomService {
     @Override
     @Transactional
     public ClassroomResponse joinClassroom(String classroomCode, String password, Long userId) {
-        Classroom classroom = classroomRepository.findByJoinCode(classroomCode)
-                .orElseThrow(() -> new RuntimeException("Invalid classroom code"));
+        // Log for debugging
+        System.out.println("Attempting to join classroom with code: " + classroomCode);
+        
+        // Use case-insensitive search
+        Classroom classroom = classroomRepository.findByJoinCodeIgnoreCase(classroomCode)
+                .orElseThrow(() -> {
+                    System.out.println("No classroom found with joinCode: " + classroomCode);
+                    return new RuntimeException("Invalid classroom code: " + classroomCode);
+                });
+
+        System.out.println("Found classroom: " + classroom.getName() + " (ID: " + classroom.getId() + ")");
 
         // Check password if classroom has one
-        if (classroom.getPassword() != null && !classroom.getPassword().equals(password)) {
+        if (classroom.getPassword() != null && !classroom.getPassword().isEmpty() 
+            && !classroom.getPassword().equals(password)) {
             throw new RuntimeException("Invalid password");
         }
 
@@ -168,6 +234,7 @@ public class ClassroomServiceImpl implements ClassroomService {
                 .role(Role.STUDENT)
                 .build());
 
+        System.out.println("User " + userId + " successfully joined classroom " + classroom.getId());
         return toResponse(classroom);
     }
 
@@ -204,6 +271,15 @@ public class ClassroomServiceImpl implements ClassroomService {
     private ClassroomResponse toResponse(Classroom classroom) {
         // Count current students
         long currentStudents = classroomMemberRepository.countByClassroomId(classroom.getId());
+        
+        // Count assignments
+        int assignmentCount = assignmentRepository.findByClassroomId(classroom.getId()).size();
+        
+        // Count quizzes
+        int quizCount = quizRepository.findByClassroomId(classroom.getId()).size();
+        
+        // Count content items (lessons/mindmaps)
+        int contentCount = classroomContentRepository.findByClassroomIdOrderByOrderIndexAsc(classroom.getId()).size();
 
         return ClassroomResponse.builder()
                 .id(classroom.getId())
@@ -214,6 +290,9 @@ public class ClassroomServiceImpl implements ClassroomService {
                 .password(classroom.getPassword())
                 .maxStudents(classroom.getMaxStudents())
                 .currentStudents((int) currentStudents)
+                .assignmentCount(assignmentCount)
+                .quizCount(quizCount)
+                .contentCount(contentCount)
                 .ownerId(classroom.getOwnerId())
                 .createdAt(classroom.getCreatedAt())
                 .updatedAt(classroom.getUpdatedAt())

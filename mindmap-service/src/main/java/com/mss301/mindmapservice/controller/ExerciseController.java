@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping("/api/v1/mindmap/exercises")
+@RequestMapping("/exercises")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Exercise Management", description = "APIs for managing exercises in mindmap nodes")

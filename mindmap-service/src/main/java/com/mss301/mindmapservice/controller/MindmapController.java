@@ -127,6 +127,20 @@ public class MindmapController {
         return ResponseEntity.ok(ApiResponse.success("Mindmap updated successfully", response));
     }
 
+    @PutMapping("/{id}/nodes")
+    @Operation(summary = "Update mindmap nodes and edges", description = "Update all nodes and edges for a mindmap in one request")
+    public ResponseEntity<ApiResponse<MindmapResponse>> updateMindmapNodes(
+            @PathVariable Long id,
+            @RequestBody MindmapRequest request,
+            Authentication authentication) {
+
+        Long userId = getUserIdFromAuthentication(authentication);
+        log.info("Updating nodes and edges for mindmap: {} by user: {}", id, userId);
+
+        MindmapResponse response = mindmapService.updateMindmapWithNodesAndEdges(id, request, userId);
+        return ResponseEntity.ok(ApiResponse.success("Mindmap nodes and edges updated successfully", response));
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete mindmap", description = "Delete a mindmap")
     public ResponseEntity<ApiResponse<Void>> deleteMindmap(@PathVariable Long id, Authentication authentication) {

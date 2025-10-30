@@ -198,7 +198,8 @@ public class RagMindmapServiceImpl implements RagMindmapService {
         try {
             String query = String.format(
                 "Create a detailed mindmap about '%s' for grade %s in Vietnamese. " +
-                "Include concepts, formulas, examples, and exercises.",
+                "Structure: {\"centralTopic\": \"Main Topic\", \"branches\": [{\"title\": \"Branch 1\", \"nodeType\": \"concept\", \"description\": \"...\", \"subBranches\": [{\"title\": \"Sub 1\", \"nodeType\": \"concept\", \"content\": \"...\"}]}]}. " +
+                "Include at least 3-5 main branches with 2-3 sub-branches each. NodeType can be: concept, formula, example, exercise.",
                 request.getTopic(),
                 request.getGrade()
             );
@@ -213,32 +214,43 @@ public class RagMindmapServiceImpl implements RagMindmapService {
                     .lessonId(request.getLessonId() != null ? request.getLessonId().toString() : null)
                     .build();
 
+            log.debug("Sending RAG request with useDocuments={}", request.getUseDocuments());
             RagResponse ragResponse = ragServiceClient.processRagQuery(ragRequest);
 
             if (ragResponse != null && ragResponse.getResponse() != null) {
                 // Extract mindmap content from response
                 Object responseObj = ragResponse.getResponse();
-                
+                log.debug("RAG response type: {}", responseObj.getClass().getName());
+
                 // Try to extract mindmap content from response
                 if (responseObj instanceof java.util.Map) {
                     @SuppressWarnings("unchecked")
                     java.util.Map<String, Object> responseMap = (java.util.Map<String, Object>) responseObj;
                     Object mindmapContent = responseMap.get("mindmapContent");
                     if (mindmapContent != null) {
-                        return mindmapContent.toString();
+                        String content = mindmapContent.toString();
+                        log.info("Extracted mindmapContent from response map, length: {}", content.length());
+                        return content;
                     }
+                    // If no mindmapContent key, try to use the whole map
+                    log.warn("No 'mindmapContent' key found, using whole response map");
                 }
-                
+
                 // If response is already a string (JSON), return it
                 if (responseObj instanceof String) {
-                    return (String) responseObj;
+                    String content = (String) responseObj;
+                    log.info("Response is already string, length: {}", content.length());
+                    return content;
                 }
-                
+
                 // Try to convert object to JSON string
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                return mapper.writeValueAsString(responseObj);
+                String jsonString = mapper.writeValueAsString(responseObj);
+                log.info("Converted response to JSON string, length: {}", jsonString.length());
+                return jsonString;
             }
 
+            log.error("RAG service returned null or invalid response");
             throw new RuntimeException("RAG service returned null or invalid response");
 
         } catch (Exception e) {
@@ -252,10 +264,28 @@ public class RagMindmapServiceImpl implements RagMindmapService {
      */
     private List<MindmapNode> parseNodesFromAiResponse(Mindmap mindmap, String aiJsonResponse) {
         List<MindmapNode> nodes = new ArrayList<>();
-        
+
         try {
+            log.info("Parsing AI response JSON for mindmap: {}", mindmap.getId());
+            log.debug("AI response (first 500 chars): {}", aiJsonResponse.substring(0, Math.min(500, aiJsonResponse.length())));
+
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(aiJsonResponse);
+
+            // Check if response has expected structure
+            if (!root.has("centralTopic") && !root.has("branches")) {
+                log.warn("AI response missing expected structure (centralTopic/branches). Response keys: {}",
+                    java.util.stream.StreamSupport.stream(
+                        java.util.Spliterators.spliteratorUnknownSize(root.fieldNames(), java.util.Spliterator.ORDERED),
+                        false)
+                        .collect(java.util.stream.Collectors.joining(", ")));
+
+                // Try to extract from nested structure if exists
+                if (root.has("mindmapContent")) {
+                    log.info("Found nested mindmapContent, trying to parse it");
+                    root = mapper.readTree(root.get("mindmapContent").asText());
+                }
+            }
 
             // Create central topic node
             MindmapNode centralNode = new MindmapNode();
@@ -272,7 +302,8 @@ public class RagMindmapServiceImpl implements RagMindmapService {
 
             // Parse branches (main nodes)
             com.fasterxml.jackson.databind.JsonNode branches = root.path("branches");
-            if (branches.isArray()) {
+            if (branches.isArray() && branches.size() > 0) {
+                log.info("Found {} main branches to parse", branches.size());
                 int branchIndex = 0;
                 for (com.fasterxml.jackson.databind.JsonNode branch : branches) {
                     MindmapNode branchNode = parseBranchNode(mindmap, branch, 1, branchIndex);
@@ -280,7 +311,8 @@ public class RagMindmapServiceImpl implements RagMindmapService {
 
                     // Parse sub-branches
                     com.fasterxml.jackson.databind.JsonNode subBranches = branch.path("subBranches");
-                    if (subBranches.isArray()) {
+                    if (subBranches.isArray() && subBranches.size() > 0) {
+                        log.debug("Branch {} has {} sub-branches", branchIndex, subBranches.size());
                         int subIndex = 0;
                         for (com.fasterxml.jackson.databind.JsonNode subBranch : subBranches) {
                             MindmapNode subNode = parseSubBranchNode(mindmap, subBranch, 2, branchIndex, subIndex);
@@ -290,13 +322,22 @@ public class RagMindmapServiceImpl implements RagMindmapService {
                     }
                     branchIndex++;
                 }
+            } else {
+                log.warn("No branches found in AI response or branches is not an array");
             }
 
-            log.info("Parsed {} nodes from AI response", nodes.size());
+            log.info("Successfully parsed {} nodes from AI response", nodes.size());
+
+            if (nodes.size() <= 1) {
+                log.error("Only {} node(s) created, falling back to default nodes", nodes.size());
+                return createFallbackNodes(mindmap);
+            }
+
             return nodes;
 
         } catch (Exception e) {
             log.error("Failed to parse AI response: {}", e.getMessage(), e);
+            log.error("AI response that failed to parse: {}", aiJsonResponse);
             // Return fallback with single root node
             return createFallbackNodes(mindmap);
         }

@@ -24,9 +24,12 @@ public class QuizOption {
     @Column(nullable = false)
     private Long questionId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String text;
 
     @Column(nullable = false)
-    private Boolean correct;
+    private Boolean isCorrect;
+    
+    @Column
+    private Integer orderIndex;
 }

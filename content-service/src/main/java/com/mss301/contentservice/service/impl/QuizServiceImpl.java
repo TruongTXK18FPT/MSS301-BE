@@ -56,7 +56,7 @@ public class QuizServiceImpl implements QuizService {
                     .map(o -> QuizOptionDto.builder()
                             .id(o.getId())
                             .text(o.getText())
-                            .correct(o.getCorrect())
+                            .correct(o.getIsCorrect())
                             .build())
                     .collect(Collectors.toList());
             questionDtos.add(QuizQuestionDto.builder()
@@ -115,7 +115,7 @@ public class QuizServiceImpl implements QuizService {
                         QuizOption option = QuizOption.builder()
                                 .questionId(question.getId())
                                 .text(oreq.getText())
-                                .correct(oreq.getCorrect())
+                                .isCorrect(oreq.getCorrect())
                                 .build();
                         quizOptionRepository.save(option);
                     }

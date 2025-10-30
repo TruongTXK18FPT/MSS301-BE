@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping("/api/v1/mindmap/formulas")
+@RequestMapping("/formulas")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Formula Management", description = "APIs for managing formulas in mindmap nodes")

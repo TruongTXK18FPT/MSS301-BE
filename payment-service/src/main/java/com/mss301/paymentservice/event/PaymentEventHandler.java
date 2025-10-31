@@ -2,10 +2,16 @@ package com.mss301.paymentservice.event;
 
 import com.mss301.paymentservice.model.PaymentCommand;
 import com.mss301.paymentservice.model.PaymentQuery;
+import com.mss301.paymentservice.model.dtos.response.ApiResponse;
+import com.mss301.paymentservice.model.dtos.response.SubscriptionResponse;
+import com.mss301.paymentservice.model.dtos.response.UserResponse;
 import com.mss301.paymentservice.repository.PaymentQueryRepository;
+import com.mss301.paymentservice.service.SubscriptionService;
+import com.mss301.paymentservice.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
@@ -15,6 +21,12 @@ public class PaymentEventHandler {
 
     @Autowired
     private PaymentQueryRepository queryRepository;
+
+    @Autowired
+    private SubscriptionService subscriptionService;
+
+    @Autowired
+    private UserService userService;
 
     @EventListener
     @Async
@@ -58,11 +70,15 @@ public class PaymentEventHandler {
     }
 
     private PaymentQuery convertToQuery(PaymentCommand command) {
+
+        ResponseEntity<SubscriptionResponse> subscriptionResponse = subscriptionService.findBySubscriptionId(command.getSubscriptionId());
+        ApiResponse<UserResponse> userResponse = userService.getUserById(command.getUserId());
+
         return new PaymentQuery(
                 null, // MongoDB will generate ID
                 command.getPaymentId(),
-                command.getSubscriptionId(),
-                command.getUserId(),
+                subscriptionResponse.getBody(),
+                userResponse.getResult(),
                 command.getAmount(),
                 command.getOrderInfo(),
                 command.getMomoRequestId(),

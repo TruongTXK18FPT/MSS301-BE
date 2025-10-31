@@ -7,9 +7,7 @@ import com.mss301.paymentservice.event.PaymentStatusUpdatedEvent;
 import com.mss301.paymentservice.model.PaymentCommand;
 import com.mss301.paymentservice.model.dtos.request.MomoRequest;
 import com.mss301.paymentservice.model.dtos.request.PaymentRequest;
-import com.mss301.paymentservice.model.dtos.response.PaymentResponse;
-import com.mss301.paymentservice.model.dtos.response.PlanResponse;
-import com.mss301.paymentservice.model.dtos.response.SubscriptionResponse;
+import com.mss301.paymentservice.model.dtos.response.*;
 import com.mss301.paymentservice.repository.PaymentCommandRepository;
 import com.mss301.paymentservice.util.MomoUtil;
 import jakarta.persistence.EntityNotFoundException;
@@ -50,6 +48,9 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
 
     @Autowired
     private PlanService planService;
+
+    @Autowired
+    private UserService userService;
 
     @Override
     public PaymentResponse createPayment(PaymentRequest request, Long userId) {
@@ -151,10 +152,13 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
     }
 
     private PaymentResponse convertToResponse(PaymentCommand payment) {
+        ResponseEntity<SubscriptionResponse> subscriptionResponse = subscriptionService.findBySubscriptionId(payment.getSubscriptionId());
+        ApiResponse<UserResponse> userResponse = userService.getUserById(payment.getUserId());
+
         return PaymentResponse.builder()
                 .paymentId(payment.getPaymentId())
-                .subscriptionId(payment.getSubscriptionId())
-                .userId(payment.getUserId())
+                .subscription(subscriptionResponse.getBody())
+                .user(userResponse.getResult())
                 .amount(payment.getAmount())
                 .orderInfo(payment.getOrderInfo())
                 .paymentUrl(payment.getPaymentUrl())

@@ -1,6 +1,8 @@
 package com.mss301.paymentservice.model;
 
 import com.mss301.paymentservice.constant.Status;
+import com.mss301.paymentservice.model.dtos.response.SubscriptionResponse;
+import com.mss301.paymentservice.model.dtos.response.UserResponse;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,8 +19,8 @@ public class PaymentQuery {
     @Id
     private String id;
     private Long paymentId;
-    private Long subscriptionId;
-    private Long userId;
+    private SubscriptionResponse subscription;
+    private UserResponse user;
     private Long amount;
     private String orderInfo;
     private String momoRequestId;

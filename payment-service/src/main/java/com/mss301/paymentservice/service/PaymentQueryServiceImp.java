@@ -44,10 +44,11 @@ public class PaymentQueryServiceImp implements PaymentQueryService {
     }
 
     private PaymentResponse convertToResponse(PaymentQuery payment) {
+
         return PaymentResponse.builder()
                 .paymentId(payment.getPaymentId())
-                .subscriptionId(payment.getSubscriptionId())
-                .userId(payment.getUserId())
+                .subscription(payment.getSubscription())
+                .user(payment.getUser())
                 .amount(payment.getAmount())
                 .orderInfo(payment.getOrderInfo())
                 .paymentUrl(payment.getPaymentUrl())

@@ -15,8 +15,6 @@ public class UsageMeterResponse {
 
     private Long usageMeterId;
 
-    private UserResponse user;
-
     private Long entitlementId;
 
     private LocalDateTime periodStart;

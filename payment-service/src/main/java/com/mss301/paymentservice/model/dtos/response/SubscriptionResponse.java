@@ -17,8 +17,6 @@ public class SubscriptionResponse {
 
     private Long subscriptionId;
 
-    private UserResponse user;
-
     private Long planId;
 
     private LocalDateTime startDate;

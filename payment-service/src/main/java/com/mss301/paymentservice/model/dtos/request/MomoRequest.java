@@ -21,13 +21,13 @@ public class MomoRequest {
     // thông tin đơn hàng
     private String orderInfo;
 
-    public String getOrderId() {
+    public String getSubscriptionId() {
         return subscriptionId != null ? subscriptionId.toString() : null;
     }
 
-    public MomoRequest(PaymentRequest paymentRequest) {
+    public MomoRequest(PaymentRequest paymentRequest, long amount) {
         this.requestId = UUID.randomUUID().toString();
-        this.amount = paymentRequest.getAmount();
+        this.amount = amount;
         this.subscriptionId = paymentRequest.getSubscriptionId();
         this.orderInfo = paymentRequest.getOrderInfo();
     }

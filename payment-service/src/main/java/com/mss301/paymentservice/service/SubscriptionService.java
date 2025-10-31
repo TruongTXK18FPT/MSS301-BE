@@ -12,4 +12,7 @@ import java.util.List;
 public interface SubscriptionService {
     @GetMapping("/user/{userId}")
     ResponseEntity<List<SubscriptionResponse>> findSubscriptionByUserId(@PathVariable("userId") Long userId);
+
+    @GetMapping("/{subscriptionId}")
+    ResponseEntity<SubscriptionResponse> findBySubscriptionId(@PathVariable("subscriptionId") Long subscriptionId);
 }

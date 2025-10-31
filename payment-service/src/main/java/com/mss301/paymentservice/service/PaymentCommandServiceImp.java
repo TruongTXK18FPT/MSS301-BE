@@ -8,6 +8,8 @@ import com.mss301.paymentservice.model.PaymentCommand;
 import com.mss301.paymentservice.model.dtos.request.MomoRequest;
 import com.mss301.paymentservice.model.dtos.request.PaymentRequest;
 import com.mss301.paymentservice.model.dtos.response.PaymentResponse;
+import com.mss301.paymentservice.model.dtos.response.PlanResponse;
+import com.mss301.paymentservice.model.dtos.response.SubscriptionResponse;
 import com.mss301.paymentservice.repository.PaymentCommandRepository;
 import com.mss301.paymentservice.util.MomoUtil;
 import jakarta.persistence.EntityNotFoundException;
@@ -18,6 +20,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -41,6 +44,12 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+
+    @Autowired
+    private SubscriptionService subscriptionService;
+
+    @Autowired
+    private PlanService planService;
 
     @Override
     public PaymentResponse createPayment(PaymentRequest request, Long userId) {
@@ -97,7 +106,7 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
         PaymentCommand payment = new PaymentCommand();
         payment.setSubscriptionId(request.getSubscriptionId());
         payment.setUserId(userId);
-        payment.setAmount(request.getAmount());
+        payment.setAmount(getAmount(payment.getSubscriptionId()));
         payment.setOrderInfo(request.getOrderInfo());
         payment.setStatus(Status.PENDING);
         return payment;
@@ -132,6 +141,13 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
             log.error("Error calling MoMo API", e);
             throw new RuntimeException("Failed to create MoMo payment URL", e);
         }
+    }
+
+    private Long getAmount(Long subscriptionId) {
+        ResponseEntity<SubscriptionResponse> subscription = subscriptionService.findBySubscriptionId(subscriptionId);
+        Long planId = subscription.getBody().getPlanId();
+        ResponseEntity<PlanResponse> plan = planService.findByPlanId(planId);
+        return plan.getBody().getPriceCents();
     }
 
     private PaymentResponse convertToResponse(PaymentCommand payment) {

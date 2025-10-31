@@ -39,7 +39,7 @@ public class Plan {
     private int billingCycle;
 
     @Column(name = "price_cents", nullable = false)
-    private int priceCents;
+    private long priceCents;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "currency", nullable = false, length = 10)

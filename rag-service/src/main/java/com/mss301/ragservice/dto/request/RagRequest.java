@@ -14,5 +14,6 @@ public class RagRequest {
     private ResponseMode mode;
     private LLMProvider llmProvider;
     private boolean useSemantic = true;
+    private Boolean useDocuments = false; // Control whether to retrieve documents or not
     private Integer topK = 7;
 }

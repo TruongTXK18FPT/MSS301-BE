@@ -24,12 +24,18 @@ public class QuizQuestion {
     @Column(nullable = false)
     private Long quizId; // references Quiz.contentItemId
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String text;
 
     @Column
     private Integer points;
 
     @Column(length = 30)
-    private String type; // MULTIPLE_CHOICE, TRUE_FALSE, SHORT_ANSWER
+    private String type; // MULTIPLE_CHOICE, TRUE_FALSE, SHORT_ANSWER, ESSAY
+    
+    @Column(columnDefinition = "TEXT")
+    private String explanation;
+    
+    @Column
+    private Integer orderIndex;
 }

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.mss301.mindmapservice.dto.ApiResponse;
 import com.mss301.mindmapservice.dto.request.ExerciseRequest;
+import com.mss301.mindmapservice.dto.request.GenerateExerciseRequest;
 import com.mss301.mindmapservice.dto.response.ExerciseResponse;
 import com.mss301.mindmapservice.service.ExerciseService;
 
@@ -20,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping("/api/v1/mindmap/exercises")
+@RequestMapping("/exercises")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Exercise Management", description = "APIs for managing exercises in mindmap nodes")
@@ -130,6 +131,22 @@ public class ExerciseController {
                 .code("200")
                 .message("Exercise retrieved successfully")
                 .result(response)
+                .build());
+    }
+
+    @PostMapping("/generate")
+    @Operation(summary = "Generate exercises with AI", description = "Generate exercises using AI based on topic and parameters")
+    public ResponseEntity<ApiResponse<List<ExerciseResponse>>> generateExercises(
+            @Valid @RequestBody GenerateExerciseRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        
+        Long userId = Long.parseLong(jwt.getClaim("userId"));
+        List<ExerciseResponse> responses = exerciseService.generateExercises(request, userId);
+        
+        return ResponseEntity.ok(ApiResponse.<List<ExerciseResponse>>builder()
+                .code("200")
+                .message("Exercises generated successfully")
+                .result(responses)
                 .build());
     }
 }

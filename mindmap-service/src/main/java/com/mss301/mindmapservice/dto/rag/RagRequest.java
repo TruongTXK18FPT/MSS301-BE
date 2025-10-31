@@ -14,6 +14,10 @@ public class RagRequest {
     private String queryText;
     private String mode;
     private String llmProvider;
+    
+    @Builder.Default
+    private Boolean useDocuments = false;
+    
     private String documentId;
     private String chapterId;
     private String lessonId;

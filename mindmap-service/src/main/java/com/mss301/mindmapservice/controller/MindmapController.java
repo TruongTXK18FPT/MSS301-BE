@@ -15,6 +15,7 @@ import com.mss301.mindmapservice.dto.ApiResponse;
 import com.mss301.mindmapservice.dto.request.AiGenerateMindmapRequest;
 import com.mss301.mindmapservice.dto.request.MindmapRequest;
 import com.mss301.mindmapservice.dto.response.AiGenerateMindmapResponse;
+import com.mss301.mindmapservice.dto.response.MindmapNodeResponse;
 import com.mss301.mindmapservice.dto.response.MindmapResponse;
 import com.mss301.mindmapservice.service.MindmapService;
 
@@ -66,7 +67,19 @@ public class MindmapController {
         log.info("Getting mindmap: {} for user: {}", id, userId);
 
         MindmapResponse response = mindmapService.getMindmapById(id, userId);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(ApiResponse.success("Mindmap retrieved successfully", response));
+    }
+
+    @GetMapping("/{id}/nodes")
+    @Operation(summary = "Get mindmap nodes", description = "Get all nodes for a specific mindmap")
+    public ResponseEntity<ApiResponse<List<MindmapNodeResponse>>> getMindmapNodes(
+            @PathVariable Long id, Authentication authentication) {
+
+        Long userId = getUserIdFromAuthentication(authentication);
+        log.info("Getting nodes for mindmap: {} by user: {}", id, userId);
+
+        List<MindmapNodeResponse> nodes = mindmapService.getMindmapNodes(id, userId);
+        return ResponseEntity.ok(ApiResponse.success("Nodes retrieved successfully", nodes));
     }
 
     @GetMapping
@@ -112,6 +125,20 @@ public class MindmapController {
 
         MindmapResponse response = mindmapService.updateMindmap(id, request, userId);
         return ResponseEntity.ok(ApiResponse.success("Mindmap updated successfully", response));
+    }
+
+    @PutMapping("/{id}/nodes")
+    @Operation(summary = "Update mindmap nodes and edges", description = "Update all nodes and edges for a mindmap in one request")
+    public ResponseEntity<ApiResponse<MindmapResponse>> updateMindmapNodes(
+            @PathVariable Long id,
+            @RequestBody MindmapRequest request,
+            Authentication authentication) {
+
+        Long userId = getUserIdFromAuthentication(authentication);
+        log.info("Updating nodes and edges for mindmap: {} by user: {}", id, userId);
+
+        MindmapResponse response = mindmapService.updateMindmapWithNodesAndEdges(id, request, userId);
+        return ResponseEntity.ok(ApiResponse.success("Mindmap nodes and edges updated successfully", response));
     }
 
     @DeleteMapping("/{id}")

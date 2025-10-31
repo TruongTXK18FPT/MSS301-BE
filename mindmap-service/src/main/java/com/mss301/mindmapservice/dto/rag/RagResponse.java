@@ -17,10 +17,15 @@ public class RagResponse {
     private String mode;
     private String llmProvider;
     private String queryText;
-    private Object response;
+    private Object content;  // Changed from 'response' to 'content' to match RAG service
     private LocalDateTime timestamp;
-    private Integer totalResults;
+    private Integer chunksUsed;  // Changed from totalResults
     private List<RagResult> results;
+
+    // Convenience method for backward compatibility
+    public Object getResponse() {
+        return content;
+    }
 
     @Data
     @Builder

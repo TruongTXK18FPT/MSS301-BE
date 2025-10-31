@@ -20,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping("/api/v1/mindmap/classroom")
+@RequestMapping("/classroom")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Classroom Mindmap", description = "APIs for sharing mindmaps to classrooms (Teacher only)")

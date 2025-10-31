@@ -20,7 +20,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/v1/contents/{id}/quiz")
+@RequestMapping("/contents/{id}/quiz")
 @RequiredArgsConstructor
 @Tag(name = "Quiz Management")
 public class QuizController {

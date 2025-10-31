@@ -60,6 +60,7 @@ public class MistralLLMService implements LLMService {
         return switch (mode) {
             case CHAT, VOICECHAT -> promptTemplateFactory.createChatPrompt(context, query);
             case MINDMAP -> promptTemplateFactory.createMindmapPrompt(context, query);
+            case EXERCISE -> promptTemplateFactory.createExercisePrompt(context, query);
         };
     }
 }

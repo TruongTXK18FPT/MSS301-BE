@@ -1,7 +1,10 @@
 package com.mss301.mindmapservice.service.impl;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -12,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.mss301.mindmapservice.dto.request.AiGenerateMindmapRequest;
+import com.mss301.mindmapservice.dto.request.MindmapNodeRequest;
 import com.mss301.mindmapservice.dto.request.MindmapRequest;
 import com.mss301.mindmapservice.dto.response.AiGenerateMindmapResponse;
 import com.mss301.mindmapservice.dto.response.MindmapResponse;
@@ -103,6 +107,10 @@ public class MindmapServiceImpl implements MindmapService {
                 .subject(request.getSubject())
                 .aiProvider(request.getAiProvider())
                 .aiModel(request.getAiModel())
+                .useDocuments(request.getUseDocuments() != null ? request.getUseDocuments() : false)
+                .documentId(request.getDocumentId())
+                .chapterId(request.getChapterId())
+                .lessonId(request.getLessonId())
                 .build();
 
         // Generate mindmap using RAG
@@ -155,6 +163,24 @@ public class MindmapServiceImpl implements MindmapService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<MindmapNodeResponse> getMindmapNodes(Long mindmapId, Long userId) {
+        log.info("Getting nodes for mindmap: {} by user: {}", mindmapId, userId);
+
+        // Verify mindmap exists and belongs to user
+        Mindmap mindmap = mindmapRepository
+                .findByIdAndUserId(mindmapId, userId)
+                .orElseThrow(() -> new RuntimeException("Mindmap not found"));
+
+        // Get all nodes for this mindmap
+        List<MindmapNode> nodes = mindmapNodeRepository.findByMindmapIdOrderByLevelAndOrderIndex(mindmapId);
+        
+        return nodes.stream()
+                .map(this::mapNodeToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<MindmapResponse> getUserMindmaps(Long userId) {
         log.info("Getting mindmaps for user: {}", userId);
 
@@ -199,6 +225,137 @@ public class MindmapServiceImpl implements MindmapService {
         log.info("Mindmap updated successfully");
 
         return mapToResponse(updatedMindmap);
+    }
+
+    @Override
+    @Transactional
+    public MindmapResponse updateMindmapWithNodesAndEdges(Long id, MindmapRequest request, Long userId) {
+        log.info("Updating mindmap with nodes and edges: {} for user: {}", id, userId);
+
+        // Verify mindmap exists and belongs to user
+        Mindmap mindmap = mindmapRepository
+                .findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new RuntimeException("Mindmap not found"));
+
+        // Update mindmap metadata
+        if (request.getTitle() != null) mindmap.setTitle(request.getTitle());
+        if (request.getDescription() != null) mindmap.setDescription(request.getDescription());
+        if (request.getGrade() != null) mindmap.setGrade(request.getGrade());
+        if (request.getSubject() != null) mindmap.setSubject(request.getSubject());
+        if (request.getIsPublic() != null) mindmap.setIsPublic(request.getIsPublic());
+        mindmap.setUpdatedAt(LocalDateTime.now());
+        mindmapRepository.save(mindmap);
+
+        // Update nodes if provided
+        if (request.getNodes() != null && !request.getNodes().isEmpty()) {
+            log.info("Updating {} nodes", request.getNodes().size());
+
+            // Delete existing nodes first - clear parentNodeId to avoid FK constraint
+            List<MindmapNode> existingNodes = mindmapNodeRepository.findByMindmapId(id);
+            if (!existingNodes.isEmpty()) {
+                // Step 1: Clear all parent references
+                for (MindmapNode node : existingNodes) {
+                    node.setParentNodeId(null);
+                }
+                mindmapNodeRepository.saveAll(existingNodes);
+
+                // Step 2: Now safe to delete all nodes
+                mindmapNodeRepository.deleteAll(existingNodes);
+                log.info("Deleted {} existing nodes", existingNodes.size());
+            }
+
+            // Create new nodes - save in two passes to handle parent relationships
+            // First pass: create all nodes without parent references
+            List<MindmapNode> savedNodes = new ArrayList<>();
+
+            for (MindmapNodeRequest nodeRequest : request.getNodes()) {
+                MindmapNode node = new MindmapNode();
+                node.setMindmapId(id);
+                node.setTitle(nodeRequest.getTitle() != null ? nodeRequest.getTitle() : "Untitled");
+                node.setContent(nodeRequest.getContent());
+                node.setNodeType(nodeRequest.getNodeType() != null ? nodeRequest.getNodeType() : MindmapNode.NodeType.CONCEPT);
+
+                node.setPositionX(nodeRequest.getPositionX() != null ? nodeRequest.getPositionX() : 0.0);
+                node.setPositionY(nodeRequest.getPositionY() != null ? nodeRequest.getPositionY() : 0.0);
+                node.setWidth(nodeRequest.getWidth());
+                node.setHeight(nodeRequest.getHeight());
+                node.setColor(nodeRequest.getColor());
+                node.setBackgroundColor(nodeRequest.getBackgroundColor());
+                node.setBorderColor(nodeRequest.getBorderColor());
+                node.setFontSize(nodeRequest.getFontSize());
+                node.setFontFamily(nodeRequest.getFontFamily());
+                node.setIsBold(nodeRequest.getIsBold());
+                node.setIsItalic(nodeRequest.getIsItalic());
+                node.setIsUnderline(nodeRequest.getIsUnderline());
+                node.setLevel(nodeRequest.getLevel() != null ? nodeRequest.getLevel() : 0);
+                node.setOrderIndex(nodeRequest.getOrderIndex());
+                node.setIsCollapsed(nodeRequest.getIsCollapsed());
+                node.setCreatedAt(LocalDateTime.now());
+                node.setUpdatedAt(LocalDateTime.now());
+                // Don't set parentNodeId yet
+
+                MindmapNode savedNode = mindmapNodeRepository.save(node);
+                savedNodes.add(savedNode);
+
+                log.debug("Saved node: {} with ID: {}", savedNode.getTitle(), savedNode.getId());
+            }
+
+            // Second pass: update parent relationships
+            for (int i = 0; i < request.getNodes().size(); i++) {
+                MindmapNodeRequest nodeRequest = request.getNodes().get(i);
+                MindmapNode savedNode = savedNodes.get(i);
+
+                if (nodeRequest.getParentNodeId() != null) {
+                    // Parent ID from request is already a database ID
+                    savedNode.setParentNodeId(nodeRequest.getParentNodeId());
+                    mindmapNodeRepository.save(savedNode);
+                    log.debug("Updated parent for node {} to {}", savedNode.getId(), nodeRequest.getParentNodeId());
+                }
+            }
+
+            log.info("Created and linked {} new nodes", savedNodes.size());
+        }
+
+        // Update edges if provided
+        if (request.getEdges() != null && !request.getEdges().isEmpty()) {
+            log.info("Updating {} edges", request.getEdges().size());
+
+            // Delete existing edges first
+            List<MindmapEdge> existingEdges = mindmapEdgeRepository.findByMindmapId(id);
+            if (!existingEdges.isEmpty()) {
+                mindmapEdgeRepository.deleteAll(existingEdges);
+                log.info("Deleted {} existing edges", existingEdges.size());
+            }
+
+            // Create new edges
+            List<MindmapEdge> newEdges = request.getEdges().stream()
+                .map(edgeRequest -> {
+                    MindmapEdge edge = new MindmapEdge();
+                    edge.setMindmapId(id);
+                    edge.setFromNodeId(edgeRequest.getFromNodeId());
+                    edge.setToNodeId(edgeRequest.getToNodeId());
+                    edge.setRelationshipType(
+                            edgeRequest.getRelationshipType() != null
+                                    ? edgeRequest.getRelationshipType().name()
+                                    : null);
+                    edge.setLabel(edgeRequest.getLabel());
+                    edge.setColor(edgeRequest.getColor());
+                    edge.setThickness(edgeRequest.getThickness());
+                    edge.setStyle(edgeRequest.getStyle());
+                    edge.setIsDirected(edgeRequest.getIsDirected());
+                    edge.setWeight(edgeRequest.getWeight());
+                    edge.setCreatedAt(LocalDateTime.now());
+                    edge.setUpdatedAt(LocalDateTime.now());
+                    return edge;
+                })
+                .collect(Collectors.toList());
+
+            mindmapEdgeRepository.saveAll(newEdges);
+            log.info("Created {} new edges", newEdges.size());
+        }
+
+        log.info("Mindmap with nodes and edges updated successfully");
+        return mapToResponse(mindmap);
     }
 
     @Override

@@ -96,7 +96,11 @@ public class MediaServiceImpl implements MediaService {
     @Override
     public List<MediaResponse> getFilesByFolder(String folder) {
         try {
-            Map<String, Object> result = cloudinary.api().resourcesByFolder(folder, ObjectUtils.emptyMap());
+            Map<String, Object> result = cloudinary.api().resources(ObjectUtils.asMap(
+                    "type", "upload",
+                    "prefix", folder,
+                    "max_results", 100
+            ));
             List<Map<String, Object>> resources = (List<Map<String, Object>>) result.get("resources");
             
             List<MediaResponse> mediaResponses = new ArrayList<>();

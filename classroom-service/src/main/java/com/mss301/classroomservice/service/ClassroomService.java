@@ -15,7 +15,7 @@ public interface ClassroomService {
 
     ClassroomResponse getById(Long id, Long userId);
 
-    List<ClassroomResponse> getMyClassrooms(Long ownerId);
+    List<ClassroomResponse> getMyClassrooms(Long userId); // Get classrooms where user is owner or member
 
     List<ClassroomResponse> getPublicClassrooms();
 

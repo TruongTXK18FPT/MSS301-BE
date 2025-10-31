@@ -10,6 +10,7 @@ import com.mss301.ragservice.dto.external.RetrievalRequest;
 import com.mss301.ragservice.dto.external.RetrievalResponse;
 import com.mss301.ragservice.dto.request.RagRequest;
 import com.mss301.ragservice.dto.response.RagResponse;
+import com.mss301.ragservice.enums.LLMProvider;
 import com.mss301.ragservice.exception.RagServiceException;
 import com.mss301.ragservice.service.llm.LLMService;
 import com.mss301.ragservice.service.llm.LLMServiceFactory;
@@ -31,19 +32,56 @@ public class RagService {
 
     public RagResponse processQuery(RagRequest request) {
         log.info(
-                "Processing RAG query - Mode: {}, Provider: {}, Query: '{}'",
+                "Processing RAG query - Mode: {}, Provider: {}, Query: '{}', UseDocuments: {}",
                 request.getMode(),
                 request.getLlmProvider(),
-                request.getQueryText());
+                request.getQueryText(),
+                request.getUseDocuments());
 
         try {
-            RetrievalResponse retrievalResponse = retrieveDocuments(request);
+            // Only retrieve documents if explicitly requested
+            RetrievalResponse retrievalResponse = null;
+            String context = "";
 
-            String context = contextService.buildContext(retrievalResponse.getResults());
+            if (Boolean.TRUE.equals(request.getUseDocuments())) {
+                log.info("Retrieving documents for context (useDocuments=true)");
+                retrievalResponse = retrieveDocuments(request);
+                context = contextService.buildContext(retrievalResponse.getResults());
+            } else {
+                log.info("Skipping document retrieval (useDocuments=false or not set)");
+                // Create empty retrieval response
+                retrievalResponse = new RetrievalResponse();
+                retrievalResponse.setResults(List.of());
+                retrievalResponse.setTotalResults(0);
+            }
 
-            LLMService llmService = llmServiceFactory.getLLMService(request.getLlmProvider());
+            // Use fallback-enabled LLM service
+            LLMService llmService;
+            try {
+                llmService = llmServiceFactory.getLLMServiceWithFallback(request.getLlmProvider());
+            } catch (Exception e) {
+                log.error("All LLM services failed, cannot process query", e);
+                throw new RagServiceException("No LLM service available: " + e.getMessage(), e);
+            }
 
-            String llmResponse = llmService.generateResponse(request.getQueryText(), context, request.getMode());
+            String llmResponse;
+            try {
+                llmResponse = llmService.generateResponse(request.getQueryText(), context, request.getMode());
+            } catch (Exception e) {
+                // If we get 429 error, try fallback manually
+                if (e.getMessage() != null && (e.getMessage().contains("429") || e.getMessage().contains("capacity exceeded"))) {
+                    log.warn("Got 429 error from {}, trying Gemini fallback", request.getLlmProvider());
+                    try {
+                        llmService = llmServiceFactory.getLLMService(LLMProvider.GEMINI);
+                        llmResponse = llmService.generateResponse(request.getQueryText(), context, request.getMode());
+                    } catch (Exception fallbackEx) {
+                        log.error("Fallback to Gemini also failed", fallbackEx);
+                        throw new RagServiceException("All LLM providers failed: " + fallbackEx.getMessage(), fallbackEx);
+                    }
+                } else {
+                    throw e;
+                }
+            }
 
             ResponseStrategy strategy = strategyFactory.getStrategy(request.getMode());
             Object formattedResponse = strategy.formatResponse(llmResponse, retrievalResponse.getResults());

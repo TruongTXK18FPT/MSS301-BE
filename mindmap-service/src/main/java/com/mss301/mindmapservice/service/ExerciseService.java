@@ -3,6 +3,7 @@ package com.mss301.mindmapservice.service;
 import java.util.List;
 
 import com.mss301.mindmapservice.dto.request.ExerciseRequest;
+import com.mss301.mindmapservice.dto.request.GenerateExerciseRequest;
 import com.mss301.mindmapservice.dto.response.ExerciseResponse;
 
 public interface ExerciseService {
@@ -46,4 +47,9 @@ public interface ExerciseService {
      * Get a single exercise by ID
      */
     ExerciseResponse getExerciseById(Long exerciseId);
+
+    /**
+     * Generate exercises using AI
+     */
+    List<ExerciseResponse> generateExercises(GenerateExerciseRequest request, Long userId);
 }

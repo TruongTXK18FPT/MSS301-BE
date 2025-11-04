@@ -90,6 +90,7 @@ public class ConceptServiceImpl implements ConceptService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ConceptResponse> getConceptsByNode(Long nodeId) {
         log.info("Getting concepts for node: {}", nodeId);
         return conceptRepository.findByNodeIdOrderByOrderIndexAsc(nodeId).stream()
@@ -98,6 +99,7 @@ public class ConceptServiceImpl implements ConceptService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ConceptResponse getConceptById(Long conceptId) {
         log.info("Getting concept: {}", conceptId);
         Concept concept = conceptRepository.findById(conceptId)

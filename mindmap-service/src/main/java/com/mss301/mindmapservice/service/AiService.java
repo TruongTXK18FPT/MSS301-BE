@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.mss301.mindmapservice.dto.request.AiGenerateMindmapRequest;
 import com.mss301.mindmapservice.dto.response.AiGenerateMindmapResponse;
+import com.mss301.mindmapservice.entity.Exercise;
 import com.mss301.mindmapservice.entity.Mindmap;
 import com.mss301.mindmapservice.entity.MindmapEdge;
 import com.mss301.mindmapservice.entity.MindmapNode;
@@ -34,4 +35,10 @@ public interface AiService {
      * Check AI service health
      */
     boolean isServiceHealthy(String provider);
+
+    /**
+     * Generate exercises for a specific node using AI
+     */
+    List<Exercise> generateExercisesForNode(Long nodeId, String topic, String difficulty,
+                                            String cognitiveLevel, Integer numberOfExercises, Long userId);
 }

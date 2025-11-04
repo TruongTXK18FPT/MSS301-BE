@@ -1,10 +1,6 @@
 spring:
   application:
     name: document-service
-
-  server:
-    port: 8091
-
   servlet:
     multipart:
       enabled: true
@@ -77,4 +73,4 @@ springdoc:
     enabled: true
 
 server:
-  port: 8089
+  port: 8091

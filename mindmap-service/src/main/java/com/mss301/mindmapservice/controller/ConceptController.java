@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping("/concepts")
+@RequestMapping("/mindmap/concepts")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Concept Management", description = "APIs for managing concepts in mindmap nodes")

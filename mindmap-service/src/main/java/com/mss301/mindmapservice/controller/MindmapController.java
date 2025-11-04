@@ -131,14 +131,22 @@ public class MindmapController {
     @Operation(summary = "Update mindmap nodes and edges", description = "Update all nodes and edges for a mindmap in one request")
     public ResponseEntity<ApiResponse<MindmapResponse>> updateMindmapNodes(
             @PathVariable Long id,
-            @RequestBody MindmapRequest request,
+            @Valid @RequestBody MindmapRequest request,
             Authentication authentication) {
 
         Long userId = getUserIdFromAuthentication(authentication);
-        log.info("Updating nodes and edges for mindmap: {} by user: {}", id, userId);
+        log.info("Updating nodes and edges for mindmap: {} by user: {}. Nodes count: {}, Edges count: {}", 
+                id, userId, 
+                request.getNodes() != null ? request.getNodes().size() : 0,
+                request.getEdges() != null ? request.getEdges().size() : 0);
 
-        MindmapResponse response = mindmapService.updateMindmapWithNodesAndEdges(id, request, userId);
-        return ResponseEntity.ok(ApiResponse.success("Mindmap nodes and edges updated successfully", response));
+        try {
+            MindmapResponse response = mindmapService.updateMindmapWithNodesAndEdges(id, request, userId);
+            return ResponseEntity.ok(ApiResponse.success("Mindmap nodes and edges updated successfully", response));
+        } catch (Exception e) {
+            log.error("Error updating mindmap nodes for mindmap {}: {}", id, e.getMessage(), e);
+            throw e; // Let GlobalExceptionHandler handle it
+        }
     }
 
     @DeleteMapping("/{id}")

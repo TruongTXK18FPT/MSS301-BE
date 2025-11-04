@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping("/exercises")
+@RequestMapping("/mindmap/exercises")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Exercise Management", description = "APIs for managing exercises in mindmap nodes")
@@ -139,10 +139,23 @@ public class ExerciseController {
     public ResponseEntity<ApiResponse<List<ExerciseResponse>>> generateExercises(
             @Valid @RequestBody GenerateExerciseRequest request,
             @AuthenticationPrincipal Jwt jwt) {
-        
-        Long userId = Long.parseLong(jwt.getClaim("userId"));
+
+        // Get userId from JWT, default to -1 (system) if not available
+        Long userId = -1L;
+        try {
+            if (jwt != null) {
+                Object userIdClaim = jwt.getClaim("userId");
+                if (userIdClaim != null) {
+                    userId = Long.parseLong(userIdClaim.toString());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to parse userId from JWT: {}, using system user", e.getMessage());
+            userId = -1L;
+        }
+
         List<ExerciseResponse> responses = exerciseService.generateExercises(request, userId);
-        
+
         return ResponseEntity.ok(ApiResponse.<List<ExerciseResponse>>builder()
                 .code("200")
                 .message("Exercises generated successfully")

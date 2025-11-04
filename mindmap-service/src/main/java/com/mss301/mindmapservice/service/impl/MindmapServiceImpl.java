@@ -29,6 +29,9 @@ import com.mss301.mindmapservice.repository.MindmapEdgeRepository;
 import com.mss301.mindmapservice.repository.MindmapNodeRepository;
 import com.mss301.mindmapservice.repository.MindmapRepository;
 import com.mss301.mindmapservice.repository.MindmapShareRepository;
+import com.mss301.mindmapservice.repository.ConceptRepository;
+import com.mss301.mindmapservice.repository.FormulaRepository;
+import com.mss301.mindmapservice.repository.ExerciseRepository;
 import com.mss301.mindmapservice.service.AiService;
 import com.mss301.mindmapservice.service.MindmapService;
 import com.mss301.mindmapservice.service.RagMindmapService;
@@ -47,8 +50,11 @@ public class MindmapServiceImpl implements MindmapService {
     private final MindmapNodeRepository mindmapNodeRepository;
     private final MindmapEdgeRepository mindmapEdgeRepository;
     private final MindmapShareRepository mindmapShareRepository;
-    private final AiService aiService;
+    private final ConceptRepository conceptRepository;
+    private final FormulaRepository formulaRepository;
+    private final ExerciseRepository exerciseRepository;
     private final RagMindmapService ragMindmapService;
+    private final AiService aiService;
 
     @Value("${mindmap.max-mindmaps-free-user:1}")
     private int maxMindmapsFreeUser;
@@ -85,7 +91,7 @@ public class MindmapServiceImpl implements MindmapService {
 
     @Override
     public AiGenerateMindmapResponse generateMindmapWithAi(AiGenerateMindmapRequest request, Long userId) {
-        log.info("Generating mindmap with AI (RAG) for user: {}", userId);
+        log.info("Generating mindmap with AI for user: {}", userId);
 
         // Check if user can create more mindmaps
         if (!canUserCreateMindmap(userId, false)) { // TODO: Check premium status
@@ -100,49 +106,73 @@ public class MindmapServiceImpl implements MindmapService {
             throw new RuntimeException("Invalid grade format: " + request.getGrade());
         }
         
-        RagMindmapRequest ragRequest = RagMindmapRequest.builder()
-                .topic(request.getTopic())
-                .description(request.getDescription())
-                .grade(gradeInteger)
-                .subject(request.getSubject())
-                .aiProvider(request.getAiProvider())
-                .aiModel(request.getAiModel())
-                .useDocuments(request.getUseDocuments() != null ? request.getUseDocuments() : false)
-                .documentId(request.getDocumentId())
-                .chapterId(request.getChapterId())
-                .lessonId(request.getLessonId())
-                .build();
-
-        // Generate mindmap using RAG
-        RagMindmapResponse ragResponse = ragMindmapService.generateRagMindmap(ragRequest, userId);
+        // Check if user wants to use documents (RAG) or direct AI generation
+        boolean useDocuments = request.getUseDocuments() != null && request.getUseDocuments();
         
-        // Check if RAG generation was successful
-        if (!"SUCCESS".equals(ragResponse.getStatus())) {
-            return AiGenerateMindmapResponse.builder()
-                    .status("FAILED")
-                    .errorMessage(ragResponse.getErrorMessage())
-                    .createdAt(LocalDateTime.now())
+        if (useDocuments) {
+            // Use RAG service - mindmap based on documents
+            log.info("Using RAG service with documents for mindmap generation");
+            
+            RagMindmapRequest ragRequest = RagMindmapRequest.builder()
+                    .topic(request.getTopic())
+                    .description(request.getDescription())
+                    .grade(gradeInteger)
+                    .subject(request.getSubject())
+                    .aiProvider(request.getAiProvider())
+                    .aiModel(request.getAiModel())
+                    .useDocuments(true)
+                    .documentId(request.getDocumentId())
+                    .chapterId(request.getChapterId())
+                    .lessonId(request.getLessonId())
                     .build();
+
+            // Generate mindmap using RAG
+            RagMindmapResponse ragResponse = ragMindmapService.generateRagMindmap(ragRequest, userId);
+            
+            // Check if RAG generation was successful
+            if (!"SUCCESS".equals(ragResponse.getStatus())) {
+                return AiGenerateMindmapResponse.builder()
+                        .status("FAILED")
+                        .errorMessage(ragResponse.getErrorMessage())
+                        .createdAt(LocalDateTime.now())
+                        .build();
+            }
+
+            // Get the saved mindmap from database
+            Mindmap savedMindmap = mindmapRepository.findById(ragResponse.getMindmapId())
+                    .orElseThrow(() -> new RuntimeException("Mindmap not found after RAG generation"));
+
+            // Return AI response with mindmap data
+            AiGenerateMindmapResponse aiResponse = new AiGenerateMindmapResponse();
+            aiResponse.setMindmapId(savedMindmap.getId());
+            aiResponse.setTitle(savedMindmap.getTitle());
+            aiResponse.setDescription(savedMindmap.getDescription());
+            aiResponse.setAiProvider(request.getAiProvider().name().toLowerCase());
+            aiResponse.setAiModel(request.getAiModel());
+            aiResponse.setStatus("SUCCESS");
+            aiResponse.setNodesGenerated(ragResponse.getNodesGenerated());
+            aiResponse.setEdgesGenerated(ragResponse.getEdgesGenerated());
+            aiResponse.setCreatedAt(LocalDateTime.now());
+            aiResponse.setMindmap(mapToResponse(savedMindmap));
+            
+            return aiResponse;
+            
+        } else {
+            // Use Direct AI service - mindmap without documents
+            log.info("Using Direct AI (Gemini) for mindmap generation without documents");
+            
+            // Call AiService for direct generation
+            AiGenerateMindmapResponse aiResponse = aiService.generateMindmap(request, userId);
+            
+            // If successful, get mindmap and attach full response
+            if ("SUCCESS".equals(aiResponse.getStatus())) {
+                Mindmap savedMindmap = mindmapRepository.findById(aiResponse.getMindmapId())
+                        .orElseThrow(() -> new RuntimeException("Mindmap not found after AI generation"));
+                aiResponse.setMindmap(mapToResponse(savedMindmap));
+            }
+            
+            return aiResponse;
         }
-
-        // Get the saved mindmap from database
-        Mindmap savedMindmap = mindmapRepository.findById(ragResponse.getMindmapId())
-                .orElseThrow(() -> new RuntimeException("Mindmap not found after RAG generation"));
-
-        // Return AI response with mindmap data
-        AiGenerateMindmapResponse aiResponse = new AiGenerateMindmapResponse();
-        aiResponse.setMindmapId(savedMindmap.getId());
-        aiResponse.setTitle(savedMindmap.getTitle());
-        aiResponse.setDescription(savedMindmap.getDescription());
-        aiResponse.setAiProvider(request.getAiProvider().name().toLowerCase());
-        aiResponse.setAiModel(request.getAiModel());
-        aiResponse.setStatus("SUCCESS");
-        aiResponse.setNodesGenerated(ragResponse.getNodesGenerated());
-        aiResponse.setEdgesGenerated(ragResponse.getEdgesGenerated());
-        aiResponse.setCreatedAt(LocalDateTime.now());
-        aiResponse.setMindmap(mapToResponse(savedMindmap));
-        
-        return aiResponse;
     }
 
     @Override
@@ -250,17 +280,69 @@ public class MindmapServiceImpl implements MindmapService {
         if (request.getNodes() != null && !request.getNodes().isEmpty()) {
             log.info("Updating {} nodes", request.getNodes().size());
 
-            // Delete existing nodes first - clear parentNodeId to avoid FK constraint
+            // Delete existing nodes first - must clear all parent references to avoid FK constraint
             List<MindmapNode> existingNodes = mindmapNodeRepository.findByMindmapId(id);
             if (!existingNodes.isEmpty()) {
-                // Step 1: Clear all parent references
+                // Step 1: Delete all edges first (they reference nodes via fromNodeId/toNodeId)
+                List<MindmapEdge> existingEdges = mindmapEdgeRepository.findByMindmapId(id);
+                if (!existingEdges.isEmpty()) {
+                    mindmapEdgeRepository.deleteAll(existingEdges);
+                    mindmapEdgeRepository.flush(); // Force immediate deletion
+                    log.info("Deleted {} existing edges before deleting nodes", existingEdges.size());
+                }
+                
+                // Step 2: Delete all entity data (Concepts, Formulas, Exercises) that reference these nodes
+                // This prevents foreign key constraint violations when deleting nodes
+                int deletedConcepts = 0;
+                int deletedFormulas = 0;
+                int deletedExercises = 0;
+                
+                for (MindmapNode node : existingNodes) {
+                    Long nodeId = node.getId();
+                    
+                    // Delete concepts for this node
+                    List<com.mss301.mindmapservice.entity.Concept> concepts = conceptRepository.findByNodeId(nodeId);
+                    if (!concepts.isEmpty()) {
+                        conceptRepository.deleteAll(concepts);
+                        deletedConcepts += concepts.size();
+                    }
+                    
+                    // Delete formulas for this node
+                    List<com.mss301.mindmapservice.entity.Formula> formulas = formulaRepository.findByNodeId(nodeId);
+                    if (!formulas.isEmpty()) {
+                        formulaRepository.deleteAll(formulas);
+                        deletedFormulas += formulas.size();
+                    }
+                    
+                    // Delete exercises for this node
+                    List<com.mss301.mindmapservice.entity.Exercise> exercises = exerciseRepository.findByNodeId(nodeId);
+                    if (!exercises.isEmpty()) {
+                        exerciseRepository.deleteAll(exercises);
+                        deletedExercises += exercises.size();
+                    }
+                }
+                
+                // Flush all entity deletions
+                conceptRepository.flush();
+                formulaRepository.flush();
+                exerciseRepository.flush();
+                log.info("Deleted entity data: {} concepts, {} formulas, {} exercises", 
+                    deletedConcepts, deletedFormulas, deletedExercises);
+                
+                // Step 3: Clear ALL parent references in ALL nodes (important: must be done before any deletion)
+                // This prevents foreign key constraint violations because parentNodeId references node.id
+                // We need to clear in a transaction-safe way
                 for (MindmapNode node : existingNodes) {
                     node.setParentNodeId(null);
                 }
-                mindmapNodeRepository.saveAll(existingNodes);
+                // Save all nodes with cleared parent references
+                existingNodes = mindmapNodeRepository.saveAll(existingNodes);
+                mindmapNodeRepository.flush(); // Force immediate update to database
+                log.info("Cleared all parent references for {} nodes", existingNodes.size());
 
-                // Step 2: Now safe to delete all nodes
+                // Step 4: Now safe to delete all nodes (no parent references or entity data remain)
                 mindmapNodeRepository.deleteAll(existingNodes);
+                mindmapNodeRepository.flush(); // Force immediate deletion
                 log.info("Deleted {} existing nodes", existingNodes.size());
             }
 
@@ -269,48 +351,107 @@ public class MindmapServiceImpl implements MindmapService {
             List<MindmapNode> savedNodes = new ArrayList<>();
 
             for (MindmapNodeRequest nodeRequest : request.getNodes()) {
-                MindmapNode node = new MindmapNode();
-                node.setMindmapId(id);
-                node.setTitle(nodeRequest.getTitle() != null ? nodeRequest.getTitle() : "Untitled");
-                node.setContent(nodeRequest.getContent());
-                node.setNodeType(nodeRequest.getNodeType() != null ? nodeRequest.getNodeType() : MindmapNode.NodeType.CONCEPT);
+                try {
+                    MindmapNode node = new MindmapNode();
+                    node.setMindmapId(id);
+                    
+                    // Validate and set title
+                    String title = nodeRequest.getTitle();
+                    if (title == null || title.trim().isEmpty()) {
+                        log.warn("Node title is empty, using default: {}", nodeRequest);
+                        title = "Untitled";
+                    }
+                    node.setTitle(title.trim());
+                    node.setContent(nodeRequest.getContent());
+                    
+                    // Convert nodeType - handle String to Enum conversion
+                    MindmapNode.NodeType nodeType = nodeRequest.getNodeType();
+                    if (nodeType == null) {
+                        // Try to infer from title or default to CONCEPT
+                        nodeType = MindmapNode.NodeType.CONCEPT;
+                        log.debug("NodeType is null for node '{}', defaulting to CONCEPT", title);
+                    }
+                    node.setNodeType(nodeType);
+                    log.debug("Setting nodeType to: {} for node: {}", nodeType, title);
 
-                node.setPositionX(nodeRequest.getPositionX() != null ? nodeRequest.getPositionX() : 0.0);
-                node.setPositionY(nodeRequest.getPositionY() != null ? nodeRequest.getPositionY() : 0.0);
-                node.setWidth(nodeRequest.getWidth());
-                node.setHeight(nodeRequest.getHeight());
-                node.setColor(nodeRequest.getColor());
-                node.setBackgroundColor(nodeRequest.getBackgroundColor());
-                node.setBorderColor(nodeRequest.getBorderColor());
-                node.setFontSize(nodeRequest.getFontSize());
-                node.setFontFamily(nodeRequest.getFontFamily());
-                node.setIsBold(nodeRequest.getIsBold());
-                node.setIsItalic(nodeRequest.getIsItalic());
-                node.setIsUnderline(nodeRequest.getIsUnderline());
-                node.setLevel(nodeRequest.getLevel() != null ? nodeRequest.getLevel() : 0);
-                node.setOrderIndex(nodeRequest.getOrderIndex());
-                node.setIsCollapsed(nodeRequest.getIsCollapsed());
-                node.setCreatedAt(LocalDateTime.now());
-                node.setUpdatedAt(LocalDateTime.now());
-                // Don't set parentNodeId yet
+                    node.setPositionX(nodeRequest.getPositionX() != null ? nodeRequest.getPositionX() : 0.0);
+                    node.setPositionY(nodeRequest.getPositionY() != null ? nodeRequest.getPositionY() : 0.0);
+                    node.setWidth(nodeRequest.getWidth());
+                    node.setHeight(nodeRequest.getHeight());
+                    node.setColor(nodeRequest.getColor());
+                    node.setBackgroundColor(nodeRequest.getBackgroundColor());
+                    node.setBorderColor(nodeRequest.getBorderColor());
+                    node.setFontSize(nodeRequest.getFontSize());
+                    node.setFontFamily(nodeRequest.getFontFamily());
+                    node.setIsBold(nodeRequest.getIsBold() != null ? nodeRequest.getIsBold() : false);
+                    node.setIsItalic(nodeRequest.getIsItalic() != null ? nodeRequest.getIsItalic() : false);
+                    node.setIsUnderline(nodeRequest.getIsUnderline() != null ? nodeRequest.getIsUnderline() : false);
+                    node.setLevel(nodeRequest.getLevel() != null ? nodeRequest.getLevel() : 0);
+                    node.setOrderIndex(nodeRequest.getOrderIndex() != null ? nodeRequest.getOrderIndex() : 0);
+                    node.setIsCollapsed(nodeRequest.getIsCollapsed() != null ? nodeRequest.getIsCollapsed() : false);
+                    node.setCreatedAt(LocalDateTime.now());
+                    node.setUpdatedAt(LocalDateTime.now());
+                    // Don't set parentNodeId yet
 
-                MindmapNode savedNode = mindmapNodeRepository.save(node);
-                savedNodes.add(savedNode);
+                    MindmapNode savedNode = mindmapNodeRepository.save(node);
+                    savedNodes.add(savedNode);
 
-                log.debug("Saved node: {} with ID: {}", savedNode.getTitle(), savedNode.getId());
+                    log.debug("Saved node: {} with ID: {}, type: {}", savedNode.getTitle(), savedNode.getId(), savedNode.getNodeType());
+                } catch (Exception e) {
+                    log.error("Failed to save node: {} - Error: {}", nodeRequest.getTitle(), e.getMessage(), e);
+                    // Continue with next node instead of failing entire operation
+                    // This prevents one bad node from blocking all others
+                }
+
+                // Note: Concept/Formula/Exercise creation is now handled separately via dedicated endpoints
+                // This prevents duplicate creation and allows users to manually add content
+                // Auto-creation can be enabled in the future if needed
             }
 
-            // Second pass: update parent relationships
-            for (int i = 0; i < request.getNodes().size(); i++) {
-                MindmapNodeRequest nodeRequest = request.getNodes().get(i);
-                MindmapNode savedNode = savedNodes.get(i);
-
-                if (nodeRequest.getParentNodeId() != null) {
-                    // Parent ID from request is already a database ID
-                    savedNode.setParentNodeId(nodeRequest.getParentNodeId());
-                    mindmapNodeRepository.save(savedNode);
-                    log.debug("Updated parent for node {} to {}", savedNode.getId(), nodeRequest.getParentNodeId());
+            // Second pass: update parent relationships based on node hierarchy (level)
+            // Don't use parentNodeId from request - those are old IDs that were deleted
+            // Instead, set parent based on node level:
+            // - Level 0 (root/central): no parent
+            // - Level 1 (branches): parent is level 0 node
+            // - Level 2+ (sub-branches): parent is closest level 1 node by position
+            
+            MindmapNode rootNode = savedNodes.stream()
+                .filter(n -> n.getLevel() == 0)
+                .findFirst()
+                .orElse(null);
+            
+            if (rootNode != null) {
+                List<MindmapNode> level1Nodes = savedNodes.stream()
+                    .filter(n -> n.getLevel() == 1)
+                    .collect(Collectors.toList());
+                
+                // Set parent for level 1 nodes (branches connect to root)
+                for (MindmapNode level1Node : level1Nodes) {
+                    level1Node.setParentNodeId(rootNode.getId());
                 }
+                
+                // Set parent for level 2+ nodes (connect to nearest level 1 by position)
+                List<MindmapNode> level2PlusNodes = savedNodes.stream()
+                    .filter(n -> n.getLevel() >= 2)
+                    .collect(Collectors.toList());
+                
+                for (MindmapNode node : level2PlusNodes) {
+                    // Find closest level 1 node by Euclidean distance
+                    MindmapNode closestParent = findClosestLevel1Node(node, level1Nodes);
+                    if (closestParent != null) {
+                        node.setParentNodeId(closestParent.getId());
+                    }
+                }
+                
+                // Save all parent relationships in one batch
+                mindmapNodeRepository.saveAll(savedNodes);
+                mindmapNodeRepository.flush(); // Force immediate update
+                log.info("Updated parent relationships for {} nodes", savedNodes.size());
+            }
+            
+            if (savedNodes.size() < request.getNodes().size()) {
+                log.warn("Only saved {} out of {} nodes. Some nodes may have failed validation or encountered errors.", 
+                        savedNodes.size(), request.getNodes().size());
             }
 
             log.info("Created and linked {} new nodes", savedNodes.size());
@@ -320,10 +461,12 @@ public class MindmapServiceImpl implements MindmapService {
         if (request.getEdges() != null && !request.getEdges().isEmpty()) {
             log.info("Updating {} edges", request.getEdges().size());
 
-            // Delete existing edges first
+            // Note: Edges may have been deleted already during node deletion above
+            // This check ensures we handle cases where nodes weren't updated but edges need updating
             List<MindmapEdge> existingEdges = mindmapEdgeRepository.findByMindmapId(id);
             if (!existingEdges.isEmpty()) {
                 mindmapEdgeRepository.deleteAll(existingEdges);
+                mindmapEdgeRepository.flush(); // Force immediate deletion
                 log.info("Deleted {} existing edges", existingEdges.size());
             }
 
@@ -359,6 +502,7 @@ public class MindmapServiceImpl implements MindmapService {
     }
 
     @Override
+    @Transactional
     public void deleteMindmap(Long id, Long userId) {
         log.info("Deleting mindmap: {} for user: {}", id, userId);
 
@@ -366,16 +510,54 @@ public class MindmapServiceImpl implements MindmapService {
                 .findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new RuntimeException("Mindmap not found"));
 
-        // Delete related entities
-        List<MindmapEdge> edges = mindmapEdgeRepository.findByMindmapId(id);
-        mindmapEdgeRepository.deleteAll(edges);
-
+        // Get all nodes first to delete their related entities
         List<MindmapNode> nodes = mindmapNodeRepository.findByMindmapId(id);
-        mindmapNodeRepository.deleteAll(nodes);
+        log.debug("Found {} nodes to delete", nodes.size());
 
+        // Step 1: Delete Concept, Formula, Exercise for all nodes
+        // These have foreign key constraints to node_id
+        for (MindmapNode node : nodes) {
+            try {
+                conceptRepository.deleteByNodeId(node.getId());
+                formulaRepository.deleteByNodeId(node.getId());
+                exerciseRepository.deleteByNodeId(node.getId());
+                log.debug("Deleted related entities for node: {}", node.getId());
+            } catch (Exception e) {
+                log.warn("Error deleting related entities for node {}: {}", node.getId(), e.getMessage());
+                // Continue with other nodes
+            }
+        }
+
+        // Step 2: Delete edges (they reference nodes via fromNodeId/toNodeId)
+        List<MindmapEdge> edges = mindmapEdgeRepository.findByMindmapId(id);
+        if (!edges.isEmpty()) {
+            mindmapEdgeRepository.deleteAll(edges);
+            mindmapEdgeRepository.flush(); // Force immediate deletion
+            log.debug("Deleted {} edges", edges.size());
+        }
+
+        // Step 3: Clear parent relationships in nodes before deletion
+        for (MindmapNode node : nodes) {
+            node.setParentNodeId(null);
+        }
+        mindmapNodeRepository.saveAll(nodes);
+        mindmapNodeRepository.flush(); // Force immediate update to database
+
+        // Step 4: Delete nodes (now safe since Concept/Formula/Exercise are deleted)
+        if (!nodes.isEmpty()) {
+            mindmapNodeRepository.deleteAll(nodes);
+            mindmapNodeRepository.flush(); // Force immediate deletion
+            log.debug("Deleted {} nodes", nodes.size());
+        }
+
+        // Step 5: Delete shares
         List<MindmapShare> shares = mindmapShareRepository.findByMindmapId(id);
-        mindmapShareRepository.deleteAll(shares);
+        if (!shares.isEmpty()) {
+            mindmapShareRepository.deleteAll(shares);
+            log.debug("Deleted {} shares", shares.size());
+        }
 
+        // Step 6: Finally delete the mindmap itself
         mindmapRepository.delete(mindmap);
 
         log.info("Mindmap deleted successfully");
@@ -541,5 +723,34 @@ public class MindmapServiceImpl implements MindmapService {
             this.totalAccessCount = totalAccessCount;
             this.totalFavoriteCount = totalFavoriteCount;
         }
+    }
+
+    /**
+     * Find closest level 1 node to a given node by Euclidean distance
+     */
+    private MindmapNode findClosestLevel1Node(MindmapNode targetNode, List<MindmapNode> level1Nodes) {
+        if (level1Nodes.isEmpty()) return null;
+        
+        MindmapNode closest = level1Nodes.get(0);
+        double minDistance = calculateDistance(targetNode, closest);
+        
+        for (MindmapNode level1Node : level1Nodes) {
+            double distance = calculateDistance(targetNode, level1Node);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closest = level1Node;
+            }
+        }
+        
+        return closest;
+    }
+
+    /**
+     * Calculate Euclidean distance between two nodes
+     */
+    private double calculateDistance(MindmapNode node1, MindmapNode node2) {
+        double dx = node1.getPositionX() - node2.getPositionX();
+        double dy = node1.getPositionY() - node2.getPositionY();
+        return Math.sqrt(dx * dx + dy * dy);
     }
 }

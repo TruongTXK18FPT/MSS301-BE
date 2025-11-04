@@ -88,6 +88,7 @@ public class FormulaServiceImpl implements FormulaService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<FormulaResponse> getFormulasByNode(Long nodeId) {
         log.info("Getting formulas for node: {}", nodeId);
         return formulaRepository.findByNodeIdOrderByOrderIndexAsc(nodeId).stream()
@@ -96,6 +97,7 @@ public class FormulaServiceImpl implements FormulaService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<FormulaResponse> getPrimaryFormulasByNode(Long nodeId) {
         log.info("Getting primary formulas for node: {}", nodeId);
         return formulaRepository.findByNodeIdAndIsPrimaryTrue(nodeId).stream()
@@ -104,6 +106,7 @@ public class FormulaServiceImpl implements FormulaService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public FormulaResponse getFormulaById(Long formulaId) {
         log.info("Getting formula: {}", formulaId);
         Formula formula = formulaRepository.findById(formulaId)

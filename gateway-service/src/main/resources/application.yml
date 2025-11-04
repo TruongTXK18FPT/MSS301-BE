@@ -110,7 +110,7 @@ spring:
               predicates:
                 - Path=${app.api.prefix}${app.service-prefix.media}/**
               filters:
-                - RewritePath=${app.api.prefix}${app.service-prefix.media}/(?<segment>.*), /${segment}
+                - StripPrefix=0
 
             - id: document-service #8091
               uri: lb://document-service

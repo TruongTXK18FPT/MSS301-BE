@@ -27,8 +27,25 @@ public class MediaServiceImpl implements MediaService {
     @Override
     public UploadResponse uploadFile(MultipartFile file, UploadRequest request, Long userId) {
         try {
+            // Validate file
+            if (file == null || file.isEmpty()) {
+                log.error("Upload failed: file is null or empty");
+                return UploadResponse.builder()
+                        .message("File is required")
+                        .success(false)
+                        .build();
+            }
+            
+            log.info("Uploading file: name={}, size={} bytes, contentType={}, userId={}", 
+                file.getOriginalFilename(), file.getSize(), file.getContentType(), userId);
+            
             Map<String, Object> uploadParams = buildUploadParams(request, userId);
+            log.debug("Cloudinary upload params: {}", uploadParams);
+            
             Map<String, Object> result = cloudinary.uploader().upload(file.getBytes(), uploadParams);
+            
+            log.info("Cloudinary upload successful: publicId={}, url={}", 
+                result.get("public_id"), result.get("secure_url"));
             
             MediaResponse mediaResponse = buildMediaResponse(result);
             
@@ -39,9 +56,17 @@ public class MediaServiceImpl implements MediaService {
                     .build();
                     
         } catch (IOException e) {
-            log.error("Error uploading file: {}", e.getMessage());
+            log.error("IOException while uploading file '{}': {}", 
+                file != null ? file.getOriginalFilename() : "null", e.getMessage(), e);
             return UploadResponse.builder()
                     .message("Failed to upload file: " + e.getMessage())
+                    .success(false)
+                    .build();
+        } catch (Exception e) {
+            log.error("Unexpected error uploading file '{}': {}", 
+                file != null ? file.getOriginalFilename() : "null", e.getMessage(), e);
+            return UploadResponse.builder()
+                    .message("Unexpected error: " + e.getMessage())
                     .success(false)
                     .build();
         }

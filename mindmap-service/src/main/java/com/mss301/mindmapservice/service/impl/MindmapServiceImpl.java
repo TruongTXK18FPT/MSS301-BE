@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -21,6 +22,7 @@ import com.mss301.mindmapservice.dto.response.AiGenerateMindmapResponse;
 import com.mss301.mindmapservice.dto.response.MindmapResponse;
 import com.mss301.mindmapservice.dto.response.MindmapNodeResponse;
 import com.mss301.mindmapservice.dto.response.MindmapEdgeResponse;
+import com.mss301.mindmapservice.entity.Concept;
 import com.mss301.mindmapservice.entity.Mindmap;
 import com.mss301.mindmapservice.entity.MindmapEdge;
 import com.mss301.mindmapservice.entity.MindmapNode;
@@ -280,41 +282,65 @@ public class MindmapServiceImpl implements MindmapService {
         if (request.getNodes() != null && !request.getNodes().isEmpty()) {
             log.info("Updating {} nodes", request.getNodes().size());
 
-            // Delete existing nodes first - must clear all parent references to avoid FK constraint
+            // Get existing nodes to check which ones should be kept vs deleted
             List<MindmapNode> existingNodes = mindmapNodeRepository.findByMindmapId(id);
-            if (!existingNodes.isEmpty()) {
-                // Step 1: Delete all edges first (they reference nodes via fromNodeId/toNodeId)
-                List<MindmapEdge> existingEdges = mindmapEdgeRepository.findByMindmapId(id);
-                if (!existingEdges.isEmpty()) {
-                    mindmapEdgeRepository.deleteAll(existingEdges);
-                    mindmapEdgeRepository.flush(); // Force immediate deletion
-                    log.info("Deleted {} existing edges before deleting nodes", existingEdges.size());
+            log.info("Found {} existing nodes in database", existingNodes.size());
+            
+            // Map of existing node IDs (from request) to keep entities
+            Set<Long> requestNodeIds = request.getNodes().stream()
+                .map(MindmapNodeRequest::getId)
+                .filter(nodeId -> nodeId != null && nodeId > 0)
+                .collect(Collectors.toSet());
+            
+            log.info("Request contains {} nodes with valid IDs: {}", requestNodeIds.size(), requestNodeIds);
+            log.info("Request node IDs detail: {}", request.getNodes().stream()
+                .map(n -> String.format("[title=%s, id=%s]", n.getTitle(), n.getId()))
+                .collect(Collectors.joining(", ")));
+            
+            // Find nodes that are being REMOVED (not in request) - only delete entities for these
+            List<MindmapNode> nodesToDelete = existingNodes.stream()
+                .filter(node -> !requestNodeIds.contains(node.getId()))
+                .collect(Collectors.toList());
+            
+            log.info("Nodes to DELETE (not in request): {} nodes - IDs: {}", 
+                nodesToDelete.size(),
+                nodesToDelete.stream().map(n -> n.getId().toString()).collect(Collectors.joining(", ")));
+            
+            if (!nodesToDelete.isEmpty()) {
+                log.info("Found {} nodes to delete (not in update request)", nodesToDelete.size());
+                
+                // Step 1: Delete edges for removed nodes
+                List<MindmapEdge> edgesToDelete = mindmapEdgeRepository.findByMindmapId(id).stream()
+                    .filter(edge -> nodesToDelete.stream().anyMatch(n -> 
+                        n.getId().equals(edge.getFromNodeId()) || n.getId().equals(edge.getToNodeId())))
+                    .collect(Collectors.toList());
+                
+                if (!edgesToDelete.isEmpty()) {
+                    mindmapEdgeRepository.deleteAll(edgesToDelete);
+                    mindmapEdgeRepository.flush();
+                    log.info("Deleted {} edges for removed nodes", edgesToDelete.size());
                 }
                 
-                // Step 2: Delete all entity data (Concepts, Formulas, Exercises) that reference these nodes
-                // This prevents foreign key constraint violations when deleting nodes
+                // Step 2: Delete entity data ONLY for removed nodes (preserve entities for kept nodes)
                 int deletedConcepts = 0;
                 int deletedFormulas = 0;
                 int deletedExercises = 0;
                 
-                for (MindmapNode node : existingNodes) {
+                for (MindmapNode node : nodesToDelete) {
                     Long nodeId = node.getId();
                     
-                    // Delete concepts for this node
-                    List<com.mss301.mindmapservice.entity.Concept> concepts = conceptRepository.findByNodeId(nodeId);
+                    List<Concept> concepts = conceptRepository.findByNodeId(nodeId);
                     if (!concepts.isEmpty()) {
                         conceptRepository.deleteAll(concepts);
                         deletedConcepts += concepts.size();
                     }
                     
-                    // Delete formulas for this node
                     List<com.mss301.mindmapservice.entity.Formula> formulas = formulaRepository.findByNodeId(nodeId);
                     if (!formulas.isEmpty()) {
                         formulaRepository.deleteAll(formulas);
                         deletedFormulas += formulas.size();
                     }
                     
-                    // Delete exercises for this node
                     List<com.mss301.mindmapservice.entity.Exercise> exercises = exerciseRepository.findByNodeId(nodeId);
                     if (!exercises.isEmpty()) {
                         exerciseRepository.deleteAll(exercises);
@@ -322,40 +348,70 @@ public class MindmapServiceImpl implements MindmapService {
                     }
                 }
                 
-                // Flush all entity deletions
                 conceptRepository.flush();
                 formulaRepository.flush();
                 exerciseRepository.flush();
-                log.info("Deleted entity data: {} concepts, {} formulas, {} exercises", 
+                log.info("Deleted entity data for removed nodes: {} concepts, {} formulas, {} exercises", 
                     deletedConcepts, deletedFormulas, deletedExercises);
                 
-                // Step 3: Clear ALL parent references in ALL nodes (important: must be done before any deletion)
-                // This prevents foreign key constraint violations because parentNodeId references node.id
-                // We need to clear in a transaction-safe way
-                for (MindmapNode node : existingNodes) {
+                // Step 3: Clear parent references for nodes to delete
+                for (MindmapNode node : nodesToDelete) {
                     node.setParentNodeId(null);
                 }
-                // Save all nodes with cleared parent references
-                existingNodes = mindmapNodeRepository.saveAll(existingNodes);
-                mindmapNodeRepository.flush(); // Force immediate update to database
-                log.info("Cleared all parent references for {} nodes", existingNodes.size());
+                mindmapNodeRepository.saveAll(nodesToDelete);
+                mindmapNodeRepository.flush();
+                log.info("Cleared parent references for {} nodes to delete", nodesToDelete.size());
 
-                // Step 4: Now safe to delete all nodes (no parent references or entity data remain)
-                mindmapNodeRepository.deleteAll(existingNodes);
-                mindmapNodeRepository.flush(); // Force immediate deletion
-                log.info("Deleted {} existing nodes", existingNodes.size());
+                // Step 4: Delete the removed nodes
+                mindmapNodeRepository.deleteAll(nodesToDelete);
+                mindmapNodeRepository.flush();
+                log.info("Deleted {} removed nodes", nodesToDelete.size());
+            } else {
+                log.info("No nodes to delete - all existing nodes are being kept/updated");
+                
+                // Just delete all edges - they will be recreated from parentNodeId
+                List<MindmapEdge> existingEdges = mindmapEdgeRepository.findByMindmapId(id);
+                if (!existingEdges.isEmpty()) {
+                    mindmapEdgeRepository.deleteAll(existingEdges);
+                    mindmapEdgeRepository.flush();
+                    log.info("Deleted {} existing edges (will be recreated)", existingEdges.size());
+                }
             }
 
-            // Create new nodes - save in two passes to handle parent relationships
-            // First pass: create all nodes without parent references
+            // Update or create nodes - preserve entities for existing nodes
+            // Build a map of existing nodes by ID for quick lookup
+            Map<Long, MindmapNode> existingNodeMap = existingNodes.stream()
+                .collect(Collectors.toMap(MindmapNode::getId, node -> node));
+            
+            log.info("Existing node map has {} entries", existingNodeMap.size());
+            
             List<MindmapNode> savedNodes = new ArrayList<>();
+            int updateCount = 0;
+            int createCount = 0;
 
             for (MindmapNodeRequest nodeRequest : request.getNodes()) {
                 try {
-                    MindmapNode node = new MindmapNode();
-                    node.setMindmapId(id);
+                    MindmapNode node;
                     
-                    // Validate and set title
+                    // Check if this is an update (node has ID and exists) or new node
+                    if (nodeRequest.getId() != null && nodeRequest.getId() > 0 && 
+                        existingNodeMap.containsKey(nodeRequest.getId())) {
+                        // UPDATE existing node - preserve its ID and created date
+                        node = existingNodeMap.get(nodeRequest.getId());
+                        log.info("✓ UPDATING existing node ID: {} - '{}' (entities will be PRESERVED)", 
+                            node.getId(), node.getTitle());
+                        updateCount++;
+                    } else {
+                        // CREATE new node
+                        node = new MindmapNode();
+                        node.setMindmapId(id);
+                        node.setCreatedAt(LocalDateTime.now());
+                        log.info("✓ CREATING new node: '{}' (requestId={}, no entities yet)", 
+                            nodeRequest.getTitle(), nodeRequest.getId());
+                        createCount++;
+                    }
+                    
+                    // Update node properties (for both new and existing nodes)
                     String title = nodeRequest.getTitle();
                     if (title == null || title.trim().isEmpty()) {
                         log.warn("Node title is empty, using default: {}", nodeRequest);
@@ -364,15 +420,13 @@ public class MindmapServiceImpl implements MindmapService {
                     node.setTitle(title.trim());
                     node.setContent(nodeRequest.getContent());
                     
-                    // Convert nodeType - handle String to Enum conversion
+                    // Convert nodeType
                     MindmapNode.NodeType nodeType = nodeRequest.getNodeType();
                     if (nodeType == null) {
-                        // Try to infer from title or default to CONCEPT
                         nodeType = MindmapNode.NodeType.CONCEPT;
                         log.debug("NodeType is null for node '{}', defaulting to CONCEPT", title);
                     }
                     node.setNodeType(nodeType);
-                    log.debug("Setting nodeType to: {} for node: {}", nodeType, title);
 
                     node.setPositionX(nodeRequest.getPositionX() != null ? nodeRequest.getPositionX() : 0.0);
                     node.setPositionY(nodeRequest.getPositionY() != null ? nodeRequest.getPositionY() : 0.0);
@@ -389,24 +443,21 @@ public class MindmapServiceImpl implements MindmapService {
                     node.setLevel(nodeRequest.getLevel() != null ? nodeRequest.getLevel() : 0);
                     node.setOrderIndex(nodeRequest.getOrderIndex() != null ? nodeRequest.getOrderIndex() : 0);
                     node.setIsCollapsed(nodeRequest.getIsCollapsed() != null ? nodeRequest.getIsCollapsed() : false);
-                    node.setCreatedAt(LocalDateTime.now());
                     node.setUpdatedAt(LocalDateTime.now());
                     // Don't set parentNodeId yet
 
                     MindmapNode savedNode = mindmapNodeRepository.save(node);
                     savedNodes.add(savedNode);
 
-                    log.debug("Saved node: {} with ID: {}, type: {}", savedNode.getTitle(), savedNode.getId(), savedNode.getNodeType());
+                    log.debug("Saved node: {} with ID: {}, type: {} (entities preserved)", 
+                        savedNode.getTitle(), savedNode.getId(), savedNode.getNodeType());
                 } catch (Exception e) {
                     log.error("Failed to save node: {} - Error: {}", nodeRequest.getTitle(), e.getMessage(), e);
-                    // Continue with next node instead of failing entire operation
-                    // This prevents one bad node from blocking all others
                 }
-
-                // Note: Concept/Formula/Exercise creation is now handled separately via dedicated endpoints
-                // This prevents duplicate creation and allows users to manually add content
-                // Auto-creation can be enabled in the future if needed
             }
+            
+            log.info("=== NODE SAVE SUMMARY: Updated={}, Created={}, Total saved={} ===", 
+                updateCount, createCount, savedNodes.size());
 
             // Second pass: update parent relationships based on node hierarchy (level)
             // Don't use parentNodeId from request - those are old IDs that were deleted

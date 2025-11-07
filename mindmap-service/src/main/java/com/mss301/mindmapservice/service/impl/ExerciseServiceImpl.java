@@ -218,10 +218,23 @@ public class ExerciseServiceImpl implements ExerciseService {
                 return Arrays.asList(hintsNode.asText());
             }
         } catch (Exception e) {
-            log.warn("Failed to parse hints JSON: {}, treating as single string", hintsJson);
+            // Not JSON format - try splitting by newlines
+            log.debug("Hints is not JSON, attempting to split by newlines: {}", hintsJson.substring(0, Math.min(100, hintsJson.length())));
+            
+            // Split by newlines and filter out empty lines
+            List<String> hints = Arrays.stream(hintsJson.split("\\n"))
+                    .map(String::trim)
+                    .filter(line -> !line.isEmpty())
+                    .collect(java.util.stream.Collectors.toList());
+            
+            if (!hints.isEmpty()) {
+                log.debug("Successfully parsed {} hints from newline-separated text", hints.size());
+                return hints;
+            }
         }
 
         // Fallback: treat as single string
+        log.debug("Using fallback: treating hints as single string");
         return Arrays.asList(hintsJson);
     }
 }

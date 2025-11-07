@@ -1,5 +1,6 @@
 package com.mss301.mindmapservice.service.impl;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -13,6 +14,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import com.fasterxml.jackson.core.io.JsonEOFException;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mss301.mindmapservice.dto.ai.*;
@@ -272,6 +274,365 @@ public class AiServiceImpl implements AiService {
     }
 
     /**
+     * Generate concepts for a specific mindmap node using Gemini AI
+     */
+    @Override
+    public List<Concept> generateConceptsForNode(Long nodeId, String topic, Integer numberOfConcepts, Long userId) {
+        log.info("Generating {} concepts for node: {} with topic: {}", numberOfConcepts, nodeId, topic);
+
+        try {
+            // 1. Verify node exists
+            MindmapNode node = mindmapNodeRepository.findById(nodeId)
+                    .orElseThrow(() -> new RuntimeException("Node not found with id: " + nodeId));
+
+            // 2. Build comprehensive prompt
+            String prompt = buildConceptGenerationPrompt(topic, numberOfConcepts, node);
+            log.debug("Built concept prompt with length: {} characters", prompt.length());
+
+            // 3. Call Gemini API
+            String aiJsonResponse = callGeminiApi(prompt);
+            log.info("Received AI response with length: {} characters", aiJsonResponse.length());
+
+            // 4. Parse concepts from response
+            List<Concept> concepts = parseConceptsFromAiResponse(aiJsonResponse, nodeId, userId);
+            log.info("Parsed {} concepts from AI response", concepts.size());
+
+            // 5. Save concepts
+            List<Concept> savedConcepts = conceptRepository.saveAll(concepts);
+            conceptRepository.flush();
+            log.info("Saved {} concepts to database", savedConcepts.size());
+
+            return savedConcepts;
+
+        } catch (Exception e) {
+            log.error("Failed to generate concepts for node {}: {}", nodeId, e.getMessage(), e);
+            throw new RuntimeException("Failed to generate concepts: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Generate formulas for a specific mindmap node using Gemini AI
+     */
+    @Override
+    public List<Formula> generateFormulasForNode(Long nodeId, String topic, Integer numberOfFormulas, Long userId) {
+        log.info("Generating {} formulas for node: {} with topic: {}", numberOfFormulas, nodeId, topic);
+
+        try {
+            // 1. Verify node exists
+            MindmapNode node = mindmapNodeRepository.findById(nodeId)
+                    .orElseThrow(() -> new RuntimeException("Node not found with id: " + nodeId));
+
+            // 2. Build comprehensive prompt
+            String prompt = buildFormulaGenerationPrompt(topic, numberOfFormulas, node);
+            log.debug("Built formula prompt with length: {} characters", prompt.length());
+
+            // 3. Call Gemini API
+            String aiJsonResponse = callGeminiApi(prompt);
+            log.info("Received AI response with length: {} characters", aiJsonResponse.length());
+
+            // 4. Parse formulas from response
+            List<Formula> formulas = parseFormulasFromAiResponse(aiJsonResponse, nodeId, userId);
+            log.info("Parsed {} formulas from AI response", formulas.size());
+
+            // 5. Save formulas
+            List<Formula> savedFormulas = formulaRepository.saveAll(formulas);
+            formulaRepository.flush();
+            log.info("Saved {} formulas to database", savedFormulas.size());
+
+            return savedFormulas;
+
+        } catch (Exception e) {
+            log.error("Failed to generate formulas for node {}: {}", nodeId, e.getMessage(), e);
+            throw new RuntimeException("Failed to generate formulas: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Build comprehensive prompt for concept generation
+     */
+    private String buildConceptGenerationPrompt(String topic, Integer numberOfConcepts, MindmapNode node) {
+        StringBuilder prompt = new StringBuilder();
+
+        // System instruction
+        prompt.append("Bạn là một chuyên gia giáo dục toán học với hơn 20 năm kinh nghiệm giảng dạy tại Việt Nam. ");
+        prompt.append("Nhiệm vụ của bạn là tạo các khái niệm toán học chi tiết và rõ ràng dựa trên yêu cầu.\n\n");
+
+        // Requirements
+        prompt.append("YÊU CẦU KHÁI NIỆM:\n");
+        prompt.append("- Chủ đề: ").append(topic).append("\n");
+        prompt.append("- Số lượng khái niệm: ").append(numberOfConcepts).append("\n");
+        prompt.append("- Ngữ cảnh: ").append(node.getTitle()).append("\n\n");
+
+        // Guidelines
+        prompt.append("HƯỚNG DẪN CHI TIẾT:\n");
+        prompt.append("1. NAME (Tên khái niệm): Tên khái niệm ngắn gọn, dễ hiểu (2-5 từ).\n");
+        prompt.append("2. DEFINITION (Định nghĩa): Định nghĩa chính xác, khoa học của khái niệm (50-100 từ).\n");
+        prompt.append("3. EXPLANATION (Giải thích): Giải thích chi tiết, dễ hiểu cho học sinh (150-300 từ).\n");
+        prompt.append("   - Giải thích bằng ngôn ngữ đơn giản\n");
+        prompt.append("   - Nêu rõ ý nghĩa và vai trò của khái niệm\n");
+        prompt.append("   - Liên hệ với các khái niệm khác nếu có\n");
+        prompt.append("4. EXAMPLES (Ví dụ): 2-3 ví dụ cụ thể, dễ hiểu minh họa cho khái niệm.\n");
+        prompt.append("5. KEY_POINTS (Điểm quan trọng): 3-5 điểm quan trọng cần nhớ về khái niệm.\n");
+        prompt.append("6. COMMON_MISTAKES (Sai lầm thường gặp): 2-3 sai lầm học sinh hay mắc phải.\n");
+        prompt.append("7. TIPS (Mẹo ghi nhớ): 1-2 mẹo giúp học sinh ghi nhớ dễ dàng.\n\n");
+
+        // JSON Structure
+        prompt.append("ĐỊNH DẠNG JSON XUẤT RA (BẮT BUỘC):\n");
+        prompt.append("{\n");
+        prompt.append("  \"concepts\": [\n");
+        prompt.append("    {\n");
+        prompt.append("      \"name\": \"Tên khái niệm\",\n");
+        prompt.append("      \"definition\": \"Định nghĩa chính xác, khoa học 50-100 từ\",\n");
+        prompt.append("      \"explanation\": \"Giải thích chi tiết, dễ hiểu 150-300 từ\",\n");
+        prompt.append("      \"examples\": [\"Ví dụ 1 cụ thể\", \"Ví dụ 2 cụ thể\", \"Ví dụ 3 cụ thể\"],\n");
+        prompt.append("      \"keyPoints\": [\"Điểm quan trọng 1\", \"Điểm quan trọng 2\", \"Điểm quan trọng 3\"],\n");
+        prompt.append("      \"commonMistakes\": [\"Sai lầm 1\", \"Sai lầm 2\"],\n");
+        prompt.append("      \"tips\": \"Mẹo ghi nhớ hữu ích\"\n");
+        prompt.append("    }\n");
+        prompt.append("  ]\n");
+        prompt.append("}\n\n");
+
+        // Quality Rules
+        prompt.append("TIÊU CHÍ CHẤT LƯỢNG:\n");
+        prompt.append("1. Định nghĩa phải chính xác về mặt toán học\n");
+        prompt.append("2. Giải thích phải dễ hiểu, phù hợp với học sinh\n");
+        prompt.append("3. Ví dụ phải cụ thể, có số liệu thực tế\n");
+        prompt.append("4. Không sử dụng dấu ba chấm (...) trong nội dung\n");
+        prompt.append("5. Dùng các ký hiệu toán học chuẩn (², √, ∫, Σ, v.v.)\n");
+        prompt.append("6. Mỗi trường phải có nội dung đầy đủ, không để trống\n\n");
+
+        prompt.append("CHỈ TRẢ VỀ JSON THUẦN TÚY, KHÔNG CÓ TEXT GIẢI THÍCH THÊM, KHÔNG CÓ MARKDOWN CODE BLOCK.\n");
+
+        return prompt.toString();
+    }
+
+    /**
+     * Build comprehensive prompt for formula generation
+     */
+    private String buildFormulaGenerationPrompt(String topic, Integer numberOfFormulas, MindmapNode node) {
+        StringBuilder prompt = new StringBuilder();
+
+        // System instruction
+        prompt.append("Bạn là một chuyên gia giáo dục toán học với hơn 20 năm kinh nghiệm giảng dạy tại Việt Nam. ");
+        prompt.append("Nhiệm vụ của bạn là tạo các công thức toán học chi tiết và rõ ràng dựa trên yêu cầu.\n\n");
+
+        // Requirements
+        prompt.append("YÊU CẦU CÔNG THỨC:\n");
+        prompt.append("- Chủ đề: ").append(topic).append("\n");
+        prompt.append("- Số lượng công thức: ").append(numberOfFormulas).append("\n");
+        prompt.append("- Ngữ cảnh: ").append(node.getTitle()).append("\n\n");
+
+        // Guidelines
+        prompt.append("HƯỚNG DẪN CHI TIẾT:\n");
+        prompt.append("1. NAME (Tên công thức): Tên công thức ngắn gọn (3-7 từ). VD: 'Công thức tính diện tích hình tròn'\n");
+        prompt.append("2. FORMULA_TEXT (Công thức dạng text): Viết công thức dạng text đơn giản. VD: 'S = π × r²'\n");
+        prompt.append("3. FORMULA_LATEX (Công thức LaTeX): Viết công thức dạng LaTeX. VD: 'S = \\pi r^2'\n");
+        prompt.append("4. VARIABLES (Biến số): Giải thích ý nghĩa từng biến trong công thức.\n");
+        prompt.append("   VD: 'S: Diện tích hình tròn (đơn vị: cm², m²)\\nr: Bán kính hình tròn (đơn vị: cm, m)\\nπ: Hằng số Pi ≈ 3.14159'\n");
+        prompt.append("5. DESCRIPTION (Mô tả): Giải thích công thức, khi nào sử dụng (100-200 từ).\n");
+        prompt.append("6. USAGE_EXAMPLE (Ví dụ áp dụng): Ví dụ cụ thể với số liệu thực tế (100-150 từ).\n");
+        prompt.append("   - Cho biết dữ liệu đầu vào\n");
+        prompt.append("   - Áp dụng công thức từng bước\n");
+        prompt.append("   - Tính toán và đưa ra kết quả\n\n");
+
+        // JSON Structure
+        prompt.append("ĐỊNH DẠNG JSON XUẤT RA (BẮT BUỘC):\n");
+        prompt.append("{\n");
+        prompt.append("  \"formulas\": [\n");
+        prompt.append("    {\n");
+        prompt.append("      \"name\": \"Tên công thức ngắn gọn\",\n");
+        prompt.append("      \"formulaText\": \"Công thức dạng text (VD: S = π × r²)\",\n");
+        prompt.append("      \"formulaLatex\": \"Công thức LaTeX (VD: S = \\\\pi r^2)\",\n");
+        prompt.append("      \"variables\": \"Giải thích từng biến\\nr: bán kính\\nS: diện tích\",\n");
+        prompt.append("      \"description\": \"Mô tả và hướng dẫn sử dụng 100-200 từ\",\n");
+        prompt.append("      \"usageExample\": \"Ví dụ cụ thể với số liệu và cách tính 100-150 từ\"\n");
+        prompt.append("    }\n");
+        prompt.append("  ]\n");
+        prompt.append("}\n\n");
+
+        // Quality Rules
+        prompt.append("TIÊU CHÍ CHẤT LƯỢNG:\n");
+        prompt.append("1. Công thức phải chính xác về mặt toán học\n");
+        prompt.append("2. LaTeX phải đúng cú pháp, render được\n");
+        prompt.append("3. Giải thích biến số phải đầy đủ, rõ ràng\n");
+        prompt.append("4. Ví dụ áp dụng phải có số liệu cụ thể\n");
+        prompt.append("5. Không sử dụng dấu ba chấm (...) trong nội dung\n");
+        prompt.append("6. Mỗi trường phải có nội dung đầy đủ, không để trống\n\n");
+
+        prompt.append("CHỈ TRẢ VỀ JSON THUẦN TÚY, KHÔNG CÓ TEXT GIẢI THÍCH THÊM, KHÔNG CÓ MARKDOWN CODE BLOCK.\n");
+
+        return prompt.toString();
+    }
+
+    /**
+     * Parse concepts from AI JSON response
+     */
+    private List<Concept> parseConceptsFromAiResponse(String aiJsonResponse, Long nodeId, Long userId) {
+        List<Concept> concepts = new ArrayList<>();
+
+        try {
+            log.info("Parsing concepts from AI response");
+            JsonNode root = objectMapper.readTree(aiJsonResponse);
+
+            JsonNode conceptsArray = root.path("concepts");
+            if (!conceptsArray.isArray()) {
+                log.warn("No 'concepts' array found in AI response");
+                return concepts;
+            }
+
+            int orderIndex = 0;
+            for (JsonNode conceptNode : conceptsArray) {
+                try {
+                    Concept concept = new Concept();
+                    concept.setNodeId(nodeId);
+
+                    // Required fields
+                    String name = conceptNode.path("name").asText("").trim();
+                    String definition = conceptNode.path("definition").asText("").trim();
+                    String explanation = conceptNode.path("explanation").asText("").trim();
+
+                    if (name.isEmpty() || definition.isEmpty()) {
+                        log.warn("Concept missing name or definition, skipping");
+                        continue;
+                    }
+
+                    concept.setName(name);
+                    concept.setDefinition(definition);
+                    concept.setExplanation(explanation.isEmpty() ? definition : explanation);
+
+                    // Parse examples array
+                    JsonNode examples = conceptNode.path("examples");
+                    if (examples.isArray() && examples.size() > 0) {
+                        StringBuilder examplesText = new StringBuilder();
+                        for (JsonNode example : examples) {
+                            examplesText.append("• ").append(example.asText()).append("\n");
+                        }
+                        concept.setExamples(examplesText.toString().trim());
+                    }
+
+                    // Parse key points array
+                    JsonNode keyPoints = conceptNode.path("keyPoints");
+                    if (keyPoints.isArray() && keyPoints.size() > 0) {
+                        StringBuilder keyPointsText = new StringBuilder();
+                        for (JsonNode point : keyPoints) {
+                            keyPointsText.append("✓ ").append(point.asText()).append("\n");
+                        }
+                        concept.setKeyPoints(keyPointsText.toString().trim());
+                    }
+
+                    // Parse common mistakes array
+                    JsonNode commonMistakes = conceptNode.path("commonMistakes");
+                    if (commonMistakes.isArray() && commonMistakes.size() > 0) {
+                        StringBuilder mistakesText = new StringBuilder();
+                        for (JsonNode mistake : commonMistakes) {
+                            mistakesText.append("⚠ ").append(mistake.asText()).append("\n");
+                        }
+                        concept.setCommonMistakes(mistakesText.toString().trim());
+                    }
+
+                    // Tips
+                    String tips = conceptNode.path("tips").asText("").trim();
+                    if (!tips.isEmpty()) {
+                        concept.setTips("💡 " + tips);
+                    }
+
+                    // Set defaults
+                    concept.setOrderIndex(orderIndex++);
+                    // createdAt and updatedAt are set automatically by @PrePersist
+
+                    concepts.add(concept);
+                    log.debug("Parsed concept: {} (definition length: {} chars)", 
+                            concept.getName(), concept.getDefinition().length());
+
+                } catch (Exception e) {
+                    log.warn("Failed to parse concept: {}", e.getMessage());
+                }
+            }
+
+            log.info("Successfully parsed {} concepts from AI response", concepts.size());
+
+        } catch (Exception e) {
+            log.error("Failed to parse concepts from AI response: {}", e.getMessage(), e);
+        }
+
+        return concepts;
+    }
+
+    /**
+     * Parse formulas from AI JSON response
+     */
+    private List<Formula> parseFormulasFromAiResponse(String aiJsonResponse, Long nodeId, Long userId) {
+        List<Formula> formulas = new ArrayList<>();
+
+        try {
+            log.info("Parsing formulas from AI response");
+            JsonNode root = objectMapper.readTree(aiJsonResponse);
+
+            JsonNode formulasArray = root.path("formulas");
+            if (!formulasArray.isArray()) {
+                log.warn("No 'formulas' array found in AI response");
+                return formulas;
+            }
+
+            int orderIndex = 0;
+            boolean isFirst = true;
+            for (JsonNode formulaNode : formulasArray) {
+                try {
+                    Formula formula = new Formula();
+                    formula.setNodeId(nodeId);
+
+                    // Required fields
+                    String name = formulaNode.path("name").asText("").trim();
+                    String formulaText = formulaNode.path("formulaText").asText("").trim();
+                    String formulaLatex = formulaNode.path("formulaLatex").asText("").trim();
+
+                    if (name.isEmpty() || (formulaText.isEmpty() && formulaLatex.isEmpty())) {
+                        log.warn("Formula missing name or formula text/latex, skipping");
+                        continue;
+                    }
+
+                    formula.setName(name);
+                    formula.setFormulaText(formulaText.isEmpty() ? formulaLatex : formulaText);
+                    formula.setFormulaLatex(formulaLatex.isEmpty() ? formulaText : formulaLatex);
+
+                    // Variables
+                    String variables = formulaNode.path("variables").asText("").trim();
+                    formula.setVariables(variables);
+
+                    // Description
+                    String description = formulaNode.path("description").asText("").trim();
+                    formula.setDescription(description);
+
+                    // Usage example
+                    String usageExample = formulaNode.path("usageExample").asText("").trim();
+                    formula.setUsageExample(usageExample);
+
+                    // Set first formula as primary
+                    formula.setIsPrimary(isFirst);
+                    isFirst = false;
+
+                    // Set defaults
+                    formula.setOrderIndex(orderIndex++);
+                    // createdAt and updatedAt are set automatically by @PrePersist
+
+                    formulas.add(formula);
+                    log.debug("Parsed formula: {} (text: {})", formula.getName(), formula.getFormulaText());
+
+                } catch (Exception e) {
+                    log.warn("Failed to parse formula: {}", e.getMessage());
+                }
+            }
+
+            log.info("Successfully parsed {} formulas from AI response", formulas.size());
+
+        } catch (Exception e) {
+            log.error("Failed to parse formulas from AI response: {}", e.getMessage(), e);
+        }
+
+        return formulas;
+    }
+
+    /**
      * Build comprehensive system prompt for mindmap generation
      */
     private String buildComprehensiveMindmapPrompt(AiGenerateMindmapRequest request) {
@@ -287,8 +648,8 @@ public class AiServiceImpl implements AiService {
         prompt.append("YÊU CẦU CỦA NGƯỜI DÙNG:\n");
         prompt.append("Tạo mindmap chi tiết về '").append(request.getTopic()).append("' ");
         prompt.append("cho học sinh lớp ").append(request.getGrade()).append(". ");
-        prompt.append("Yêu cầu: TỐI THIỂU 15-20 nodes (4-5 branches, mỗi branch có 3-4 subBranches). ");
-        prompt.append("Mỗi node phải có content đầy đủ 200-500 từ với emoji, công thức toán học (², ³, √, Δ), ");
+        prompt.append("Yêu cầu: TỐI THIỂU 10-15 nodes (4-5 branches, mỗi branch có 2-3 subBranches). ");
+        prompt.append("Mỗi node phải có content đầy đủ 100-300 từ với emoji, công thức toán học (², ³, √, Δ), ");
         prompt.append("ví dụ cụ thể, và bài tập có đáp án. ");
         prompt.append("KHÔNG viết nội dung chung chung hoặc '...'.\n\n");
         
@@ -303,57 +664,159 @@ public class AiServiceImpl implements AiService {
         prompt.append(getMathKnowledgeByGrade());
         
         // Structure requirements with DETAILED entity schemas
-        prompt.append("\nCẤU TRÚC JSON MINDMAP YÊU CẦU:\n\n");
-        prompt.append("QUAN TRỌNG: Mỗi node PHẢI có nodeType phù hợp và dữ liệu entity tương ứng:\n");
-        prompt.append("- nodeType=\"CONCEPT\": PHẢI có object \"concept\" với: name, definition (bắt buộc), explanation (chi tiết 200-500 từ), examples (array), keyPoints (array), commonMistakes (array)\n");
-        prompt.append("- nodeType=\"FORMULA\": PHẢI có array \"formulas\" với: name, formulaText, formulaLatex, description (chi tiết công thức), usageExample (ví dụ áp dụng), variables (giải thích từng biến số)\n");
-        prompt.append("- nodeType=\"EXERCISE\": PHẢI có array \"exercises\" với: question (bắt buộc), answer (đáp án), solution (lời giải chi tiết 100+ từ), difficulty, cognitiveLevel, hints\n\n");
+        prompt.append("\n╔═══════════════════════════════════════════════════════════════╗\n");
+        prompt.append("║  ⚠️  CẢNH BÁO NGHIÊM KHẮC - BẮT BUỘC PHẢI TUÂN THỦ  ⚠️      ║\n");
+        prompt.append("╚═══════════════════════════════════════════════════════════════╝\n\n");
         
-        prompt.append("YÊU CẦU ĐA DẠNG LOẠI NODE: Không tạo tất cả các node là CONCEPT!\n");
-        prompt.append("- Branches chính (4-5 nodes): Dùng nodeType=\"CONCEPT\" cho định nghĩa tổng quan\n");
-        prompt.append("- Sub-branches (10-15 nodes): Pha trộn 40% FORMULA + 40% EXERCISE + 20% CONCEPT\n");
-        prompt.append("- Mỗi khái niệm quan trọng cần có công thức (formula) và bài tập (exercise) đi kèm\n\n");
+        prompt.append("🚫 TUYỆT ĐỐI KHÔNG được:\n");
+        prompt.append("❌ Thiếu bất kỳ field nào trong entity data\n");
+        prompt.append("❌ Để trống hoặc dùng \"...\" trong bất kỳ field nào\n");
+        prompt.append("❌ Viết nội dung chung chung, phải cụ thể và chi tiết\n");
+        prompt.append("❌ Tạo tất cả nodes là CONCEPT - phải đa dạng CONCEPT/FORMULA/EXERCISE\n\n");
+        
+        prompt.append("✅ BẮT BUỘC phải:\n");
+        prompt.append("✓ MỖI node phải có đầy đủ entity data theo đúng nodeType\n");
+        prompt.append("✓ Concept: definition phải 50-100 từ, explanation phải 100-200 từ, examples phải có ít nhất 2 ví dụ cụ thể\n");
+        prompt.append("✓ Formula: description phải 80-150 từ, usageExample phải có số liệu cụ thể và tính toán chi tiết\n");
+        prompt.append("✓ Exercise: question phải rõ ràng có số liệu, solution phải 100-200 từ giải thích từng bước\n\n");
+        
+        prompt.append("📊 PHÂN BỐ LOẠI NODE BẮT BUỘC:\n");
+        prompt.append("- Root node: nodeType=\"CONCEPT\" (node gốc - chủ đề chính)\n");
+        prompt.append("- Branches chính (4-5 nodes): 100% nodeType=\"CONCEPT\" (định nghĩa tổng quan)\n");
+        prompt.append("- Sub-branches (8-12 nodes): PHẢI pha trộn:\n");
+        prompt.append("  • 30% CONCEPT (khái niệm chi tiết)\n");
+        prompt.append("  • 35% FORMULA (công thức, định lý)\n");
+        prompt.append("  • 35% EXERCISE (bài tập thực hành)\n\n");
+        
+        prompt.append("🎯 CÁCH PHÂN BỐ CỤ THỂ:\n");
+        prompt.append("- Mỗi branch chính có 2-3 sub-branches\n");
+        prompt.append("- Sub-branch thứ 1: nodeType=\"CONCEPT\" (giải thích khái niệm)\n");
+        prompt.append("- Sub-branch thứ 2: nodeType=\"FORMULA\" (công thức liên quan)\n");
+        prompt.append("- Sub-branch thứ 3 (nếu có): nodeType=\"EXERCISE\" (bài tập áp dụng)\n\n");
+        
+        prompt.append("═══════════════════════════════════════════════════════════════\n");
+        prompt.append("📋 CHUẨN ENTITY DATA CHO TỪNG NODE TYPE:\n");
+        prompt.append("═══════════════════════════════════════════════════════════════\n\n");
+        
+        prompt.append("🔷 NODE TYPE = \"CONCEPT\" - PHẢI có object \"concept\":\n");
+        prompt.append("{\n");
+        prompt.append("  \"name\": \"Tên khái niệm ngắn gọn (3-7 từ)\",\n");
+        prompt.append("  \"definition\": \"Định nghĩa chính xác, khoa học 50-150 từ. VD: Phương trình bậc hai là phương trình có dạng ax² + bx + c = 0 trong đó a, b, c là các hệ số thực và a ≠ 0. Đây là dạng phương trình cơ bản trong đại số, có nhiều ứng dụng trong toán học và thực tế.\",\n");
+        prompt.append("  \"explanation\": \"Giải thích chi tiết 150-300 từ với emoji và ví dụ. VD: 📐 Phương trình bậc hai xuất hiện khi ta cần tìm giá trị x làm cho biểu thức bậc hai bằng 0. Phương trình này có thể có 0, 1 hoặc 2 nghiệm tuỳ thuộc vào giá trị delta (Δ = b² - 4ac). Khi Δ > 0 có 2 nghiệm phân biệt, Δ = 0 có nghiệm kép, Δ < 0 vô nghiệm. Trong thực tế, phương trình bậc hai dùng để tính quỹ đạo vật thể, tối ưu hoá lợi nhuận, thiết kế cầu đường...\",\n");
+        prompt.append("  \"examples\": [\n");
+        prompt.append("    \"• Phương trình x² - 5x + 6 = 0 có a=1, b=-5, c=6. Delta = 25-24 = 1 > 0 nên có 2 nghiệm x₁=2, x₂=3\",\n");
+        prompt.append("    \"• Phương trình 2x² + 3x - 5 = 0 giải bằng công thức nghiệm: x = (-3 ± √49)/4 = (-3 ± 7)/4\",\n");
+        prompt.append("    \"• Ứng dụng thực tế: Tính thời gian vật rơi tự do h = ½gt² khi biết độ cao\"\n");
+        prompt.append("  ],\n");
+        prompt.append("  \"keyPoints\": [\n");
+        prompt.append("    \"✓ Điều kiện: a ≠ 0, nếu a=0 thì là phương trình bậc nhất\",\n");
+        prompt.append("    \"✓ Delta (Δ) quyết định số nghiệm: Δ>0 (2 nghiệm), Δ=0 (1 nghiệm), Δ<0 (vô nghiệm)\",\n");
+        prompt.append("    \"✓ Công thức nghiệm: x = (-b ± √Δ)/(2a)\",\n");
+        prompt.append("    \"✓ Hệ thức Vi-et: x₁ + x₂ = -b/a; x₁ × x₂ = c/a\"\n");
+        prompt.append("  ],\n");
+        prompt.append("  \"commonMistakes\": [\n");
+        prompt.append("    \"⚠ Quên kiểm tra điều kiện a ≠ 0\",\n");
+        prompt.append("    \"⚠ Tính sai delta: nhầm công thức b² - 4ac\",\n");
+        prompt.append("    \"⚠ Kết luận vội vô nghiệm khi delta âm mà không xét số phức\"\n");
+        prompt.append("  ],\n");
+        prompt.append("  \"tips\": \"💡 Ghi nhớ: 'Delta Dương - 2 nghiệm Đẹp, Delta 0 - nghiệm Kép, Delta Âm - Vô nghiệm'\"\n");
+        prompt.append("}\n\n");
+        
+        prompt.append("🔶 NODE TYPE = \"FORMULA\" - PHẢI có array \"formulas\" (ít nhất 1 công thức):\n");
+        prompt.append("[\n");
+        prompt.append("  {\n");
+        prompt.append("    \"name\": \"Công thức nghiệm phương trình bậc hai\",\n");
+        prompt.append("    \"formulaText\": \"x = (-b ± √(b² - 4ac)) / (2a)\",\n");
+        prompt.append("    \"formulaLatex\": \"x = \\\\frac{-b \\\\pm \\\\sqrt{b^2 - 4ac}}{2a}\",\n");
+        prompt.append("    \"variables\": \"a: Hệ số bậc hai (a ≠ 0), đơn vị phụ thuộc bài toán\\nb: Hệ số bậc nhất, cùng đơn vị với a×x\\nc: Hệ số tự do, số thực bất kỳ\\nx: Nghiệm cần tìm, giá trị làm cho phương trình bằng 0\\nΔ (Delta): Biệt thức Δ = b² - 4ac, quyết định số nghiệm\",\n");
+        prompt.append("    \"description\": \"Công thức nghiệm tổng quát để giải phương trình bậc hai ax² + bx + c = 0. Công thức này được suy ra bằng phương pháp hoàn thành bình phương. Trước tiên chia cả hai vế cho a (vì a≠0), sau đó chuyển vế và hoàn thành bình phương để tách x ra ngoài. Dấu ± trong công thức cho ta hai nghiệm x₁ (dùng +) và x₂ (dùng -). Điều kiện để có nghiệm thực là Δ ≥ 0.\",\n");
+        prompt.append("    \"usageExample\": \"VÍ DỤ CỤ THỂ: Giải phương trình 2x² - 7x + 3 = 0\\n\\nBước 1: Xác định hệ số\\n- a = 2, b = -7, c = 3\\n\\nBước 2: Tính delta\\n- Δ = b² - 4ac = (-7)² - 4(2)(3) = 49 - 24 = 25\\n\\nBước 3: Vì Δ = 25 > 0, phương trình có 2 nghiệm phân biệt\\n\\nBước 4: Áp dụng công thức nghiệm\\n- x₁ = (7 + √25)/(2×2) = (7 + 5)/4 = 12/4 = 3\\n- x₂ = (7 - √25)/(2×2) = (7 - 5)/4 = 2/4 = 0.5\\n\\nVậy phương trình có 2 nghiệm: x₁ = 3 và x₂ = 0.5\"\n");
+        prompt.append("  }\n");
+        prompt.append("]\n\n");
+        
+        prompt.append("🔷 NODE TYPE = \"EXERCISE\" - PHẢI có array \"exercises\" (1-3 bài tập):\n");
+        prompt.append("[\n");
+        prompt.append("  {\n");
+        prompt.append("    \"question\": \"Giải phương trình sau và biện luận số nghiệm: 3x² - 12x + 9 = 0\",\n");
+        prompt.append("    \"answer\": \"x₁ = 3, x₂ = 1\",\n");
+        prompt.append("    \"solution\": \"📝 GIẢI CHI TIẾT:\\n\\nBước 1️⃣: Xác định các hệ số\\n- Phương trình có dạng: ax² + bx + c = 0\\n- So sánh: a = 3, b = -12, c = 9\\n- Kiểm tra: a = 3 ≠ 0 ✓ (đúng là phương trình bậc hai)\\n\\nBước 2️⃣: Tính biệt thức Delta (Δ)\\n- Δ = b² - 4ac\\n- Δ = (-12)² - 4(3)(9)\\n- Δ = 144 - 108\\n- Δ = 36\\n\\nBước 3️⃣: Biện luận số nghiệm\\n- Vì Δ = 36 > 0\\n- Phương trình có 2 nghiệm phân biệt\\n\\nBước 4️⃣: Tính nghiệm theo công thức\\n- x = (-b ± √Δ) / (2a)\\n- x = (12 ± √36) / (2×3)\\n- x = (12 ± 6) / 6\\n\\nNghiệm 1: x₁ = (12 + 6)/6 = 18/6 = 3\\nNghiệm 2: x₂ = (12 - 6)/6 = 6/6 = 1\\n\\nBước 5️⃣: Kiểm tra (thay vào phương trình)\\nVới x = 3: 3(3)² - 12(3) + 9 = 27 - 36 + 9 = 0 ✓\\nVới x = 1: 3(1)² - 12(1) + 9 = 3 - 12 + 9 = 0 ✓\\n\\n🎯 KẾT LUẬN: Phương trình có 2 nghiệm phân biệt x₁ = 3 và x₂ = 1\",\n");
+        prompt.append("    \"difficulty\": \"medium\",\n");
+        prompt.append("    \"cognitiveLevel\": \"application\",\n");
+        prompt.append("    \"hints\": [\"💡 Gợi ý 1: Tính delta trước để biết số nghiệm\", \"💡 Gợi ý 2: Áp dụng công thức x = (-b ± √Δ)/(2a)\", \"💡 Gợi ý 3: Nhớ kiểm tra lại đáp án bằng cách thế vào phương trình\"],\n");
+        prompt.append("    \"estimatedTime\": 10\n");
+        prompt.append("  }\n");
+        prompt.append("]\n\n");
+        
+        prompt.append("═══════════════════════════════════════════════════════════════\n");
+        prompt.append("📐 CẤU TRÚC JSON MINDMAP HOÀN CHỈNH:\n");
+        prompt.append("═══════════════════════════════════════════════════════════════\n\n");
+        
+        prompt.append("⚠️ LƯU Ý QUAN TRỌNG VỀ KÝ HIỆU TOÁN HỌC:\n");
+        prompt.append("1. Trong field \"title\" và \"content\": CHỈ dùng ký hiệu Unicode\n");
+        prompt.append("   ✓ ĐÚNG: √(A²), x², x³, Δ, π, ∑, ∫, ≤, ≥, ≠, ±, ×, ÷\n");
+        prompt.append("   ✗ SAI: \\sqrt{A^2}, x^2 (LaTeX syntax), \\frac{a}{b}\n");
+        prompt.append("2. LaTeX syntax CHỈ dùng trong field \"formulaLatex\" của entity Formula\n");
+        prompt.append("3. Nếu không chắc Unicode, dùng text mô tả: \"căn bậc hai của A\"\n\n");
         
         prompt.append("{\n");
         prompt.append("  \"centralTopic\": \"").append(request.getTopic()).append("\",\n");
         prompt.append("  \"branches\": [\n");
         prompt.append("    {\n");
-        prompt.append("      \"title\": \"Khái niệm tổng quan\",\n");
-        prompt.append("      \"description\": \"Mô tả chi tiết 200-500 từ\",\n");
+        prompt.append("      \"title\": \"Định nghĩa và khái niệm cơ bản\",\n");
+        prompt.append("      \"content\": \"Nội dung giới thiệu tổng quan về chủ đề với 100-300 từ, bao gồm emoji 📐 và ký hiệu Unicode x² √ Δ\",\n");
         prompt.append("      \"nodeType\": \"CONCEPT\",\n");
         prompt.append("      \"concept\": {\n");
-        prompt.append("        \"name\": \"Tên khái niệm\",\n");
-        prompt.append("        \"definition\": \"Định nghĩa chính xác của khái niệm\",\n");
-        prompt.append("        \"explanation\": \"Giải thích chi tiết với emoji 📐 và ký hiệu toán học x², √\",\n");
-        prompt.append("        \"examples\": [\"Ví dụ 1 cụ thể với số\", \"Ví dụ 2 thực tế\"]\n");
+        prompt.append("        \"name\": \"Tên khái niệm chính\",\n");
+        prompt.append("        \"definition\": \"Định nghĩa khoa học chính xác 50-150 từ, không được thiếu, không được dùng ...\",\n");
+        prompt.append("        \"explanation\": \"Giải thích chi tiết 150-300 từ với emoji, ví dụ cụ thể, ứng dụng thực tế\",\n");
+        prompt.append("        \"examples\": [\"Ví dụ 1 cụ thể với số liệu\", \"Ví dụ 2 thực tế có tính toán\", \"Ví dụ 3 ứng dụng\"],\n");
+        prompt.append("        \"keyPoints\": [\"Điểm quan trọng 1\", \"Điểm quan trọng 2\", \"Điểm quan trọng 3\"],\n");
+        prompt.append("        \"commonMistakes\": [\"Sai lầm thường gặp 1\", \"Sai lầm 2\"],\n");
+        prompt.append("        \"tips\": \"Mẹo ghi nhớ hữu ích\"\n");
         prompt.append("      },\n");
         prompt.append("      \"subBranches\": [\n");
         prompt.append("        {\n");
-        prompt.append("          \"title\": \"Công thức tính toán\",\n");
-        prompt.append("          \"content\": \"Nội dung giải thích công thức 200-500 từ\",\n");
+        prompt.append("          \"title\": \"Khái niệm chi tiết\",\n");
+        prompt.append("          \"content\": \"Nội dung giải thích khái niệm chi tiết 100-300 từ\",\n");
+        prompt.append("          \"nodeType\": \"CONCEPT\",\n");
+        prompt.append("          \"concept\": {\n");
+        prompt.append("            \"name\": \"Tên khái niệm con\",\n");
+        prompt.append("            \"definition\": \"Định nghĩa chi tiết 50-150 từ\",\n");
+        prompt.append("            \"explanation\": \"Giải thích với ví dụ 150-300 từ\",\n");
+        prompt.append("            \"examples\": [\"Ví dụ cụ thể 1\", \"Ví dụ 2\"],\n");
+        prompt.append("            \"keyPoints\": [\"Điểm quan trọng 1\", \"Điểm 2\"],\n");
+        prompt.append("            \"commonMistakes\": [\"Sai lầm 1\"],\n");
+        prompt.append("            \"tips\": \"Mẹo ghi nhớ\"\n");
+        prompt.append("          }\n");
+        prompt.append("        },\n");
+        prompt.append("        {\n");
+        prompt.append("          \"title\": \"Công thức √(a² + b²)\",\n");
+        prompt.append("          \"content\": \"Nội dung giải thích công thức 100-300 từ với cách suy ra và ứng dụng\",\n");
         prompt.append("          \"nodeType\": \"FORMULA\",\n");
         prompt.append("          \"formulas\": [\n");
         prompt.append("            {\n");
-        prompt.append("              \"name\": \"Tên công thức\",\n");
+        prompt.append("              \"name\": \"Tên công thức đầy đủ\",\n");
         prompt.append("              \"formulaText\": \"Công thức dạng text: a² + b² = c²\",\n");
         prompt.append("              \"formulaLatex\": \"a^2 + b^2 = c^2\",\n");
-        prompt.append("              \"variables\": \"a: cạnh góc vuông thứ nhất, b: cạnh góc vuông thứ hai, c: cạnh huyền\",\n");
-        prompt.append("              \"usageExample\": \"Ví dụ: Tam giác vuông có a=3, b=4 thì c=√(3²+4²)=5\"\n");
+        prompt.append("              \"variables\": \"a: giải thích biến a\\nb: giải thích biến b\\nc: giải thích biến c\",\n");
+        prompt.append("              \"description\": \"Mô tả công thức chi tiết 100-200 từ: nguồn gốc, cách suy ra, điều kiện áp dụng\",\n");
+        prompt.append("              \"usageExample\": \"Ví dụ áp dụng CỤ THỂ với số liệu:\\nCho a=3, b=4\\nÁp dụng công thức: c² = 3² + 4² = 9 + 16 = 25\\nVậy c = √25 = 5\"\n");
         prompt.append("            }\n");
         prompt.append("          ]\n");
         prompt.append("        },\n");
         prompt.append("        {\n");
         prompt.append("          \"title\": \"Bài tập thực hành\",\n");
-        prompt.append("          \"content\": \"Hướng dẫn làm bài tập 200-500 từ\",\n");
+        prompt.append("          \"content\": \"Hướng dẫn cách làm dạng bài tập này 100-300 từ\",\n");
         prompt.append("          \"nodeType\": \"EXERCISE\",\n");
         prompt.append("          \"exercises\": [\n");
         prompt.append("            {\n");
-        prompt.append("              \"question\": \"Câu hỏi bài tập cụ thể\",\n");
-        prompt.append("              \"answer\": \"Đáp án ngắn gọn\",\n");
-        prompt.append("              \"solution\": \"Lời giải chi tiết từng bước\",\n");
-        prompt.append("              \"difficulty\": \"easy|medium|hard\",\n");
-        prompt.append("              \"cognitiveLevel\": \"remember|understand|apply|analyze\",\n");
-        prompt.append("              \"hints\": \"Gợi ý: Áp dụng công thức...\"\n");
+        prompt.append("              \"question\": \"Câu hỏi bài tập CỤ THỂ với số liệu rõ ràng\",\n");
+        prompt.append("              \"answer\": \"Đáp án ngắn gọn (số hoặc biểu thức)\",\n");
+        prompt.append("              \"solution\": \"Lời giải CHI TIẾT 100-200 từ:\\nBước 1: ...\\nBước 2: ...\\nBước 3: ...\\nKết luận: ...\",\n");
+        prompt.append("              \"difficulty\": \"easy\",\n");
+        prompt.append("              \"cognitiveLevel\": \"application\",\n");
+        prompt.append("              \"hints\": [\"Gợi ý 1\", \"Gợi ý 2\"],\n");
+        prompt.append("              \"estimatedTime\": 10\n");
         prompt.append("            }\n");
         prompt.append("          ]\n");
         prompt.append("        }\n");
@@ -362,17 +825,63 @@ public class AiServiceImpl implements AiService {
         prompt.append("  ]\n");
         prompt.append("}\n\n");
         
-        // Professional rules
-        prompt.append("QUY TẮC CHUYÊN MÔN:\n");
-        prompt.append("1. PHẠM VI KIẾN THỨC: Tự do mở rộng kiến thức từ nhiều nguồn, không bị giới hạn\n");
-        prompt.append("2. ĐỘ SÂU: Đào sâu chi tiết với nhiều góc nhìn, ví dụ thực tế\n");
-        prompt.append("3. SỐ LƯỢNG NODES: Tối thiểu 15-20 nodes đảm bảo độ chi tiết\n");
-        prompt.append("4. NỘI DUNG: Mỗi node 200-500 từ với emoji (🔢 📐 ✏️ 🎯), công thức (x², √, ∫, Σ), ví dụ cụ thể\n");
-        prompt.append("5. BÀI TẬP: Mỗi khái niệm quan trọng cần có bài tập với đáp án chi tiết\n");
-        prompt.append("6. CÔNG THỨC: Bao gồm cả giải thích và ví dụ áp dụng\n\n");
+        // Professional rules with STRONG EMPHASIS
+        prompt.append("═══════════════════════════════════════════════════════════════\n");
+        prompt.append("⚡ QUY TẮC BẮT BUỘC - KHÔNG ĐƯỢC VI PHẠM:\n");
+        prompt.append("═══════════════════════════════════════════════════════════════\n\n");
         
-        prompt.append("ĐỊNH DẠNG ĐẦU RA:\n");
-        prompt.append("CHỈ TRẢ VỀ JSON THUẦN TÚY, KHÔNG CÓ TEXT GIẢI THÍCH THÊM, KHÔNG CÓ MARKDOWN CODE BLOCK.\n");
+        prompt.append("1️⃣ ENTITY DATA ĐẦY ĐỦ:\n");
+        prompt.append("   ✓ MỖI node PHẢI có đầy đủ entity data theo đúng nodeType\n");
+        prompt.append("   ✓ CONCEPT: definition min 50 từ, explanation min 100 từ, ít nhất 2 examples\n");
+        prompt.append("   ✓ FORMULA: description min 80 từ, usageExample phải có số liệu và tính toán\n");
+        prompt.append("   ✓ EXERCISE: solution min 100 từ giải chi tiết từng bước\n");
+        prompt.append("   ❌ KHÔNG được để trống, dùng \"...\", hoặc viết \"Nội dung sẽ được bổ sung\"\n\n");
+        
+        prompt.append("2️⃣ ĐA DẠNG NODE TYPE:\n");
+        prompt.append("   ✓ Branches chính: 100% CONCEPT (4-5 nodes)\n");
+        prompt.append("   ✓ Sub-branches: 30% CONCEPT + 35% FORMULA + 35% EXERCISE (12-15 nodes)\n");
+        prompt.append("   ❌ KHÔNG tạo tất cả nodes là CONCEPT\n\n");
+        
+        prompt.append("3️⃣ SỐ LƯỢNG VÀ ĐỘ SÂU:\n");
+        prompt.append("   ✓ Tối thiểu 10-15 nodes (4-5 branches × 2-3 sub-branches mỗi branch)\n");
+        prompt.append("   ✓ Content mỗi node: 100-300 từ với emoji và ký hiệu toán học\n");
+        prompt.append("   ✓ Mỗi khái niệm quan trọng phải có công thức và bài tập đi kèm\n\n");
+        
+        prompt.append("4️⃣ CHẤT LƯỢNG NỘI DUNG:\n");
+        prompt.append("   ✓ Definition/Explanation: Khoa học, chính xác, dễ hiểu\n");
+        prompt.append("   ✓ Examples: Cụ thể với số liệu, không chung chung\n");
+        prompt.append("   ✓ Formula: Có cả text và LaTeX, giải thích đầy đủ biến số\n");
+        prompt.append("   ✓ Exercise: Câu hỏi rõ ràng, lời giải từng bước, có kiểm tra\n");
+        prompt.append("   ✓ Sử dụng emoji phù hợp: 📐 🔢 ✏️ 🎯 💡 ⚠️ ✓\n\n");
+        
+        prompt.append("5️⃣ PHẠM VI KIẾN THỨC:\n");
+        prompt.append("   ✓ Tự do mở rộng từ kiến thức tổng quát, không giới hạn bởi tài liệu\n");
+        prompt.append("   ✓ Đào sâu chi tiết với nhiều góc nhìn, ví dụ thực tế\n");
+        prompt.append("   ✓ Phù hợp với lớp học: Lớp ").append(request.getGrade()).append("\n\n");
+        
+        prompt.append("═══════════════════════════════════════════════════════════════\n");
+        prompt.append("🎯 LƯU Ý QUAN TRỌNG CUỐI CÙNG:\n");
+        prompt.append("═══════════════════════════════════════════════════════════════\n\n");
+        
+        prompt.append("📌 KÝ HIỆU TOÁN HỌC - TUYỆT ĐỐI PHẢI TUÂN THỦ:\n");
+        prompt.append("    ✅ Trong \"title\", \"content\": CHỈ dùng ký hiệu Unicode\n");
+        prompt.append("       VD: √(A²) = |A|, x² + y² = z², Δ = b² - 4ac, π ≈ 3.14\n");
+        prompt.append("    ❌ TUYỆT ĐỐI KHÔNG dùng LaTeX syntax trong title/content\n");
+        prompt.append("       VD SAI: \\sqrt{A^2}, \\frac{a}{b}, x^2 (phải viết x²)\n");
+        prompt.append("    ℹ️  LaTeX CHỈ dùng trong field \"formulaLatex\" của entity Formula\n\n");
+        
+        prompt.append("⚠️  Nếu bất kỳ node nào THIẾU entity data hoặc có data không đầy đủ,\n");
+        prompt.append("    hệ thống SẼ TỰ ĐỘNG TẠO DEFAULT DATA và đánh dấu là LOW QUALITY.\n");
+        prompt.append("    Điều này làm giảm giá trị của mindmap!\n\n");
+        
+        prompt.append("✅  Hãy đảm bảo TỪNG NODE đều có entity data ĐẦY ĐỦ, CHI TIẾT:\n");
+        prompt.append("    - Concept: name + definition (50-100 từ) + explanation (100-200 từ) + examples (2-3) + keyPoints + commonMistakes + tips\n");
+        prompt.append("    - Formula: name + formulaText + formulaLatex + variables + description (80-150 từ) + usageExample (với số liệu)\n");
+        prompt.append("    - Exercise: question + answer + solution (100-200 từ chi tiết) + difficulty + cognitiveLevel + hints + estimatedTime\n\n");
+        
+        prompt.append("🔥 QUAN TRỌNG NHẤT:\n");
+        prompt.append("    CHỈ TRẢ VỀ JSON THUẦN TÚY, KHÔNG CÓ TEXT GIẢI THÍCH THÊM, KHÔNG CÓ MARKDOWN CODE BLOCK ```json.\n");
+        prompt.append("    JSON phải VALID và COMPLETE, kiểm tra kỹ trước khi trả về!\n\n");
         
         return prompt.toString();
     }
@@ -454,7 +963,7 @@ public class AiServiceImpl implements AiService {
                         .role("user")
                         .build()))
                 .generationConfig(GeminiRequest.GeminiGenerationConfig.builder()
-                        .maxOutputTokens(8000)  // Increased for detailed content
+                        .maxOutputTokens(30000)  // Increased to 30k for comprehensive mindmap content
                         .temperature(0.7)
                         .topP(0.95)
                         .topK(40.0)
@@ -464,9 +973,12 @@ public class AiServiceImpl implements AiService {
         WebClient webClient = webClientBuilder
                 .baseUrl(geminiBaseUrl)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .codecs(configurer -> configurer
+                        .defaultCodecs()
+                        .maxInMemorySize(16 * 1024 * 1024)) // 16MB buffer for large responses
                 .build();
 
-        log.debug("Calling Gemini API with model: {}", model);
+        log.debug("Calling Gemini API with model: {} (timeout: 5 minutes)", model);
         
         GeminiResponse response = webClient
                 .post()
@@ -474,6 +986,7 @@ public class AiServiceImpl implements AiService {
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(GeminiResponse.class)
+                .timeout(Duration.ofMinutes(5)) // 5 minutes timeout for mindmap generation
                 .block();
 
         if (response != null && response.getCandidates() != null && !response.getCandidates().isEmpty()) {
@@ -512,6 +1025,84 @@ public class AiServiceImpl implements AiService {
     }
 
     /**
+     * Clean JSON string by properly escaping newlines and control characters within string values.
+     * This fixes issues where AI returns JSON with unescaped newlines inside string literals,
+     * which causes Jackson parser to fail with "Illegal unquoted character (CTRL-CHAR, code 10)"
+     * 
+     * Strategy:
+     * 1. Find all string literals (text between quotes that are not escaped)
+     * 2. Within each string literal, replace unescaped newlines with \\n
+     * 3. Also escape other control characters like tabs, carriage returns
+     * 
+     * @param jsonString The raw JSON string from AI
+     * @return Cleaned JSON string with properly escaped control characters
+     */
+    private String cleanJsonString(String jsonString) {
+        if (jsonString == null || jsonString.isEmpty()) {
+            return jsonString;
+        }
+
+        StringBuilder result = new StringBuilder(jsonString.length());
+        boolean inString = false;
+        boolean escaped = false;
+        
+        for (int i = 0; i < jsonString.length(); i++) {
+            char c = jsonString.charAt(i);
+            
+            if (escaped) {
+                // If previous char was backslash, keep current char as-is
+                result.append(c);
+                escaped = false;
+                continue;
+            }
+            
+            if (c == '\\') {
+                // Mark that next char is escaped
+                result.append(c);
+                escaped = true;
+                continue;
+            }
+            
+            if (c == '"') {
+                // Toggle string context
+                inString = !inString;
+                result.append(c);
+                continue;
+            }
+            
+            // If we're inside a string literal, escape control characters
+            if (inString) {
+                switch (c) {
+                    case '\n':
+                        result.append("\\n");
+                        break;
+                    case '\r':
+                        result.append("\\r");
+                        break;
+                    case '\t':
+                        result.append("\\t");
+                        break;
+                    case '\b':
+                        result.append("\\b");
+                        break;
+                    case '\f':
+                        result.append("\\f");
+                        break;
+                    default:
+                        // Keep all other characters including Unicode
+                        result.append(c);
+                }
+            } else {
+                // Outside string literals, keep everything as-is
+                result.append(c);
+            }
+        }
+        
+        log.debug("Cleaned JSON string: {} chars -> {} chars", jsonString.length(), result.length());
+        return result.toString();
+    }
+
+    /**
      * Parse nodes from AI JSON response
      */
     private List<MindmapNode> parseNodesFromAiResponse(Mindmap mindmap, String aiJsonResponse) {
@@ -520,14 +1111,17 @@ public class AiServiceImpl implements AiService {
         try {
             log.info("Parsing AI response JSON for mindmap: {}", mindmap.getId());
             
-            JsonNode root = objectMapper.readTree(aiJsonResponse);
+            // Clean JSON: Escape unescaped newlines and control characters in string values
+            String cleanedJson = cleanJsonString(aiJsonResponse);
+            
+            JsonNode root = objectMapper.readTree(cleanedJson);
 
             // Create central topic node (level 0)
             MindmapNode centralNode = new MindmapNode();
             centralNode.setMindmapId(mindmap.getId());
             centralNode.setTitle(root.path("centralTopic").asText(mindmap.getTitle()));
             centralNode.setContent("🎯 Chủ đề trung tâm: " + mindmap.getTitle());
-            centralNode.setNodeType(MindmapNode.NodeType.CONCEPT);
+            centralNode.setNodeType(MindmapNode.NodeType.ROOT);  // Node trung tâm là ROOT
             centralNode.setLevel(0);
             centralNode.setPositionX(0.0);
             centralNode.setPositionY(0.0);
@@ -857,19 +1451,63 @@ public class AiServiceImpl implements AiService {
     @Transactional
     private void parseAndSaveRelatedEntities(String aiJsonResponse, List<MindmapNode> nodes) {
         JsonNode root = null;
+        
+        // Log first 1000 chars of AI response for debugging
+        log.info("=== AI RESPONSE DEBUG ===");
+        log.info("Total AI response length: {} characters", aiJsonResponse.length());
+        log.info("First 1000 chars: {}", aiJsonResponse.substring(0, Math.min(1000, aiJsonResponse.length())));
+        
         try {
+            // Clean JSON: Escape unescaped newlines and control characters in string values
+            String cleanedJson = cleanJsonString(aiJsonResponse);
+            
             // Try to parse the JSON response
-            root = objectMapper.readTree(aiJsonResponse);
+            root = objectMapper.readTree(cleanedJson);
+            log.info("✓ Successfully parsed AI JSON response");
         } catch (JsonEOFException e) {
-            log.error("JSON response is truncated or malformed at line {}, column {}: {}", 
+            log.error("❌ JSON response is truncated or malformed at line {}, column {}: {}", 
                 e.getLocation() != null ? e.getLocation().getLineNr() : "?",
                 e.getLocation() != null ? e.getLocation().getColumnNr() : "?",
                 e.getMessage());
-            log.warn("Skipping entity parsing due to malformed JSON response");
+            log.warn("⚠️ Skipping entity parsing due to malformed JSON response - This means nodes will have NO detailed entity data");
+            return;
+        } catch (JsonParseException e) {
+            // Log more context around the error location
+            int lineNum = e.getLocation() != null ? (int) e.getLocation().getLineNr() : -1;
+            int colNum = e.getLocation() != null ? (int) e.getLocation().getColumnNr() : -1;
+            
+            log.error("❌ JSON Parse Error at line {}, column {}: {}", lineNum, colNum, e.getMessage());
+            
+            // Log snippet around error location for debugging
+            if (lineNum > 0 && colNum > 0) {
+                String[] lines = aiJsonResponse.split("\n");
+                if (lineNum <= lines.length) {
+                    int startLine = Math.max(0, lineNum - 3);
+                    int endLine = Math.min(lines.length, lineNum + 2);
+                    
+                    StringBuilder context = new StringBuilder("\n=== JSON CONTEXT AROUND ERROR ===\n");
+                    for (int i = startLine; i < endLine; i++) {
+                        String marker = (i == lineNum - 1) ? " >>> ERROR HERE >>>" : "";
+                        context.append(String.format("Line %d: %s%s\n", i + 1, lines[i], marker));
+                    }
+                    context.append("=================================");
+                    log.error(context.toString());
+                }
+            }
+            
+            log.warn("⚠️ Skipping entity parsing due to JSON parse error - This means nodes will have NO detailed entity data");
+            
+            // FALLBACK: Create default entities for all existing nodes
+            log.info("🔧 Attempting to create fallback entities from node content...");
+            createFallbackEntitiesForNodes(nodes);
             return;
         } catch (Exception e) {
-            log.error("Failed to parse JSON response: {}", e.getMessage());
-            log.warn("Skipping entity parsing due to JSON parse error");
+            log.error("❌ Failed to parse JSON response: {}", e.getMessage());
+            log.warn("⚠️ Skipping entity parsing due to JSON parse error - This means nodes will have NO detailed entity data");
+            
+            // FALLBACK: Create default entities for all existing nodes
+            log.info("🔧 Attempting to create fallback entities from node content...");
+            createFallbackEntitiesForNodes(nodes);
             return;
         }
 
@@ -877,37 +1515,46 @@ public class AiServiceImpl implements AiService {
             JsonNode branches = root.path("branches");
 
             if (!branches.isArray()) {
-                log.warn("No branches array found for parsing related entities");
+                log.warn("⚠️ No branches array found for parsing related entities - AI response structure is wrong");
+                log.debug("Root keys available: {}", root.fieldNames());
                 return;
             }
 
+            log.info("Found {} branches in AI response for parsing", branches.size());
             int nodeIndex = 1; // Skip root node at index 0
+            int entitiesParsed = 0;
 
             for (JsonNode branch : branches) {
                 // Parse branch-level entities BASED ON NODE TYPE
                 if (nodeIndex < nodes.size()) {
                     MindmapNode branchNode = nodes.get(nodeIndex);
+                    log.debug("Parsing branch node #{}: '{}' (type={})", nodeIndex, branchNode.getTitle(), branchNode.getNodeType());
                     parseEntitiesForNodeType(branch, branchNode);
+                    entitiesParsed++;
                     nodeIndex++;
                 }
 
                 // Parse sub-branch-level entities BASED ON NODE TYPE
                 JsonNode subBranches = branch.path("subBranches");
                 if (subBranches.isArray()) {
+                    log.debug("Found {} sub-branches to parse", subBranches.size());
                     for (JsonNode subBranch : subBranches) {
                         if (nodeIndex < nodes.size()) {
                             MindmapNode subNode = nodes.get(nodeIndex);
+                            log.debug("Parsing sub-branch node #{}: '{}' (type={})", nodeIndex, subNode.getTitle(), subNode.getNodeType());
                             parseEntitiesForNodeType(subBranch, subNode);
+                            entitiesParsed++;
                             nodeIndex++;
                         }
                     }
                 }
             }
 
-            log.info("Parsed and saved related entities for {} nodes", nodeIndex);
+            log.info("✓ Successfully parsed and saved related entities for {} nodes", entitiesParsed);
 
         } catch (Exception e) {
-            log.error("Failed to parse related entities: {}", e.getMessage(), e);
+            log.error("❌ Failed to parse related entities: {}", e.getMessage(), e);
+            log.error("This means some nodes may not have their concept/formula/exercise data!");
         }
     }
 
@@ -1009,9 +1656,14 @@ public class AiServiceImpl implements AiService {
                     node.getTitle(), concept.getDefinition().length(), concept.getExplanation().length(),
                     concept.getKeyPoints() != null ? concept.getKeyPoints().length() : 0);
             } else {
-                log.warn("Node '{}' (type={}) is missing or has incomplete 'concept' object in AI response",
-                    node.getTitle(), node.getNodeType());
-                log.warn("Skipping concept creation - AI response must include complete concept data for CONCEPT nodes");
+                // FALLBACK: Create default concept from node content when AI data is missing
+                log.warn("⚠️  Node '{}' (type=CONCEPT) missing entity data from AI - Creating DEFAULT CONCEPT as fallback",
+                    node.getTitle());
+                
+                Concept defaultConcept = createDefaultConcept(node);
+                conceptRepository.save(defaultConcept);
+                
+                log.info("✓ Created DEFAULT concept for node '{}' (marked as AI_INCOMPLETE)", node.getTitle());
             }
         } catch (Exception e) {
             log.warn("Failed to parse concept for node {}: {}", node.getTitle(), e.getMessage());
@@ -1092,9 +1744,14 @@ public class AiServiceImpl implements AiService {
                 log.debug("Saved {} formula(s) for node: {}", savedCount, node.getTitle());
             } else {
                 if (node.getNodeType() == MindmapNode.NodeType.FORMULA) {
-                    log.warn("Node '{}' has type=FORMULA but is missing 'formulas' array in AI response",
+                    // FALLBACK: Create default formula when AI data is missing
+                    log.warn("⚠️  Node '{}' (type=FORMULA) missing entity data from AI - Creating DEFAULT FORMULA as fallback",
                         node.getTitle());
-                    log.warn("Skipping formula creation - AI response must include formulas array for FORMULA nodes");
+                    
+                    Formula defaultFormula = createDefaultFormula(node);
+                    formulaRepository.save(defaultFormula);
+                    
+                    log.info("✓ Created DEFAULT formula for node '{}' (marked as AI_INCOMPLETE)", node.getTitle());
                 }
             }
         } catch (Exception e) {
@@ -1212,9 +1869,14 @@ public class AiServiceImpl implements AiService {
                 log.debug("Saved {} exercise(s) for node: {}", savedCount, node.getTitle());
             } else {
                 if (node.getNodeType() == MindmapNode.NodeType.EXERCISE) {
-                    log.warn("Node '{}' has type=EXERCISE but is missing 'exercises' array in AI response",
+                    // FALLBACK: Create default exercise when AI data is missing
+                    log.warn("⚠️  Node '{}' (type=EXERCISE) missing entity data from AI - Creating DEFAULT EXERCISE as fallback",
                         node.getTitle());
-                    log.warn("Skipping exercise creation - AI response must include exercises array for EXERCISE nodes");
+                    
+                    Exercise defaultExercise = createDefaultExercise(node);
+                    exerciseRepository.save(defaultExercise);
+                    
+                    log.info("✓ Created DEFAULT exercise for node '{}' (marked as AI_INCOMPLETE)", node.getTitle());
                 }
             }
         } catch (Exception e) {
@@ -1235,6 +1897,144 @@ public class AiServiceImpl implements AiService {
     }
 
     /**
+     * Create default concept when AI data is missing or incomplete
+     * Uses node.content and node.title as fallback
+     */
+    private Concept createDefaultConcept(MindmapNode node) {
+        Concept concept = new Concept();
+        concept.setNodeId(node.getId());
+        concept.setName(node.getTitle());
+        
+        // Use node content as definition
+        String content = node.getContent() != null && !node.getContent().trim().isEmpty() 
+            ? node.getContent() 
+            : "Đây là khái niệm về " + node.getTitle() + ". Nội dung chi tiết sẽ được bổ sung.";
+        
+        concept.setDefinition(content);
+        concept.setExplanation("📝 " + content + "\n\n⚠️ Lưu ý: Đây là nội dung mặc định được tạo tự động do AI không cung cấp đầy đủ dữ liệu concept. Vui lòng cập nhật hoặc regenerate để có nội dung chi tiết hơn.");
+        concept.setExamples("• Ví dụ sẽ được bổ sung\n⚠️ Đây là default data - cần regenerate");
+        concept.setKeyPoints("✓ Điểm quan trọng sẽ được bổ sung\n⚠️ Default data");
+        concept.setCommonMistakes("⚠️ Sai lầm thường gặp sẽ được bổ sung\n⚠️ Default data");
+        concept.setTips("💡 Mẹo ghi nhớ sẽ được bổ sung (Default data)");
+        
+        concept.setCreatedAt(LocalDateTime.now());
+        concept.setUpdatedAt(LocalDateTime.now());
+        
+        return concept;
+    }
+
+    /**
+     * Create default formula when AI data is missing or incomplete
+     */
+    private Formula createDefaultFormula(MindmapNode node) {
+        Formula formula = new Formula();
+        formula.setNodeId(node.getId());
+        formula.setName(node.getTitle());
+        
+        String content = node.getContent() != null && !node.getContent().trim().isEmpty()
+            ? node.getContent()
+            : "Công thức " + node.getTitle();
+        
+        formula.setFormulaText(content);
+        formula.setFormulaLatex(content);
+        formula.setVariables("⚠️ Biến số sẽ được giải thích chi tiết khi regenerate");
+        formula.setDescription("📐 " + content + "\n\n⚠️ Lưu ý: Đây là công thức mặc định được tạo tự động do AI không cung cấp đầy đủ dữ liệu. Vui lòng regenerate để có công thức LaTeX chính xác và giải thích chi tiết.");
+        formula.setUsageExample("VD: Ví dụ áp dụng sẽ được bổ sung\n⚠️ Default data - cần regenerate");
+        formula.setIsPrimary(true);
+        formula.setOrderIndex(0);
+        
+        formula.setCreatedAt(LocalDateTime.now());
+        formula.setUpdatedAt(LocalDateTime.now());
+        
+        return formula;
+    }
+
+    /**
+     * Create default exercise when AI data is missing or incomplete
+     */
+    private Exercise createDefaultExercise(MindmapNode node) {
+        Exercise exercise = new Exercise();
+        exercise.setNodeId(node.getId());
+        
+        String content = node.getContent() != null && !node.getContent().trim().isEmpty()
+            ? node.getContent()
+            : node.getTitle();
+        
+        exercise.setQuestion("❓ Câu hỏi về " + node.getTitle() + "\n⚠️ Đây là default question - cần regenerate để có bài tập cụ thể");
+        exercise.setAnswer("Đáp án sẽ được bổ sung (Default)");
+        exercise.setSolution("📝 Lời giải chi tiết:\n\n" + content + "\n\n⚠️ Lưu ý: Đây là bài tập mặc định được tạo tự động do AI không cung cấp đầy đủ dữ liệu. Vui lòng regenerate để có bài tập với câu hỏi cụ thể, lời giải từng bước chi tiết.");
+        exercise.setDifficulty(Exercise.DifficultyLevel.MEDIUM);
+        exercise.setCognitiveLevel(Exercise.CognitiveLevel.COMPREHENSION);
+        exercise.setHints("💡 Gợi ý sẽ được bổ sung\n⚠️ Default data");
+        exercise.setEstimatedTime(10);
+        exercise.setOrderIndex(0);
+        exercise.setIsActive(true);
+        exercise.setCreatedBy(-1L); // System generated
+        exercise.setCreatedAt(LocalDateTime.now());
+        exercise.setUpdatedAt(LocalDateTime.now());
+        
+        return exercise;
+    }
+
+    /**
+     * Create fallback entities for all nodes when JSON parsing fails.
+     * This ensures that even if AI JSON is malformed, nodes still have basic entity data.
+     * 
+     * @param nodes List of nodes that were created but have no entities
+     */
+    private void createFallbackEntitiesForNodes(List<MindmapNode> nodes) {
+        if (nodes == null || nodes.isEmpty()) {
+            log.warn("No nodes provided for fallback entity creation");
+            return;
+        }
+
+        int conceptCount = 0;
+        int formulaCount = 0;
+        int exerciseCount = 0;
+
+        for (MindmapNode node : nodes) {
+            // Skip root node (level 0 or ROOT type)
+            if (node.getLevel() == 0 || node.getNodeType() == MindmapNode.NodeType.ROOT) {
+                continue;
+            }
+
+            try {
+                switch (node.getNodeType()) {
+                    case CONCEPT:
+                        Concept concept = createDefaultConcept(node);
+                        conceptRepository.save(concept);
+                        conceptCount++;
+                        log.debug("Created fallback concept for node: {}", node.getTitle());
+                        break;
+                        
+                    case FORMULA:
+                        Formula formula = createDefaultFormula(node);
+                        formulaRepository.save(formula);
+                        formulaCount++;
+                        log.debug("Created fallback formula for node: {}", node.getTitle());
+                        break;
+                        
+                    case EXERCISE:
+                        Exercise exercise = createDefaultExercise(node);
+                        exerciseRepository.save(exercise);
+                        exerciseCount++;
+                        log.debug("Created fallback exercise for node: {}", node.getTitle());
+                        break;
+                        
+                    default:
+                        log.warn("Unknown node type {} for node '{}', skipping fallback entity", 
+                            node.getNodeType(), node.getTitle());
+                }
+            } catch (Exception e) {
+                log.error("Failed to create fallback entity for node {}: {}", node.getTitle(), e.getMessage());
+            }
+        }
+
+        log.info("✓ Created {} fallback entities: {} concepts, {} formulas, {} exercises",
+            (conceptCount + formulaCount + exerciseCount), conceptCount, formulaCount, exerciseCount);
+    }
+
+    /**
      * Parse exercises from AI JSON response for exercise generation
      */
     private List<Exercise> parseExercisesFromAiResponse(String aiJsonResponse, Long nodeId, Long userId) {
@@ -1242,7 +2042,11 @@ public class AiServiceImpl implements AiService {
 
         try {
             log.info("Parsing exercises from AI response");
-            JsonNode root = objectMapper.readTree(aiJsonResponse);
+            
+            // Clean JSON: Escape unescaped newlines and control characters
+            String cleanedJson = cleanJsonString(aiJsonResponse);
+            
+            JsonNode root = objectMapper.readTree(cleanedJson);
 
             JsonNode exercisesArray = root.path("exercises");
             if (!exercisesArray.isArray()) {

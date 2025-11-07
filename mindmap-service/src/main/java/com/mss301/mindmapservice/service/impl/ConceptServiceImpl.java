@@ -7,10 +7,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.mss301.mindmapservice.dto.request.ConceptRequest;
+import com.mss301.mindmapservice.dto.request.GenerateConceptRequest;
 import com.mss301.mindmapservice.dto.response.ConceptResponse;
 import com.mss301.mindmapservice.entity.Concept;
 import com.mss301.mindmapservice.repository.ConceptRepository;
 import com.mss301.mindmapservice.repository.MindmapNodeRepository;
+import com.mss301.mindmapservice.service.AiService;
 import com.mss301.mindmapservice.service.ConceptService;
 
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ public class ConceptServiceImpl implements ConceptService {
 
     private final ConceptRepository conceptRepository;
     private final MindmapNodeRepository mindmapNodeRepository;
+    private final AiService aiService;
 
     @Override
     @Transactional
@@ -105,6 +108,32 @@ public class ConceptServiceImpl implements ConceptService {
         Concept concept = conceptRepository.findById(conceptId)
                 .orElseThrow(() -> new RuntimeException("Concept not found with id: " + conceptId));
         return mapToResponse(concept);
+    }
+
+    @Override
+    @Transactional
+    public List<ConceptResponse> generateConcepts(GenerateConceptRequest request, Long userId) {
+        log.info("Generating {} concepts for node {} using AI", request.getNumberOfConcepts(), request.getNodeId());
+
+        try {
+            // Call AI service to generate concepts using Gemini
+            List<Concept> concepts = aiService.generateConceptsForNode(
+                    request.getNodeId(),
+                    request.getTopic(),
+                    request.getNumberOfConcepts(),
+                    userId
+            );
+
+            log.info("Successfully generated {} concepts using Gemini AI", concepts.size());
+
+            return concepts.stream()
+                    .map(this::mapToResponse)
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            log.error("Failed to generate concepts: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to generate concepts: " + e.getMessage());
+        }
     }
 
     private ConceptResponse mapToResponse(Concept concept) {

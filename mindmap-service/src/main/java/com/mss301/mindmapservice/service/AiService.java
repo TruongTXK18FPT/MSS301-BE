@@ -4,7 +4,9 @@ import java.util.List;
 
 import com.mss301.mindmapservice.dto.request.AiGenerateMindmapRequest;
 import com.mss301.mindmapservice.dto.response.AiGenerateMindmapResponse;
+import com.mss301.mindmapservice.entity.Concept;
 import com.mss301.mindmapservice.entity.Exercise;
+import com.mss301.mindmapservice.entity.Formula;
 import com.mss301.mindmapservice.entity.Mindmap;
 import com.mss301.mindmapservice.entity.MindmapEdge;
 import com.mss301.mindmapservice.entity.MindmapNode;
@@ -41,4 +43,14 @@ public interface AiService {
      */
     List<Exercise> generateExercisesForNode(Long nodeId, String topic, String difficulty,
                                             String cognitiveLevel, Integer numberOfExercises, Long userId);
+
+    /**
+     * Generate concepts for a specific node using AI
+     */
+    List<Concept> generateConceptsForNode(Long nodeId, String topic, Integer numberOfConcepts, Long userId);
+
+    /**
+     * Generate formulas for a specific node using AI
+     */
+    List<Formula> generateFormulasForNode(Long nodeId, String topic, Integer numberOfFormulas, Long userId);
 }

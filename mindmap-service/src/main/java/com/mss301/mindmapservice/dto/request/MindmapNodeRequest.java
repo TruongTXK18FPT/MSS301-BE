@@ -1,9 +1,9 @@
 package com.mss301.mindmapservice.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.mss301.mindmapservice.entity.MindmapNode.NodeType;
 
 import lombok.AllArgsConstructor;
@@ -17,14 +17,17 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MindmapNodeRequest {
 
-    @NotBlank(message = "Title is required")
+    private Long id; // For updating existing nodes
+
     @Size(max = 255, message = "Title must not exceed 255 characters")
     private String title;
 
     @Size(max = 2000, message = "Content must not exceed 2000 characters")
     private String content;
 
-    @NotNull(message = "Node type is required")
+    // Node type is optional - defaults to CONCEPT if not provided
+    // Use custom deserializer to handle String to Enum conversion
+    @JsonDeserialize(using = NodeTypeDeserializer.class)
     private NodeType nodeType;
 
     private Double positionX;

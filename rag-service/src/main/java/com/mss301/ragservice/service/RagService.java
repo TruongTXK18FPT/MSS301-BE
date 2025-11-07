@@ -32,15 +32,28 @@ public class RagService {
 
     public RagResponse processQuery(RagRequest request) {
         log.info(
-                "Processing RAG query - Mode: {}, Provider: {}, Query: '{}'",
+                "Processing RAG query - Mode: {}, Provider: {}, Query: '{}', UseDocuments: {}",
                 request.getMode(),
                 request.getLlmProvider(),
-                request.getQueryText());
+                request.getQueryText(),
+                request.getUseDocuments());
 
         try {
-            RetrievalResponse retrievalResponse = retrieveDocuments(request);
+            // Only retrieve documents if explicitly requested
+            RetrievalResponse retrievalResponse = null;
+            String context = "";
 
-            String context = contextService.buildContext(retrievalResponse.getResults());
+            if (Boolean.TRUE.equals(request.getUseDocuments())) {
+                log.info("Retrieving documents for context (useDocuments=true)");
+                retrievalResponse = retrieveDocuments(request);
+                context = contextService.buildContext(retrievalResponse.getResults());
+            } else {
+                log.info("Skipping document retrieval (useDocuments=false or not set)");
+                // Create empty retrieval response
+                retrievalResponse = new RetrievalResponse();
+                retrievalResponse.setResults(List.of());
+                retrievalResponse.setTotalResults(0);
+            }
 
             // Use fallback-enabled LLM service
             LLMService llmService;

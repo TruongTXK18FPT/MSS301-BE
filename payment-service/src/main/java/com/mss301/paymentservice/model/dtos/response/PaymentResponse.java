@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class PaymentResponse {
     private Long paymentId;
-    private Long subscriptionId;
-    private Long userId;
+    private SubscriptionResponse subscription;
+    private UserResponse user;
     private Long amount;
     private String orderInfo;
 //    private String momoRequestId;

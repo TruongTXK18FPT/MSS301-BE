@@ -1,7 +1,5 @@
 package com.mss301.premiumservice.controller;
 
-import com.mss301.premiumservice.model.Subscription;
-import com.mss301.premiumservice.model.UsageMeter;
 import com.mss301.premiumservice.model.dtos.request.SubscriptionRequest;
 import com.mss301.premiumservice.model.dtos.response.SubscriptionResponse;
 import com.mss301.premiumservice.model.dtos.response.UsageMeterResponse;
@@ -13,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/subscriptions")
+@RequestMapping("/api/v1/subscriptions")
 @CrossOrigin
 public class SubscriptionController {
 

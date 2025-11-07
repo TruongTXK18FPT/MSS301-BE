@@ -33,7 +33,7 @@ public class PlanRequest {
 
     @NotNull
     @Size(min = 1)
-    private int priceCents;
+    private long priceCents;
 
     @NotNull
     private Currency currency;

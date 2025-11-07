@@ -54,6 +54,11 @@ public interface MindmapService {
     MindmapResponse updateMindmap(Long id, MindmapRequest request, Long userId);
 
     /**
+     * Update mindmap with nodes and edges
+     */
+    MindmapResponse updateMindmapWithNodesAndEdges(Long id, MindmapRequest request, Long userId);
+
+    /**
      * Delete mindmap
      */
     void deleteMindmap(Long id, Long userId);

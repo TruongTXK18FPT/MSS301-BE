@@ -31,19 +31,21 @@ public class MediaController {
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "folder", defaultValue = "general") String folder,
             @RequestParam(value = "quality", required = false) Integer quality,
-            @AuthenticationPrincipal Jwt jwt) {
+            @AuthenticationPrincipal(errorOnInvalidType = false) Jwt jwt) {
         
         // Extract userId from JWT - either from userId claim or subject
         Long userId = 1L; // Default fallback
-        try {
-            Object userIdClaim = jwt.getClaim("userId");
-            if (userIdClaim != null) {
-                userId = Long.valueOf(userIdClaim.toString());
-            } else {
-                userId = Long.valueOf(jwt.getSubject());
+        if (jwt != null) {
+            try {
+                Object userIdClaim = jwt.getClaim("userId");
+                if (userIdClaim != null) {
+                    userId = Long.valueOf(userIdClaim.toString());
+                } else if (jwt.getSubject() != null) {
+                    userId = Long.valueOf(jwt.getSubject());
+                }
+            } catch (Exception e) {
+                // Use default userId if parsing fails
             }
-        } catch (Exception e) {
-            // Use default userId if parsing fails
         }
         
         UploadRequest request = UploadRequest.builder()
@@ -61,19 +63,21 @@ public class MediaController {
             @RequestParam("files") List<MultipartFile> files,
             @RequestParam(value = "folder", defaultValue = "general") String folder,
             @RequestParam(value = "quality", required = false) Integer quality,
-            @AuthenticationPrincipal Jwt jwt) {
+            @AuthenticationPrincipal(errorOnInvalidType = false) Jwt jwt) {
         
         // Extract userId from JWT - either from userId claim or subject
         Long userId = 1L; // Default fallback
-        try {
-            Object userIdClaim = jwt.getClaim("userId");
-            if (userIdClaim != null) {
-                userId = Long.valueOf(userIdClaim.toString());
-            } else {
-                userId = Long.valueOf(jwt.getSubject());
+        if (jwt != null) {
+            try {
+                Object userIdClaim = jwt.getClaim("userId");
+                if (userIdClaim != null) {
+                    userId = Long.valueOf(userIdClaim.toString());
+                } else if (jwt.getSubject() != null) {
+                    userId = Long.valueOf(jwt.getSubject());
+                }
+            } catch (Exception e) {
+                // Use default userId if parsing fails
             }
-        } catch (Exception e) {
-            // Use default userId if parsing fails
         }
         
         UploadRequest request = UploadRequest.builder()

@@ -1,4 +1,4 @@
-package com.mss301.premiumservice.constant;
+package com.mss301.paymentservice.constant;
 
 public enum Currency {
     VND, // Vietnamese Dong

@@ -5,10 +5,13 @@ import java.util.List;
 import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import com.mss301.mindmapservice.dto.ApiResponse;
 import com.mss301.mindmapservice.dto.request.FormulaRequest;
+import com.mss301.mindmapservice.dto.request.GenerateFormulaRequest;
 import com.mss301.mindmapservice.dto.response.FormulaResponse;
 import com.mss301.mindmapservice.service.FormulaService;
 
@@ -18,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping("/api/v1/mindmap/formulas")
+@RequestMapping("/mindmap/formulas")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Formula Management", description = "APIs for managing formulas in mindmap nodes")
@@ -106,6 +109,35 @@ public class FormulaController {
                 .code("200")
                 .message("Formula retrieved successfully")
                 .result(response)
+                .build());
+    }
+
+    @PostMapping("/generate")
+    @Operation(summary = "Generate formulas with AI", description = "Generate formulas using AI based on topic")
+    public ResponseEntity<ApiResponse<List<FormulaResponse>>> generateFormulas(
+            @Valid @RequestBody GenerateFormulaRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        // Get userId from JWT, default to -1 (system) if not available
+        Long userId = -1L;
+        try {
+            if (jwt != null) {
+                Object userIdClaim = jwt.getClaim("userId");
+                if (userIdClaim != null) {
+                    userId = Long.parseLong(userIdClaim.toString());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to parse userId from JWT: {}, using system user", e.getMessage());
+            userId = -1L;
+        }
+
+        List<FormulaResponse> responses = formulaService.generateFormulas(request, userId);
+
+        return ResponseEntity.ok(ApiResponse.<List<FormulaResponse>>builder()
+                .code("200")
+                .message("Formulas generated successfully")
+                .result(responses)
                 .build());
     }
 }

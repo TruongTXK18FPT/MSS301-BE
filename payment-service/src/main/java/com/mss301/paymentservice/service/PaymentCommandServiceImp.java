@@ -7,7 +7,7 @@ import com.mss301.paymentservice.event.PaymentStatusUpdatedEvent;
 import com.mss301.paymentservice.model.PaymentCommand;
 import com.mss301.paymentservice.model.dtos.request.MomoRequest;
 import com.mss301.paymentservice.model.dtos.request.PaymentRequest;
-import com.mss301.paymentservice.model.dtos.response.PaymentResponse;
+import com.mss301.paymentservice.model.dtos.response.*;
 import com.mss301.paymentservice.repository.PaymentCommandRepository;
 import com.mss301.paymentservice.util.MomoUtil;
 import jakarta.persistence.EntityNotFoundException;
@@ -18,6 +18,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -41,6 +42,15 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+
+    @Autowired
+    private SubscriptionService subscriptionService;
+
+    @Autowired
+    private PlanService planService;
+
+    @Autowired
+    private UserService userService;
 
     @Override
     public PaymentResponse createPayment(PaymentRequest request, Long userId) {
@@ -97,7 +107,7 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
         PaymentCommand payment = new PaymentCommand();
         payment.setSubscriptionId(request.getSubscriptionId());
         payment.setUserId(userId);
-        payment.setAmount(request.getAmount());
+        payment.setAmount(getAmount(payment.getSubscriptionId()));
         payment.setOrderInfo(request.getOrderInfo());
         payment.setStatus(Status.PENDING);
         return payment;
@@ -134,11 +144,21 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
         }
     }
 
+    private Long getAmount(Long subscriptionId) {
+        ResponseEntity<SubscriptionResponse> subscription = subscriptionService.findBySubscriptionId(subscriptionId);
+        Long planId = subscription.getBody().getPlanId();
+        ResponseEntity<PlanResponse> plan = planService.findByPlanId(planId);
+        return plan.getBody().getPriceCents();
+    }
+
     private PaymentResponse convertToResponse(PaymentCommand payment) {
+        ResponseEntity<SubscriptionResponse> subscriptionResponse = subscriptionService.findBySubscriptionId(payment.getSubscriptionId());
+        ApiResponse<UserResponse> userResponse = userService.getUserById(payment.getUserId());
+
         return PaymentResponse.builder()
                 .paymentId(payment.getPaymentId())
-                .subscriptionId(payment.getSubscriptionId())
-                .userId(payment.getUserId())
+                .subscription(subscriptionResponse.getBody())
+                .user(userResponse.getResult())
                 .amount(payment.getAmount())
                 .orderInfo(payment.getOrderInfo())
                 .paymentUrl(payment.getPaymentUrl())

@@ -3,6 +3,7 @@ package com.mss301.mindmapservice.service;
 import java.util.List;
 
 import com.mss301.mindmapservice.dto.request.ConceptRequest;
+import com.mss301.mindmapservice.dto.request.GenerateConceptRequest;
 import com.mss301.mindmapservice.dto.response.ConceptResponse;
 
 public interface ConceptService {
@@ -31,4 +32,9 @@ public interface ConceptService {
      * Get a single concept by ID
      */
     ConceptResponse getConceptById(Long conceptId);
+
+    /**
+     * Generate concepts using AI
+     */
+    List<ConceptResponse> generateConcepts(GenerateConceptRequest request, Long userId);
 }

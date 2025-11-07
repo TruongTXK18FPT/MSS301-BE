@@ -1,8 +1,7 @@
-package com.mss301.premiumservice.model.dtos.response;
+package com.mss301.paymentservice.model.dtos.response;
 
-import com.mss301.premiumservice.constant.Currency;
-import com.mss301.premiumservice.constant.PlanStatus;
-import com.mss301.premiumservice.model.Entitlement;
+import com.mss301.paymentservice.constant.Currency;
+import com.mss301.paymentservice.constant.PlanStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -36,6 +35,4 @@ public class PlanResponse {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
-
-    private List<Entitlement> entitlements;
 }

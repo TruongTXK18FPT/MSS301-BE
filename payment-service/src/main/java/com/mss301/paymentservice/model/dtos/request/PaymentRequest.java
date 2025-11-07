@@ -13,9 +13,6 @@ public class PaymentRequest {
 
     private Long userId;
 
-    // số tiền cần thanh toán
-    private long amount;
-
     // Mã đơn hàng bên hệ thống của bạn
     private Long subscriptionId;
 

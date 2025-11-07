@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List; 
  
 @RestController 
-@RequestMapping("/api/entitlements")
+@RequestMapping("/api/v1/entitlements")
 @CrossOrigin 
 public class EntitlementController { 
  

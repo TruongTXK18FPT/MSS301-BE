@@ -1,7 +1,9 @@
 package com.mss301.mindmapservice.dto.response;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mss301.mindmapservice.entity.Exercise;
 
 import lombok.AllArgsConstructor;
@@ -23,7 +25,8 @@ public class ExerciseResponse {
     private Exercise.DifficultyLevel difficulty;
     private Exercise.CognitiveLevel cognitiveLevel;
     private Integer estimatedTime;
-    private String hints;
+    @JsonProperty("hints")
+    private List<String> hints;
     private Integer orderIndex;
     private Boolean isActive;
     private Long createdBy;

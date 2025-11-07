@@ -15,7 +15,6 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/api/v1/media/upload", "/api/v1/media/upload-multiple").authenticated()
                 .requestMatchers("/api/v1/media/**").permitAll()
                 .anyRequest().authenticated()
             )

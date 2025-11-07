@@ -7,10 +7,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.mss301.mindmapservice.dto.request.FormulaRequest;
+import com.mss301.mindmapservice.dto.request.GenerateFormulaRequest;
 import com.mss301.mindmapservice.dto.response.FormulaResponse;
 import com.mss301.mindmapservice.entity.Formula;
 import com.mss301.mindmapservice.repository.FormulaRepository;
 import com.mss301.mindmapservice.repository.MindmapNodeRepository;
+import com.mss301.mindmapservice.service.AiService;
 import com.mss301.mindmapservice.service.FormulaService;
 
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ public class FormulaServiceImpl implements FormulaService {
 
     private final FormulaRepository formulaRepository;
     private final MindmapNodeRepository mindmapNodeRepository;
+    private final AiService aiService;
 
     @Override
     @Transactional
@@ -88,6 +91,7 @@ public class FormulaServiceImpl implements FormulaService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<FormulaResponse> getFormulasByNode(Long nodeId) {
         log.info("Getting formulas for node: {}", nodeId);
         return formulaRepository.findByNodeIdOrderByOrderIndexAsc(nodeId).stream()
@@ -96,6 +100,7 @@ public class FormulaServiceImpl implements FormulaService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<FormulaResponse> getPrimaryFormulasByNode(Long nodeId) {
         log.info("Getting primary formulas for node: {}", nodeId);
         return formulaRepository.findByNodeIdAndIsPrimaryTrue(nodeId).stream()
@@ -104,11 +109,38 @@ public class FormulaServiceImpl implements FormulaService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public FormulaResponse getFormulaById(Long formulaId) {
         log.info("Getting formula: {}", formulaId);
         Formula formula = formulaRepository.findById(formulaId)
                 .orElseThrow(() -> new RuntimeException("Formula not found with id: " + formulaId));
         return mapToResponse(formula);
+    }
+
+    @Override
+    @Transactional
+    public List<FormulaResponse> generateFormulas(GenerateFormulaRequest request, Long userId) {
+        log.info("Generating {} formulas for node {} using AI", request.getNumberOfFormulas(), request.getNodeId());
+
+        try {
+            // Call AI service to generate formulas using Gemini
+            List<Formula> formulas = aiService.generateFormulasForNode(
+                    request.getNodeId(),
+                    request.getTopic(),
+                    request.getNumberOfFormulas(),
+                    userId
+            );
+
+            log.info("Successfully generated {} formulas using Gemini AI", formulas.size());
+
+            return formulas.stream()
+                    .map(this::mapToResponse)
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            log.error("Failed to generate formulas: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to generate formulas: " + e.getMessage());
+        }
     }
 
     private FormulaResponse mapToResponse(Formula formula) {

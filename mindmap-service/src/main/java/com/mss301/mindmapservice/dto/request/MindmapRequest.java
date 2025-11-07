@@ -1,5 +1,7 @@
 package com.mss301.mindmapservice.dto.request;
 
+import java.util.List;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -27,5 +29,10 @@ public class MindmapRequest {
     @Size(max = 100, message = "Subject must not exceed 100 characters")
     private String subject;
 
+    @Builder.Default
     private Boolean isPublic = false;
+
+    // For bulk update of nodes and edges
+    private List<MindmapNodeRequest> nodes;
+    private List<MindmapEdgeRequest> edges;
 }

@@ -86,10 +86,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         if (user.getStatus() != UserAccount.UserStatus.ACTIVE) {
             // Special message for teacher accounts
             if ("TEACHER".equalsIgnoreCase(user.getRole().getName())) {
-                throw new RuntimeException(
-                        "Tài khoản giáo viên của bạn đang chờ quản trị viên duyệt. Bạn sẽ nhận được email khi tài khoản được duyệt.");
+                throw new com.mss301.authservice.exception.AppException(
+                        com.mss301.authservice.exception.ErrorCode.TEACHER_PENDING_APPROVAL);
             }
-            throw new RuntimeException("User is not active");
+            throw new com.mss301.authservice.exception.AppException(
+                    com.mss301.authservice.exception.ErrorCode.USER_INACTIVE);
         }
 
         if (!user.getEmailVerified()) {
@@ -138,6 +139,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             log.error("Error parsing role from token: {}", e.getMessage());
         }
 
+        // Invalidate if user is not ACTIVE
+        if (isValid && userId != null) {
+            try {
+                var user = userRepository.findById(Long.parseLong(userId)).orElse(null);
+                if (user == null || user.getStatus() != UserAccount.UserStatus.ACTIVE) {
+                    isValid = false;
+                }
+            } catch (Exception e) {
+                isValid = false;
+            }
+        }
+
         log.info("Introspect response for user {}: valid={}, id={}, email={}, role={}",
                 email, isValid, userId, email, role);
 
@@ -182,6 +195,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     .findById(Long.parseLong(userId))
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
+            // Block refresh for inactive users with explicit error code
+            if (user.getStatus() != UserAccount.UserStatus.ACTIVE) {
+                throw new com.mss301.authservice.exception.AppException(
+                        com.mss301.authservice.exception.ErrorCode.USER_INACTIVE);
+            }
+
             var token = generateToken(user);
 
             return AuthenticationResponse.builder()
@@ -189,6 +208,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     .expiryTime(Date.from(Instant.now().plus(validDuration, ChronoUnit.SECONDS)))
                     .build();
 
+        } catch (com.mss301.authservice.exception.AppException ae) {
+            // propagate business error with proper status/message
+            throw ae;
         } catch (Exception e) {
             throw new RuntimeException("Invalid token");
         }

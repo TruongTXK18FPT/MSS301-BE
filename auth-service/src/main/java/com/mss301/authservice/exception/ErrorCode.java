@@ -33,8 +33,9 @@ public enum ErrorCode {
     TOKEN_EXPIRED(1011, "Token expired", HttpStatus.UNAUTHORIZED),
     INVALID_OTP(1012, "Invalid or expired OTP", HttpStatus.BAD_REQUEST),
     EMAIL_NOT_VERIFIED(1013, "Email not verified", HttpStatus.BAD_REQUEST),
-    USER_INACTIVE(1014, "User account is inactive", HttpStatus.FORBIDDEN),
-    TEACHER_PENDING_APPROVAL(1017, "Teacher account is pending admin approval", HttpStatus.FORBIDDEN),
+    USER_INACTIVE(1014, "Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ ban quản trị để được hỗ trợ.",
+            HttpStatus.FORBIDDEN),
+    TEACHER_PENDING_APPROVAL(1017, "Tài khoản giáo viên đang chờ quản trị viên phê duyệt.", HttpStatus.FORBIDDEN),
     EMAIL_ALREADY_VERIFIED(1015, "Email already verified", HttpStatus.BAD_REQUEST),
     PASSWORD_CHANGE_REQUIRED(1016, "Password change required", HttpStatus.BAD_REQUEST);
 

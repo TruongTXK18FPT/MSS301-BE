@@ -167,7 +167,10 @@ public class UserServiceImpl implements UserService {
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @Override
     public Page<UserResponse> getUsers(Pageable pageable) {
-        return userRepository.findAll(pageable).map(this::mapToUserResponse);
+        // Exclude ADMIN users from admin list view
+        return userRepository
+                .findNonAdminUsers("ADMIN", pageable)
+                .map(this::mapToUserResponse);
     }
 
     @Override

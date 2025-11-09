@@ -8,13 +8,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mss301.authservice.config.EventPublisher;
 import com.mss301.authservice.dto.request.*;
-import com.mss301.authservice.dto.response.ProfileStatusResponse;
 import com.mss301.authservice.dto.response.UserResponse;
 import com.mss301.authservice.entity.Role;
 import com.mss301.authservice.entity.UserAccount;
@@ -41,6 +42,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationService authenticationService;
     private final EventPublisher eventPublisher;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     @Transactional
@@ -80,6 +82,28 @@ public class UserServiceImpl implements UserService {
 
         user = userRepository.save(user);
 
+        // Save teacher-specific registration data as JSON for later use
+        if ("TEACHER".equalsIgnoreCase(request.getUserType())) {
+            try {
+                java.util.Map<String, Object> registrationData = new java.util.HashMap<>();
+                registrationData.put("fullName", request.getFullName());
+                registrationData.put("department", request.getDepartment());
+                registrationData.put("specialization", request.getSpecialization());
+                registrationData.put("yearsOfExperience", request.getYearsOfExperience());
+                registrationData.put("qualifications", request.getQualifications());
+                registrationData.put("bio", request.getBio());
+                registrationData.put("phone", request.getPhone());
+                
+                String jsonData = objectMapper.writeValueAsString(registrationData);
+                user.setRegistrationData(jsonData);
+                user = userRepository.save(user);
+                
+                log.info("Saved registration data for teacher: {}", user.getEmail());
+            } catch (Exception e) {
+                log.error("Failed to save registration data for teacher: {}", user.getEmail(), e);
+            }
+        }
+
         try {
             // Send verification email
             authenticationService.sendEmailVerification(user.getEmail());
@@ -88,26 +112,8 @@ public class UserServiceImpl implements UserService {
             // Don't fail the registration if email sending fails
         }
 
-        try {
-            // Publish appropriate event based on user type
-            if ("TEACHER".equalsIgnoreCase(request.getUserType())) {
-                // Publish TeacherRegistrationEvent for teachers
-                publishTeacherRegistrationEvent(user, request);
-            } else {
-                // Publish CreatedUserEvent for students and guardians
-                publishUserCreatedEvent(user, request);
-            }
-        } catch (Exception e) {
-            log.error("Failed to publish registration event for user: {}", user.getEmail(), e);
-            // Don't fail the registration if event publishing fails
-        }
-
-        return mapToUserResponse(user);
-    }
-
-    @Override
-    public UserResponse getUserById(Long id) {
-        UserAccount user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        // NOTE: Profile creation events are now published AFTER email verification
+        // See verifyEmail() in AuthenticationServiceImpl for the event publishing logic
 
         return mapToUserResponse(user);
     }
@@ -125,31 +131,9 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Unauthenticated");
         }
 
-        return getUserById(Long.parseLong(userId));
-    }
-
-    @Override
-    @Transactional
-    public UserResponse updateUser(Long id, UserUpdateRequest request) {
-        UserAccount user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-
-        // Update email if provided and different
-        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
-            if (userRepository.existsByEmail(request.getEmail())) {
-                throw new AppException(ErrorCode.USER_EXISTED);
-            }
-            user.setEmail(request.getEmail());
-            user.setEmailVerified(false); // Reset verification status
-        }
-
-        // Update password if provided
-        if (request.getPassword() != null) {
-            user.setPassword(passwordEncoder.encode(request.getPassword()));
-        }
-
-        user.setUpdatedAt(LocalDateTime.now());
-        user = userRepository.save(user);
-
+        // Get user directly without calling getUserById
+        UserAccount user = userRepository.findById(Long.parseLong(userId))
+                .orElseThrow(() -> new RuntimeException("User not found"));
         return mapToUserResponse(user);
     }
 
@@ -163,8 +147,8 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
-    // ADDED: only admins can list users (aligned with external)
-    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    // KEPT: Used by AdminController
+    @PreAuthorize("hasRole('ADMIN')")
     @Override
     public Page<UserResponse> getUsers(Pageable pageable) {
         // Exclude ADMIN users from admin list view
@@ -173,13 +157,8 @@ public class UserServiceImpl implements UserService {
                 .map(this::mapToUserResponse);
     }
 
-    @Override
-    public List<UserResponse> getAllUsers() {
-        return userRepository.findAll().stream().map(this::mapToUserResponse).collect(Collectors.toList());
-    }
-
-    // ADDED: only admins can change user status (aligned with external)
-    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    // KEPT: Used by AdminController  
+    @PreAuthorize("hasRole('ADMIN')")
     @Override
     @Transactional
     public void updateUserStatus(Long id, UpdateUserStatusRequest request) {
@@ -268,31 +247,6 @@ public class UserServiceImpl implements UserService {
     public void completeProfile(Object request) {
         // TODO: Implement profile completion logic
         log.info("Profile completion requested: {}", request);
-    }
-
-    @Override
-    public ProfileStatusResponse getProfileStatus() {
-        // Get current user
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = null;
-
-        if (authentication instanceof JwtAuthenticationToken jwtToken) {
-            userId = jwtToken.getToken().getSubject();
-        }
-
-        if (userId == null) {
-            throw new RuntimeException("Unauthenticated");
-        }
-
-        UserAccount user = userRepository
-                .findById(Long.parseLong(userId))
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        return ProfileStatusResponse.builder()
-                .profileCompleted(user.isProfileCompleted())
-                .userType(user.getRole().getName())
-                .email(user.getEmail())
-                .build();
     }
 
     @Override

@@ -44,14 +44,31 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         String originalPath = exchange.getRequest().getURI().getPath();
         String path = originalPath.replace(API_PREFIX, "");
 
+        // Strip query parameters for public URL matching
+        String pathWithoutQuery = path;
+        if (path.contains("?")) {
+            pathWithoutQuery = path.substring(0, path.indexOf("?"));
+        }
+        String originalPathWithoutQuery = originalPath;
+        if (originalPath.contains("?")) {
+            originalPathWithoutQuery = originalPath.substring(0, originalPath.indexOf("?"));
+        }
+
         log.info("Original path: {}, Stripped path: {}, API_PREFIX: {}", originalPath, path, API_PREFIX);
 
-        // Check if path is public (exact match or wildcard)
-        boolean isPathPublic = publicUrlMatcher.isPublicUrl(path);
-        boolean isOriginalPathPublic = publicUrlMatcher.isPublicUrl(originalPath);
+        // Check if path is public (exact match or wildcard) - use path without query
+        // parameters
+        boolean isPathPublic = publicUrlMatcher.isPublicUrl(pathWithoutQuery);
+        boolean isOriginalPathPublic = publicUrlMatcher.isPublicUrl(originalPathWithoutQuery);
 
         log.info("isPathPublic: {}, isOriginalPathPublic: {}", isPathPublic, isOriginalPathPublic);
-        log.info("Public URLs check: path='{}', originalPath='{}'", path, originalPath);
+        log.info("Public URLs check: path='{}', originalPath='{}'", pathWithoutQuery, originalPathWithoutQuery);
+
+        // Debug for otp-info endpoint
+        if (pathWithoutQuery != null && pathWithoutQuery.contains("otp-info")) {
+            log.info("DEBUG AuthenticationFilter - pathWithoutQuery: '{}'", pathWithoutQuery);
+            log.info("DEBUG AuthenticationFilter - isPathPublic: {}", isPathPublic);
+        }
 
         // Debug: Check if this specific path matches
         if (path.contains("google/setup-password")) {

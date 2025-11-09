@@ -3,6 +3,8 @@ package com.mss301.authservice.service;
 import com.mss301.authservice.dto.request.*;
 import com.mss301.authservice.dto.response.AuthenticationResponse;
 import com.mss301.authservice.dto.response.IntrospectResponse;
+import com.mss301.authservice.dto.response.OTPResponse;
+import com.mss301.authservice.dto.response.VerifyEmailResponse;
 
 public interface AuthenticationService {
     AuthenticationResponse authenticate(AuthenticationRequest request);
@@ -13,17 +15,15 @@ public interface AuthenticationService {
 
     AuthenticationResponse refreshToken(RefreshRequest request);
 
-    void verifyEmail(VerifyEmailRequest request);
+    VerifyEmailResponse verifyEmail(VerifyEmailRequest request);
 
     void resetPassword(ResetPasswordRequest request);
 
-    void createPassword(String userId, PasswordCreationRequest request);
-
-    void sendEmailVerification(String email);
+    OTPResponse sendEmailVerification(String email);
 
     void sendPasswordResetOTP(String email);
 
-    void resendOTP(String email);
+    OTPResponse getCurrentOTPInfo(String email);
 
     /**
      * Authenticate user using Google OAuth2 authorization code

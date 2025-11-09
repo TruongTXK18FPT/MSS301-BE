@@ -22,6 +22,8 @@ public class PublicUrlMatcher {
                         "/authenticate/auth/google/callback",
                         "/authenticate/auth/password-setup-status",
                         "/authenticate/auth/send-email-verification",
+                        "/authenticate/auth/resend-email-verification",
+                        "/authenticate/auth/otp-info",
                         "/authenticate/auth/send-password-reset",
 
                         // User endpoints (UserController with /users prefix)
@@ -51,8 +53,20 @@ public class PublicUrlMatcher {
                         "/content/contents/*", "/profile/profiles/*");
 
         public boolean isPublicUrl(String path) {
-                return PUBLIC_EXACT_PATHS.contains(path)
-                                || PUBLIC_WILDCARD_PATTERNS.stream()
-                                                .anyMatch(pattern -> pathMatcher.match(pattern, path));
+                boolean isExactMatch = PUBLIC_EXACT_PATHS.contains(path);
+                boolean isWildcardMatch = PUBLIC_WILDCARD_PATTERNS.stream()
+                                .anyMatch(pattern -> pathMatcher.match(pattern, path));
+
+                // Debug log for otp-info endpoint
+                if (path != null && path.contains("otp-info")) {
+                        System.out.println("DEBUG PublicUrlMatcher - Checking path: " + path);
+                        System.out.println("DEBUG PublicUrlMatcher - isExactMatch: " + isExactMatch);
+                        System.out.println("DEBUG PublicUrlMatcher - isWildcardMatch: " + isWildcardMatch);
+                        System.out.println("DEBUG PublicUrlMatcher - PUBLIC_EXACT_PATHS contains: "
+                                        + PUBLIC_EXACT_PATHS.contains(path));
+                        System.out.println("DEBUG PublicUrlMatcher - PUBLIC_EXACT_PATHS: " + PUBLIC_EXACT_PATHS);
+                }
+
+                return isExactMatch || isWildcardMatch;
         }
 }

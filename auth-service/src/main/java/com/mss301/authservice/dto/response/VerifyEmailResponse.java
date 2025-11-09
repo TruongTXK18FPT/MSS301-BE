@@ -1,4 +1,4 @@
-package com.mss301.authservice.dto.request;
+package com.mss301.authservice.dto.response;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -8,8 +8,7 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UserUpdateRequest {
-    String email;
-    String phone;
-    String password;
+public class VerifyEmailResponse {
+    String userType; // STUDENT, TEACHER, GUARDIAN
+    boolean emailVerified;
 }

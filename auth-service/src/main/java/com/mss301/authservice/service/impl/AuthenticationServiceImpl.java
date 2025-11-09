@@ -20,13 +20,23 @@ import com.mss301.authservice.dto.response.AuthenticationResponse;
 import com.mss301.authservice.dto.response.GoogleOAuthTokenResponse;
 import com.mss301.authservice.dto.response.GoogleUserInfoResponse;
 import com.mss301.authservice.dto.response.IntrospectResponse;
+import com.mss301.authservice.dto.response.OTPResponse;
+import com.mss301.authservice.dto.response.VerifyEmailResponse;
 import com.mss301.authservice.entity.*;
 import com.mss301.authservice.event.CreatedUserEvent;
 import com.mss301.authservice.event.NotificationEvent;
+import com.mss301.authservice.event.TeacherRegistrationEvent;
+import com.mss301.authservice.exception.AppException;
+import com.mss301.authservice.exception.ErrorCode;
 import com.mss301.authservice.repository.*;
 import com.mss301.authservice.service.AuthenticationService;
 import com.mss301.authservice.service.GoogleOAuthService;
 import com.mss301.authservice.service.GoogleUserService;
+
+import java.time.Duration;
+import java.time.ZoneId;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
@@ -40,6 +50,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class AuthenticationServiceImpl implements AuthenticationService {
+    
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final UserRepository userRepository;
     private final OTPRepository otpRepository;
@@ -72,25 +84,24 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     @Transactional
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
+        // Check if user exists first to provide specific error message
         var user = userRepository
                 .findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("Email không tồn tại trong hệ thống"));
 
         boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
 
         if (!authenticated) {
-            throw new RuntimeException("Unauthenticated");
+            throw new RuntimeException("Mật khẩu không đúng");
         }
 
         // Check if user is active - for teachers, they need admin approval
         if (user.getStatus() != UserAccount.UserStatus.ACTIVE) {
             // Special message for teacher accounts
             if ("TEACHER".equalsIgnoreCase(user.getRole().getName())) {
-                throw new com.mss301.authservice.exception.AppException(
-                        com.mss301.authservice.exception.ErrorCode.TEACHER_PENDING_APPROVAL);
+                throw new AppException(ErrorCode.TEACHER_PENDING_APPROVAL);
             }
-            throw new com.mss301.authservice.exception.AppException(
-                    com.mss301.authservice.exception.ErrorCode.USER_INACTIVE);
+            throw new AppException(ErrorCode.USER_INACTIVE);
         }
 
         if (!user.getEmailVerified()) {
@@ -175,7 +186,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     .id(jit)
                     .expiryTime(expiryTime
                             .toInstant()
-                            .atZone(java.time.ZoneId.systemDefault())
+                            .atZone(ZoneId.systemDefault())
                             .toLocalDateTime())
                     .build();
 
@@ -197,8 +208,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
             // Block refresh for inactive users with explicit error code
             if (user.getStatus() != UserAccount.UserStatus.ACTIVE) {
-                throw new com.mss301.authservice.exception.AppException(
-                        com.mss301.authservice.exception.ErrorCode.USER_INACTIVE);
+                throw new AppException(ErrorCode.USER_INACTIVE);
             }
 
             var token = generateToken(user);
@@ -208,7 +218,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     .expiryTime(Date.from(Instant.now().plus(validDuration, ChronoUnit.SECONDS)))
                     .build();
 
-        } catch (com.mss301.authservice.exception.AppException ae) {
+        } catch (AppException ae) {
             // propagate business error with proper status/message
             throw ae;
         } catch (Exception e) {
@@ -218,7 +228,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     @Transactional
-    public void verifyEmail(VerifyEmailRequest request) {
+    public VerifyEmailResponse verifyEmail(VerifyEmailRequest request) {
+        // Validate request
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            throw new RuntimeException("Email không được để trống");
+        }
+        if (request.getOtpCode() == null || request.getOtpCode().trim().isEmpty()) {
+            throw new RuntimeException("Mã OTP không được để trống");
+        }
+
         log.info("Verifying email: {} with OTP: {}", request.getEmail(), request.getOtpCode());
 
         // Debug: Check all OTPs for this email
@@ -233,23 +251,29 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                         .toList());
 
         // Use explicit query method to avoid Spring Data JPA naming issues
+        // Check expiry time in query to ensure we only get valid, non-expired OTPs
+        LocalDateTime currentTime = LocalDateTime.now();
         var otp = otpRepository
-                .findValidOTP(request.getEmail(), request.getOtpCode(), OTP.OtpPurpose.EMAIL_VERIFICATION)
+                .findValidOTP(request.getEmail(), request.getOtpCode(), OTP.OtpPurpose.EMAIL_VERIFICATION, currentTime)
                 .orElseThrow(() -> {
-                    log.error("Invalid OTP for email: {} with OTP: {}", request.getEmail(), request.getOtpCode());
-                    return new RuntimeException("Invalid OTP");
+                    log.error("Invalid or expired OTP for email: {} with OTP: {}. Checking all OTPs for this email...",
+                            request.getEmail(), request.getOtpCode());
+
+                    // Debug: Check all OTPs for this email
+                    var allOtpsForEmail = otpRepository.findAllByEmail(request.getEmail());
+                    log.error("All OTPs for email {}: {}", request.getEmail(),
+                            allOtpsForEmail.stream()
+                                    .map(otpItem -> String.format("OTP=%s, Used=%s, Expired=%s, Purpose=%s, Expiry=%s",
+                                            otpItem.getOtp(), otpItem.isUsed(),
+                                            otpItem.getExpiryTime().isBefore(currentTime),
+                                            otpItem.getPurpose(), otpItem.getExpiryTime()))
+                                    .toList());
+
+                    return new RuntimeException(
+                            "Mã OTP không đúng hoặc đã hết hạn. Vui lòng kiểm tra lại hoặc yêu cầu gửi lại mã mới.");
                 });
 
-        log.info("Found OTP: {} for email: {}, expiry: {}", otp.getOtp(), otp.getEmail(), otp.getExpiryTime());
-
-        if (otp.getExpiryTime().isBefore(LocalDateTime.now())) {
-            log.error(
-                    "OTP expired for email: {}, expiry: {}, current: {}",
-                    request.getEmail(),
-                    otp.getExpiryTime(),
-                    LocalDateTime.now());
-            throw new RuntimeException("OTP expired");
-        }
+        log.info("Found valid OTP: {} for email: {}, expiry: {}", otp.getOtp(), otp.getEmail(), otp.getExpiryTime());
 
         // Mark OTP as used
         otp.setUsed(true);
@@ -265,8 +289,30 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         userRepository.save(user);
         log.info("Updated email verification status for user: {}", request.getEmail());
 
+        // Get user type/role for response
+        String userType = user.getRole() != null ? user.getRole().getName() : "STUDENT";
+        log.info("User type for verified email: {}", userType);
+
+        // Publish profile creation event ONLY after email is verified
+        try {
+            if ("TEACHER".equalsIgnoreCase(userType)) {
+                // For teachers: Publish TeacherRegistrationEvent
+                // Profile will be created with PENDING status, waiting for admin approval
+                publishTeacherRegistrationEventAfterVerification(user);
+                log.info("Published TeacherRegistrationEvent for verified user: {}", user.getEmail());
+            } else {
+                // For students/guardians: Publish CreatedUserEvent
+                // Profile will be created immediately
+                publishCreatedUserEventAfterVerification(user);
+                log.info("Published CreatedUserEvent for verified user: {}", user.getEmail());
+            }
+        } catch (Exception e) {
+            log.error("Failed to publish profile creation event for user: {}", user.getEmail(), e);
+            // Don't fail verification if event publishing fails
+        }
+
         // Send welcome email after successful verification (skip for TEACHER role)
-        if (!"TEACHER".equalsIgnoreCase(user.getRole().getName())) {
+        if (!"TEACHER".equalsIgnoreCase(userType)) {
             Map<String, Object> welcomeData = new HashMap<>();
             welcomeData.put("fullName", "User"); // Use generic name for personalization
 
@@ -282,6 +328,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         } else {
             log.info("Skipped welcome email for TEACHER role: {}", user.getEmail());
         }
+
+        // Return response with user type
+        return VerifyEmailResponse.builder()
+                .userType(userType)
+                .emailVerified(true)
+                .build();
     }
 
     @Override
@@ -289,24 +341,21 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public void resetPassword(ResetPasswordRequest request) {
         log.info("Resetting password for email: {} with OTP: {}", request.getEmail(), request.getOtpCode());
 
+        // Check expiry time in query to ensure we only get valid, non-expired OTPs
+        LocalDateTime currentTime = LocalDateTime.now();
         var otp = otpRepository
-                .findValidOTP(request.getEmail(), request.getOtpCode(), OTP.OtpPurpose.PASSWORD_RESET)
+                .findValidOTP(request.getEmail(), request.getOtpCode(), OTP.OtpPurpose.PASSWORD_RESET, currentTime)
                 .orElseThrow(() -> {
                     log.error(
-                            "Invalid OTP for password reset for email: {} with OTP: {}",
+                            "Invalid or expired OTP for password reset for email: {} with OTP: {}",
                             request.getEmail(),
                             request.getOtpCode());
-                    return new RuntimeException("Invalid OTP");
+                    return new RuntimeException(
+                            "Mã OTP không đúng hoặc đã hết hạn. Vui lòng kiểm tra lại hoặc yêu cầu gửi lại mã mới.");
                 });
 
-        if (otp.getExpiryTime().isBefore(LocalDateTime.now())) {
-            log.error(
-                    "OTP expired for password reset for email: {}, expiry: {}, current: {}",
-                    request.getEmail(),
-                    otp.getExpiryTime(),
-                    LocalDateTime.now());
-            throw new RuntimeException("OTP expired");
-        }
+        log.info("Found valid password reset OTP: {} for email: {}, expiry: {}", otp.getOtp(), otp.getEmail(),
+                otp.getExpiryTime());
 
         // Mark OTP as used
         otp.setUsed(true);
@@ -346,18 +395,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
-    @Transactional
-    public void createPassword(String userId, PasswordCreationRequest request) {
-        var user = userRepository
-                .findById(Long.parseLong(userId))
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        userRepository.save(user);
-    }
-
-    @Override
-    public void sendEmailVerification(String email) {
+    public OTPResponse sendEmailVerification(String email) {
         // Generate OTP
         String otpCode = String.format("%06d", new Random().nextInt(999999));
 
@@ -366,12 +404,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         previousOtps.forEach(otp -> otp.setUsed(true));
         otpRepository.saveAll(previousOtps);
 
-        // Create new OTP
+        // Create new OTP with 5 minutes expiry
+        LocalDateTime expiryTime = LocalDateTime.now().plusMinutes(5);
         OTP otp = OTP.builder()
                 .email(email)
                 .otp(otpCode)
                 .purpose(OTP.OtpPurpose.EMAIL_VERIFICATION)
-                .expiryTime(LocalDateTime.now().plusMinutes(5))
+                .expiryTime(expiryTime)
                 .build();
 
         otpRepository.save(otp);
@@ -389,7 +428,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .build();
 
         eventPublisher.publishNotificationEvent(notificationEvent);
-        log.info("Sent email verification OTP to: {}", email);
+        log.info("Sent email verification OTP to: {}, expiry: {}", email, expiryTime);
+
+        // Calculate remaining seconds until expiry
+        long expiryInSeconds = Duration.between(LocalDateTime.now(), expiryTime).getSeconds();
+
+        return OTPResponse.builder()
+                .email(email)
+                .expiryTime(expiryTime)
+                .expiryInSeconds((int) expiryInSeconds)
+                .build();
     }
 
     @Override
@@ -429,42 +477,23 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
-    public void resendOTP(String email) {
+    public OTPResponse getCurrentOTPInfo(String email) {
         // Check if user exists
         userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Generate new OTP
-        String otpCode = String.format("%06d", new Random().nextInt(999999));
+        // Get current valid OTP
+        LocalDateTime currentTime = LocalDateTime.now();
+        var otp = otpRepository.findCurrentValidOTP(email, OTP.OtpPurpose.EMAIL_VERIFICATION, currentTime)
+                .orElseThrow(() -> new RuntimeException("No valid OTP found for this email"));
 
-        // Invalidate previous OTPs for email verification
-        var previousOtps = otpRepository.findByEmailAndPurposeAndUsedFalse(email, OTP.OtpPurpose.EMAIL_VERIFICATION);
-        previousOtps.forEach(otp -> otp.setUsed(true));
-        otpRepository.saveAll(previousOtps);
+        // Calculate remaining seconds until expiry
+        long expiryInSeconds = Duration.between(currentTime, otp.getExpiryTime()).getSeconds();
 
-        // Create new OTP
-        OTP otp = OTP.builder()
+        return OTPResponse.builder()
                 .email(email)
-                .otp(otpCode)
-                .purpose(OTP.OtpPurpose.EMAIL_VERIFICATION)
-                .expiryTime(LocalDateTime.now().plusMinutes(5))
+                .expiryTime(otp.getExpiryTime())
+                .expiryInSeconds((int) expiryInSeconds)
                 .build();
-
-        otpRepository.save(otp);
-
-        // Send email notification via EventPublisher
-        Map<String, Object> templateData = new HashMap<>();
-        templateData.put("OTP", otpCode); // Capital letters
-        templateData.put("PURPOSE", "EMAIL_VERIFICATION"); // Add PURPOSE
-
-        NotificationEvent notificationEvent = NotificationEvent.builder()
-                .recipient(email)
-                .subject("Mã xác thực Email - MSS301")
-                .templateCode("otp_verified") // Use OTP template
-                .param(templateData)
-                .build();
-
-        eventPublisher.publishNotificationEvent(notificationEvent);
-        log.info("Resent OTP to email: {}", email);
     }
 
     private String generateToken(UserAccount user) {
@@ -565,6 +594,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             // Handle user authentication
             UserAccount user = handleGoogleUser(userInfo);
 
+            // Check if user is active
+            // Note: Only STUDENT accounts can use Google login, so we don't need to check
+            // for TEACHER_PENDING_APPROVAL
+            if (user.getStatus() != UserAccount.UserStatus.ACTIVE) {
+                log.warn("Google login attempt for inactive user: {}", user.getEmail());
+                throw new AppException(ErrorCode.USER_INACTIVE);
+            }
+
             // Generate JWT token
             String jwtToken = generateToken(user);
 
@@ -576,6 +613,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     .name("User")
                     .build();
 
+        } catch (AppException e) {
+            // Re-throw AppException to preserve error code and message
+            log.error("Google OAuth authentication failed with AppException: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Google OAuth authentication failed: {}", e.getMessage(), e);
             throw new RuntimeException("Google OAuth authentication failed: " + e.getMessage());
@@ -733,6 +774,65 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         } catch (Exception e) {
             log.error("Failed to change password for user: {}: {}", email, e.getMessage(), e);
             throw new RuntimeException("Failed to change password: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Publish CreatedUserEvent after email verification for STUDENT/GUARDIAN
+     */
+    private void publishCreatedUserEventAfterVerification(UserAccount user) {
+        try {
+            CreatedUserEvent event = CreatedUserEvent.builder()
+                    .id(user.getId().toString())
+                    .email(user.getEmail())
+                    .fullName(user.getEmail()) // Use email as placeholder, will be updated in profile
+                    .userType(user.getRole() != null ? user.getRole().getName() : "STUDENT")
+                    .build();
+
+            eventPublisher.publishCreatedUserEvent(event);
+            log.info("Published CreatedUserEvent after email verification for user: {}", user.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to publish CreatedUserEvent after verification for user: {}", user.getEmail(), e);
+            throw e;
+        }
+    }
+
+    /**
+     * Publish TeacherRegistrationEvent after email verification for TEACHER
+     */
+    private void publishTeacherRegistrationEventAfterVerification(UserAccount user) {
+        try {
+            // Parse registration data from JSON
+            Map<String, Object> registrationData = new HashMap<>();
+            if (user.getRegistrationData() != null && !user.getRegistrationData().isEmpty()) {
+                try {
+                    registrationData = objectMapper.readValue(
+                        user.getRegistrationData(), 
+                        new TypeReference<Map<String, Object>>() {}
+                    );
+                } catch (Exception e) {
+                    log.error("Failed to parse registration data for user: {}", user.getEmail(), e);
+                }
+            }
+
+            TeacherRegistrationEvent event = TeacherRegistrationEvent.builder()
+                    .id(user.getId().toString())
+                    .email(user.getEmail())
+                    .fullName((String) registrationData.getOrDefault("fullName", user.getEmail()))
+                    .department((String) registrationData.get("department"))
+                    .specialization((String) registrationData.get("specialization"))
+                    .yearsOfExperience((Integer) registrationData.get("yearsOfExperience"))
+                    .qualifications((String) registrationData.get("qualifications"))
+                    .bio((String) registrationData.get("bio"))
+                    .phone((String) registrationData.get("phone"))
+                    .build();
+
+            eventPublisher.publishTeacherRegistrationEvent(event);
+            log.info("Published TeacherRegistrationEvent after email verification for user: {} with data: {}", 
+                user.getEmail(), registrationData);
+        } catch (Exception e) {
+            log.error("Failed to publish TeacherRegistrationEvent after verification for user: {}", user.getEmail(), e);
+            throw e;
         }
     }
 }

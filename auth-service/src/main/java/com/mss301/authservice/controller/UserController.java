@@ -2,18 +2,21 @@ package com.mss301.authservice.controller;
 
 import java.util.List;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.mss301.authservice.dto.ApiResponse;
 import com.mss301.authservice.dto.request.TeacherApprovalRequest;
 import com.mss301.authservice.dto.request.UpdateUserStatusRequest;
 import com.mss301.authservice.dto.request.UserCreationRequest;
-import com.mss301.authservice.dto.request.UserUpdateRequest;
-import com.mss301.authservice.dto.response.ProfileStatusResponse;
 import com.mss301.authservice.dto.response.UserResponse;
-import com.mss301.authservice.service.AuthenticationService;
 import com.mss301.authservice.service.UserService;
 
 import lombok.AccessLevel;
@@ -27,7 +30,6 @@ import lombok.experimental.FieldDefaults;
 public class UserController {
 
     UserService userService;
-    AuthenticationService authenticationService;
 
     @PostMapping("/register")
     public ApiResponse<UserResponse> createUser(@RequestBody UserCreationRequest request) {
@@ -36,44 +38,7 @@ public class UserController {
                 .build();
     }
 
-    @PostMapping("/resend-otp")
-    public ApiResponse<Void> resendOTP(@RequestParam String email) {
-        authenticationService.resendOTP(email);
-        return ApiResponse.<Void>builder()
-                .message("OTP đã được gửi lại thành công")
-                .build();
-    }
-
-    @GetMapping("/get-users")
-    public ApiResponse<Page<UserResponse>> getUsers(Pageable pageable) {
-        return ApiResponse.<Page<UserResponse>>builder()
-                .result(userService.getUsers(pageable))
-                .build();
-    }
-
-    @GetMapping("/all")
-    public ApiResponse<List<UserResponse>> getAllUsers() {
-        return ApiResponse.<List<UserResponse>>builder()
-                .result(userService.getAllUsers())
-                .build();
-    }
-
-    @GetMapping("/{userId}")
-    public ApiResponse<UserResponse> getUser(@PathVariable("userId") Long userId) {
-        return ApiResponse.<UserResponse>builder()
-                .result(userService.getUserById(userId))
-                .build();
-    }
-
-    @GetMapping("/my-info")
-    public ApiResponse<UserResponse> getMyInfo() {
-        return ApiResponse.<UserResponse>builder()
-                .result(userService.getMyInfo())
-                .build();
-    }
-
-    // ADDED: alias endpoint mirroring external "me" pattern, reusing your existing
-    // service
+    // KEPT: Get current user info (used by FE: auth.service.ts)
     @GetMapping("/me")
     public ApiResponse<UserResponse> getMe() {
         return ApiResponse.<UserResponse>builder()
@@ -81,8 +46,7 @@ public class UserController {
                 .build();
     }
 
-    // ADDED: fetch by email (adapted from external) without duplicating service
-    // logic
+    // KEPT: Fetch user by email (potentially useful for admin)
     @GetMapping("/by-email")
     public ApiResponse<UserResponse> getByEmail(@RequestParam("email") String email) {
         return ApiResponse.<UserResponse>builder()
@@ -90,26 +54,21 @@ public class UserController {
                 .build();
     }
 
-    // ADDED: admin-only status toggle/update adapted from external
+    // KEPT: Admin status update (used by FE: admin.service.ts)
     @PatchMapping("/{id}/status")
     public ApiResponse<Void> updateUserStatus(@PathVariable Long id, @RequestBody UpdateUserStatusRequest request) {
         userService.updateUserStatus(id, request);
         return ApiResponse.<Void>builder().build();
     }
 
-    @PutMapping("/{userId}")
-    public ApiResponse<UserResponse> updateUser(@PathVariable Long userId, @RequestBody UserUpdateRequest request) {
-        return ApiResponse.<UserResponse>builder()
-                .result(userService.updateUser(userId, request))
-                .build();
-    }
-
+    // KEPT: Used by FE: admin.service.ts
     @DeleteMapping("/{userId}")
     public ApiResponse<String> deleteUser(@PathVariable Long userId) {
         userService.deleteUser(userId);
         return ApiResponse.<String>builder().result("User has been deleted").build();
     }
 
+    // KEPT: Profile completion (used by FE: auth.service.ts)
     @PostMapping("/complete-profile")
     public ApiResponse<String> completeProfile(@RequestBody Object request) {
         userService.completeProfile(request);
@@ -118,14 +77,7 @@ public class UserController {
                 .build();
     }
 
-    @GetMapping("/my-profile-status")
-    public ApiResponse<ProfileStatusResponse> getProfileStatus() {
-        return ApiResponse.<ProfileStatusResponse>builder()
-                .result(userService.getProfileStatus())
-                .build();
-    }
-
-    // Admin endpoint to approve/reject teacher registration
+    // KEPT: Admin endpoint to approve/reject teacher (used by FE: teacher-registrations/page.tsx)
     @PostMapping("/{userId}/teacher-approval")
     public ApiResponse<Void> approveTeacherRegistration(
             @PathVariable Long userId,
@@ -136,7 +88,7 @@ public class UserController {
                 .build();
     }
 
-    // Admin endpoint to get pending teacher registrations
+    // KEPT: Get pending teachers (used by FE: teacher-registrations/page.tsx)
     @GetMapping("/pending-teachers")
     public ApiResponse<List<UserResponse>> getPendingTeachers() {
         return ApiResponse.<List<UserResponse>>builder()

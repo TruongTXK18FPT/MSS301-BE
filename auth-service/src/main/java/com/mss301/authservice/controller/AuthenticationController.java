@@ -1,24 +1,47 @@
 package com.mss301.authservice.controller;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.mss301.authservice.config.FrontendProperties;
 import com.mss301.authservice.dto.ApiResponse;
-import com.mss301.authservice.dto.request.*;
+import com.mss301.authservice.dto.request.AuthenticationRequest;
+import com.mss301.authservice.dto.request.ChangePasswordRequest;
+import com.mss301.authservice.dto.request.IntrospectRequest;
+import com.mss301.authservice.dto.request.LogoutRequest;
+import com.mss301.authservice.dto.request.RefreshRequest;
+import com.mss301.authservice.dto.request.ResetPasswordRequest;
+import com.mss301.authservice.dto.request.VerifyEmailRequest;
 import com.mss301.authservice.dto.response.AuthenticationResponse;
 import com.mss301.authservice.dto.response.IntrospectResponse;
+import com.mss301.authservice.dto.response.OTPResponse;
+import com.mss301.authservice.dto.response.VerifyEmailResponse;
+import com.mss301.authservice.exception.AppException;
+import com.mss301.authservice.exception.ErrorCode;
 import com.mss301.authservice.service.AuthenticationService;
 import com.mss301.authservice.service.GoogleOAuthService;
+
+import jakarta.validation.Valid;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -54,9 +77,11 @@ public class AuthenticationController {
     }
 
     @PostMapping("/verify-email")
-    public ApiResponse<Void> verifyEmail(@RequestBody VerifyEmailRequest request) {
-        authenticationService.verifyEmail(request);
-        return ApiResponse.<Void>builder()
+    public ApiResponse<VerifyEmailResponse> verifyEmail(
+            @Valid @RequestBody VerifyEmailRequest request) {
+        var result = authenticationService.verifyEmail(request);
+        return ApiResponse.<VerifyEmailResponse>builder()
+                .result(result)
                 .message("Email verified successfully")
                 .build();
     }
@@ -69,18 +94,14 @@ public class AuthenticationController {
                 .build();
     }
 
-    @PostMapping("/create-password/{userId}")
-    public ApiResponse<Void> createPassword(@PathVariable String userId, @RequestBody PasswordCreationRequest request) {
-        authenticationService.createPassword(userId, request);
-        return ApiResponse.<Void>builder()
-                .message("Password created successfully")
-                .build();
-    }
-
     @PostMapping("/send-email-verification")
-    public ApiResponse<Void> sendEmailVerification(@RequestParam String email) {
-        authenticationService.sendEmailVerification(email);
-        return ApiResponse.<Void>builder().message("Verification email sent").build();
+    public ApiResponse<OTPResponse> sendEmailVerification(
+            @RequestParam String email) {
+        var result = authenticationService.sendEmailVerification(email);
+        return ApiResponse.<OTPResponse>builder()
+                .result(result)
+                .message("Verification email sent. OTP is valid for 5 minutes.")
+                .build();
     }
 
     @PostMapping("/send-password-reset")
@@ -90,9 +111,22 @@ public class AuthenticationController {
     }
 
     @PostMapping("/resend-email-verification")
-    public ApiResponse<Void> resendEmailVerificationOTP(@RequestParam String email) {
-        authenticationService.resendOTP(email);
-        return ApiResponse.<Void>builder().message("Email verification OTP resent successfully").build();
+    public ApiResponse<OTPResponse> resendEmailVerificationOTP(
+            @RequestParam String email) {
+        var result = authenticationService.sendEmailVerification(email);
+        return ApiResponse.<OTPResponse>builder()
+                .result(result)
+                .message("Email verification OTP resent successfully. OTP is valid for 5 minutes.")
+                .build();
+    }
+
+    @GetMapping("/otp-info")
+    public ApiResponse<OTPResponse> getCurrentOTPInfo(@RequestParam String email) {
+        var result = authenticationService.getCurrentOTPInfo(email);
+        return ApiResponse.<OTPResponse>builder()
+                .result(result)
+                .message("OTP info retrieved successfully")
+                .build();
     }
 
     @PostMapping("/resend-password-reset")
@@ -135,27 +169,47 @@ public class AuthenticationController {
             HttpHeaders headers = new HttpHeaders();
             headers.add("Location", redirectUrl);
             return new ResponseEntity<>(headers, HttpStatus.FOUND);
+        } catch (AppException appException) {
+            // Handle AppException with specific error codes
+            ErrorCode errorCode = appException.getErrorCode();
+            String errorMessage = errorCode.getMessage();
+            String redirectUrl;
+
+            if (errorCode == ErrorCode.USER_INACTIVE) {
+                redirectUrl = frontendProperties.getLoginUrl() + "?error=user_inactive&message=" +
+                        URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
+            } else if (errorCode == ErrorCode.TEACHER_PENDING_APPROVAL) {
+                redirectUrl = frontendProperties.getLoginUrl() + "?error=teacher_pending&message=" +
+                        URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
+            } else {
+                redirectUrl = frontendProperties.getLoginUrl() + "?error=google_auth_failed&message=" +
+                        URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
+            }
+
+            log.info("Redirecting to: {}", redirectUrl);
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Location", redirectUrl);
+            return new ResponseEntity<>(headers, HttpStatus.FOUND);
         } catch (Exception e) {
             // Log the exception for debugging
-            System.err.println("Google OAuth callback error: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Google OAuth callback error: {}", e.getMessage(), e);
 
             // Redirect to error page with specific error message
             String errorMessage = e.getMessage();
             String redirectUrl;
 
-            if (errorMessage.contains("Google login is only available for students")) {
+            if (errorMessage != null && errorMessage.contains("Google login is only available for students")) {
                 redirectUrl = frontendProperties.getLoginUrl() + "?error=google_role_restricted&message=" +
-                        java.net.URLEncoder.encode(
+                        URLEncoder.encode(
                                 "Đăng nhập Google chỉ dành cho học sinh. Vui lòng sử dụng đăng nhập thường với email và mật khẩu.",
-                                java.nio.charset.StandardCharsets.UTF_8);
+                                StandardCharsets.UTF_8);
             } else {
                 redirectUrl = frontendProperties.getLoginUrl() + "?error=google_auth_failed&message=" +
-                        java.net.URLEncoder.encode("Đăng nhập Google thất bại. Vui lòng thử lại.",
-                                java.nio.charset.StandardCharsets.UTF_8);
+                        URLEncoder.encode("Đăng nhập Google thất bại. Vui lòng thử lại.",
+                                StandardCharsets.UTF_8);
             }
 
-            System.out.println("Redirecting to: " + redirectUrl);
+            log.info("Redirecting to: {}", redirectUrl);
             HttpHeaders headers = new HttpHeaders();
             headers.add("Location", redirectUrl);
             return new ResponseEntity<>(headers, HttpStatus.FOUND);
@@ -180,19 +234,20 @@ public class AuthenticationController {
     @PostMapping("/change-password")
     public ApiResponse<Void> changePassword(@RequestBody ChangePasswordRequest request,
             @RequestHeader("Authorization") String authHeader) {
-        System.out.println("[DEBUG] Change password request received");
-        System.out.println("[DEBUG] Authorization header: " + authHeader);
+        log.debug("Change password request received");
+        log.debug("Authorization header present: {}", authHeader != null);
 
         // Extract token from Authorization header
         String token = authHeader.replace("Bearer ", "");
-        System.out.println("[DEBUG] Extracted token: " + token.substring(0, Math.min(20, token.length())) + "...");
+        log.debug("Extracted token (first 20 chars): {}",
+                token.length() > 20 ? token.substring(0, 20) + "..." : token);
 
         // Get user info from token
         IntrospectResponse introspectResponse = authenticationService.introspect(new IntrospectRequest(token));
-        System.out.println("[DEBUG] Introspect response valid: " + introspectResponse.isValid());
+        log.debug("Introspect response valid: {}", introspectResponse.isValid());
 
         if (!introspectResponse.isValid()) {
-            System.out.println("[DEBUG] Token is invalid, returning 401");
+            log.warn("Token is invalid, returning 401");
             return ApiResponse.<Void>builder()
                     .code(401)
                     .message("Invalid token")

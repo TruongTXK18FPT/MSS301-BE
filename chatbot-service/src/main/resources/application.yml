@@ -1,9 +1,11 @@
 server:
   port: 8086
+
 eureka:
   client:
     service-url:
-        defaultZone: http://localhost:8761/eureka
+      defaultZone: http://localhost:8761/eureka
+
 springdoc:
   api-docs:
     path: /api-docs
@@ -28,3 +30,11 @@ spring:
 
 jwt:
   signerKey: "1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij"
+
+service:
+  user:
+    name: auth-service
+    url: http://localhost:8081
+  rag:
+    url: http://localhost:8093
+    name: rag-service

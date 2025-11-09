@@ -2,14 +2,15 @@ package com.mss301.authservice.dto.response;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import java.time.LocalDateTime;
 
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ProfileStatusResponse {
-    Boolean profileCompleted;
-    String userType;
+public class OTPResponse {
     String email;
+    LocalDateTime expiryTime;
+    int expiryInSeconds; // Remaining seconds until expiry
 }

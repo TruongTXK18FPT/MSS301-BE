@@ -64,6 +64,9 @@ public class UserAccount {
     @Column(name = "profile_completed", nullable = false)
     private boolean profileCompleted = false;
 
+    @Column(name = "registration_data", columnDefinition = "TEXT")
+    private String registrationData; // JSON string to store teacher registration details temporarily
+
     @Column(name = "role_id")
     private Long roleId;
 

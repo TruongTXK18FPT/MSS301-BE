@@ -19,8 +19,6 @@ import com.mss301.profileservice.service.TeacherProfileService;
 
 import lombok.RequiredArgsConstructor;
 
-import java.util.Map;
-
 @RestController
 @RequestMapping("/")
 @RequiredArgsConstructor
@@ -113,20 +111,6 @@ public class ProfileController {
             @PathVariable Long userId) {
         TeacherProfileResponse response = teacherProfileService.getTeacherProfileByUserId(userId);
         return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-    // Debug endpoint to check teacher status
-    @GetMapping("/debug/teacher-status/{userId}")
-    public ResponseEntity<ApiResponse<Object>> debugTeacherStatus(@PathVariable Long userId) {
-        try {
-            TeacherProfileResponse response = teacherProfileService.getTeacherProfileByUserId(userId);
-            return ResponseEntity.ok(ApiResponse.success(Map.of(
-                    "teacherProfile", response,
-                    "approvalStatus", response.getApprovalStatus(),
-                    "userId", response.getUserId())));
-        } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error(500, "Error: " + e.getMessage()));
-        }
     }
 
     /**

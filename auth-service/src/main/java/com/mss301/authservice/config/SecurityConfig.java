@@ -31,6 +31,8 @@ public class SecurityConfig {
             "/auth/verify-email",
             "/auth/reset-password",
             "/auth/send-email-verification",
+            "/auth/resend-email-verification",
+            "/auth/otp-info",
             "/auth/send-password-reset",
             "/auth/google/redirect",
             "/auth/google/callback",
@@ -66,7 +68,8 @@ public class SecurityConfig {
     @Bean
     JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        jwtGrantedAuthoritiesConverter.setAuthorityPrefix("");
+        jwtGrantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
+        jwtGrantedAuthoritiesConverter.setAuthoritiesClaimName("role");
 
         JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);

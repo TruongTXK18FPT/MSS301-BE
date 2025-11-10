@@ -17,8 +17,23 @@ ENV SERVICE_NAME=${SERVICE_NAME}
 # Copy parent POM first for better caching
 COPY pom.xml ./
 
-# Copy only the service we're building to reduce context size
-COPY ${SERVICE_NAME} ${SERVICE_NAME}/
+# Copy all services (required because parent POM declares all modules)
+# If we only copy one service, Maven will fail because it can't find other modules
+COPY eureka-server ./eureka-server/
+COPY gateway-service ./gateway-service/
+COPY auth-service ./auth-service/
+COPY profile-service ./profile-service/
+COPY content-service ./content-service/
+COPY mindmap-service ./mindmap-service/
+COPY premium-service ./premium-service/
+COPY payment-service ./payment-service/
+COPY notification-service ./notification-service/
+COPY chatbot-service ./chatbot-service/
+COPY classroom-service ./classroom-service/
+COPY document-service ./document-service/
+COPY rag-service ./rag-service/
+COPY retrieval-service ./retrieval-service/
+COPY media-service ./media-service/
 
 # Download dependencies separately for better layer caching
 # This layer will be cached unless pom.xml changes

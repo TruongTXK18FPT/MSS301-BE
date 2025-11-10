@@ -4,6 +4,9 @@ import java.util.List;
 
 import jakarta.validation.Valid;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -27,6 +30,17 @@ import lombok.RequiredArgsConstructor;
 public class ClassroomController {
 
     private final ClassroomService classroomService;
+
+    @GetMapping
+    @Operation(summary = "Get all classrooms (admin)")
+    public ResponseEntity<ApiResponse<Page<ClassroomResponse>>> getAllClassrooms(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            Authentication authentication) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ClassroomResponse> classrooms = classroomService.getAllClassrooms(pageable);
+        return ResponseEntity.ok(ApiResponse.success(classrooms));
+    }
 
     @PostMapping
     @Operation(summary = "Create classroom")

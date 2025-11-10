@@ -1,4 +1,5 @@
 # Multi-stage Dockerfile for Spring Boot Services
+# Optimized for 4 core 8GB RAM server
 # Build with: docker build --build-arg SERVICE_NAME=auth-service -t mss301-auth-service .
 
 FROM eclipse-temurin:21-jdk-alpine AS builder
@@ -9,36 +10,25 @@ RUN apk add --no-cache maven
 # Set working directory
 WORKDIR /app
 
-# Copy parent POM
-COPY pom.xml ./
-COPY mvnw mvnw.cmd ./
-COPY .mvn .mvn
-
-# Copy all service directories (for multi-module build)
-COPY auth-service auth-service/
-COPY payment-service payment-service/
-COPY premium-service premium-service/
-COPY mindmap-service mindmap-service/
-COPY content-service content-service/
-COPY chatbot-service chatbot-service/
-COPY profile-service profile-service/
-COPY notification-service notification-service/
-COPY document-service document-service/
-COPY retrieval-service retrieval-service/
-COPY rag-service rag-service/
-COPY classroom-service classroom-service/
-COPY media-service media-service/
-COPY eureka-server eureka-server/
-COPY gateway-service gateway-service/
-
 # Build argument for service name
 ARG SERVICE_NAME
 ENV SERVICE_NAME=${SERVICE_NAME}
 
-# Build only the specified service with Spring Boot repackage
-RUN mvn clean package -pl ${SERVICE_NAME} -am -DskipTests spring-boot:repackage
+# Copy parent POM first for better caching
+COPY pom.xml ./
 
-# Runtime stage
+# Copy only the service we're building to reduce context size
+COPY ${SERVICE_NAME} ${SERVICE_NAME}/
+
+# Download dependencies separately for better layer caching
+# This layer will be cached unless pom.xml changes
+RUN mvn dependency:go-offline -pl ${SERVICE_NAME} -am || true
+
+# Build only the specified service
+# Use single thread to reduce memory usage on 8GB RAM server
+RUN mvn clean package -pl ${SERVICE_NAME} -am -DskipTests -T 1 spring-boot:repackage
+
+# Runtime stage - use distroless for smaller image
 FROM eclipse-temurin:21-jre-alpine
 
 # Add non-root user
@@ -46,6 +36,9 @@ RUN addgroup -S spring && adduser -S spring -G spring
 
 # Set working directory
 WORKDIR /app
+
+# Install wget for healthcheck
+RUN apk add --no-cache wget
 
 # Copy built JAR from builder stage
 ARG SERVICE_NAME
@@ -61,9 +54,20 @@ USER spring:spring
 # Expose port (will be overridden by docker-compose)
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+# Health check - less aggressive for resource-constrained server
+HEALTHCHECK --interval=45s --timeout=15s --start-period=90s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
 
-# Run application
-ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+# JVM optimizations for 8GB RAM server
+# Allocate max 512MB per service (8GB / 16 services ≈ 512MB)
+ENTRYPOINT ["java", \
+    "-XX:+UseContainerSupport", \
+    "-XX:MaxRAMPercentage=75.0", \
+    "-Xms256m", \
+    "-Xmx512m", \
+    "-XX:+UseG1GC", \
+    "-XX:MaxGCPauseMillis=200", \
+    "-XX:+UseStringDeduplication", \
+    "-Djava.security.egd=file:/dev/./urandom", \
+    "-Dspring.jmx.enabled=false", \
+    "-jar", "app.jar"]

@@ -1,0 +1,57 @@
+# Payment Service - Production Configuration
+server:
+  port: 8082
+
+spring:
+  application:
+    name: payment-service
+
+  # PostgreSQL - Write Database (Command/Write Model)
+  datasource:
+    url: jdbc:postgresql://postgres:5432/payment_db
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:12345}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # MongoDB - Read Database (Query/Read Model)
+  data:
+    mongodb:
+      uri: mongodb://${MONGO_USER:mongo}:${MONGO_PASSWORD:12345}@mongodb:27017/payment_db?authSource=admin
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-server:8761/eureka/
+    fetchRegistry: true
+    registerWithEureka: true
+  instance:
+    preferIpAddress: true
+    hostname: payment-service
+
+# MoMo Payment Gateway Configuration
+momo:
+  partner-code: ${MOMO_PARTNER_CODE:MOMO}
+  access-key: ${MOMO_ACCESS_KEY:F8BBA842ECF85}
+  secret-key: ${MOMO_SECRET_KEY:K951B6PE1waDMi640xX08PD3vg6EkVlz}
+  endpoint: https://test-payment.momo.vn
+  return-url: ${MOMO_RETURN_URL:https://mss301.me/payment/return}
+  ipn-url: ${MOMO_IPN_URL:https://api.mss301.me/api/v1/payment/momo/ipn}
+  redirect-url: ${MOMO_REDIRECT_URL:https://mss301.me/payment/success}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

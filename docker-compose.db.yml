@@ -1,0 +1,173 @@
+# Use postgres/example user/password credentials
+
+services:
+  payment_command_db:
+    image: postgres
+    restart: on-failure:3
+    # set shared memory limit when using docker compose
+    shm_size: 128mb
+    # or set shared memory limit when deploy via swarm stack
+    #volumes:
+    #  - type: tmpfs
+    #    target: /dev/shm
+    #    tmpfs:
+    #      size: 134217728 # 128*2^20 bytes = 128Mb
+    environment:
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_USER: postgres
+      POSTGRES_DB: payment_db
+    ports:
+      - "5432:5432"
+
+  payment_query_db:
+    image: mongodb/mongodb-community-server:latest
+    restart: on-failure:3
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=mongo
+      - MONGO_INITDB_ROOT_PASSWORD=12345
+    ports:
+      - "27017:27017"
+
+  auth_db:
+    image: postgres
+    restart: on-failure:3
+    # set shared memory limit when using docker compose
+    shm_size: 128mb
+    # or set shared memory limit when deploy via swarm stack
+    #volumes:
+    #  - type: tmpfs
+    #    target: /dev/shm
+    #    tmpfs:
+    #      size: 134217728 # 128*2^20 bytes = 128Mb
+    environment:
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_USER: postgres
+      POSTGRES_DB: auth_db
+    ports:
+      - "5431:5432"
+
+  chatbot_db:
+    image: postgres
+    restart: on-failure:3
+    # set shared memory limit when using docker compose
+    shm_size: 128mb
+    # or set shared memory limit when deploy via swarm stack
+    #volumes:
+    #  - type: tmpfs
+    #    target: /dev/shm
+    #    tmpfs:
+    #      size: 134217728 # 128*2^20 bytes = 128Mb
+    environment:
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_USER: postgres
+      POSTGRES_DB: chatbot_db
+    ports:
+      - "5436:5432"
+
+  classroom_db:
+    image: postgres
+    restart: on-failure:3
+    # set shared memory limit when using docker compose
+    shm_size: 128mb
+    # or set shared memory limit when deploy via swarm stack
+    #volumes:
+    #  - type: tmpfs
+    #    target: /dev/shm
+    #    tmpfs:
+    #      size: 134217728 # 128*2^20 bytes = 128Mb
+    environment:
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_USER: postgres
+      POSTGRES_DB: classroom_db
+    ports:
+      - "5434:5432"
+
+  content_db:
+    image: postgres
+    restart: on-failure:3
+    # set shared memory limit when using docker compose
+    shm_size: 128mb
+    # or set shared memory limit when deploy via swarm stack
+    #volumes:
+    #  - type: tmpfs
+    #    target: /dev/shm
+    #    tmpfs:
+    #      size: 134217728 # 128*2^20 bytes = 128Mb
+    environment:
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_USER: postgres
+      POSTGRES_DB: content_db
+    ports:
+      - "5435:5432"
+
+  mindmap_db:
+    image: postgres
+    restart: on-failure:3
+    # set shared memory limit when using docker compose
+    shm_size: 128mb
+    # or set shared memory limit when deploy via swarm stack
+    #volumes:
+    #  - type: tmpfs
+    #    target: /dev/shm
+    #    tmpfs:
+    #      size: 134217728 # 128*2^20 bytes = 128Mb
+    environment:
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_USER: postgres
+      POSTGRES_DB: mindmap_db
+    ports:
+      - "5444:5432"
+
+  notification_db:
+    image: postgres
+    restart: on-failure:3
+    # set shared memory limit when using docker compose
+    shm_size: 128mb
+    # or set shared memory limit when deploy via swarm stack
+    #volumes:
+    #  - type: tmpfs
+    #    target: /dev/shm
+    #    tmpfs:
+    #      size: 134217728 # 128*2^20 bytes = 128Mb
+    environment:
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_USER: postgres
+      POSTGRES_DB: notification_db
+    ports:
+      - "5438:5432"
+
+  premium_db:
+    image: postgres
+    restart: on-failure:3
+    # set shared memory limit when using docker compose
+    shm_size: 128mb
+    # or set shared memory limit when deploy via swarm stack
+    #volumes:
+    #  - type: tmpfs
+    #    target: /dev/shm
+    #    tmpfs:
+    #      size: 134217728 # 128*2^20 bytes = 128Mb
+    environment:
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_USER: postgres
+      POSTGRES_DB: premium_db
+    ports:
+      - "5433:5432"
+
+  profile_db:
+    image: postgres
+    restart: on-failure:3
+    # set shared memory limit when using docker compose
+    shm_size: 128mb
+    # or set shared memory limit when deploy via swarm stack
+    #volumes:
+    #  - type: tmpfs
+    #    target: /dev/shm
+    #    tmpfs:
+    #      size: 134217728 # 128*2^20 bytes = 128Mb
+    environment:
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_USER: postgres
+      POSTGRES_DB: profile_db
+    ports:
+      - "5437:5432"

@@ -32,7 +32,7 @@ public class PaymentQueryServiceImp implements PaymentQueryService {
     @Override
     public PaymentResponse findBySubscriptionId(Long subscriptionId) {
         log.info("Finding payment by subscription ID: {}", subscriptionId);
-        PaymentQuery payment = queryRepository.findBySubscriptionId(subscriptionId);
+        PaymentQuery payment = queryRepository.findBySubscription(subscriptionId);
         return payment != null ? convertToResponse(payment) : null;
     }
 

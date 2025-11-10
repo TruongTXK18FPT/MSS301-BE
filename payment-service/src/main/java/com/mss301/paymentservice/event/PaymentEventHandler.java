@@ -52,7 +52,7 @@ public class PaymentEventHandler {
 
         try {
             PaymentCommand command = event.getPayment();
-            PaymentQuery existing = queryRepository.findBySubscriptionId(command.getSubscriptionId());
+            PaymentQuery existing = queryRepository.findBySubscription(command.getSubscriptionId());
 
             if (existing != null) {
                 existing.setStatus(command.getStatus());

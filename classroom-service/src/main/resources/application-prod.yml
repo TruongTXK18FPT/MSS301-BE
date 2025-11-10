@@ -1,0 +1,41 @@
+# Classroom Service - Production Configuration
+server:
+  port: 8089
+
+spring:
+  application:
+    name: classroom-service
+
+  datasource:
+    url: jdbc:postgresql://postgres:5432/classroom_db
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:12345}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-server:8761/eureka/
+    fetchRegistry: true
+    registerWithEureka: true
+  instance:
+    preferIpAddress: true
+    hostname: classroom-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

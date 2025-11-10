@@ -27,7 +27,7 @@ spring:
     password: 12345
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -42,3 +42,6 @@ service:
   user:
     name: auth-service
     url: http://localhost:8081
+  payment:
+    name: payment-service
+    url: http://localhost:8082

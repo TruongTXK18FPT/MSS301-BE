@@ -2,8 +2,8 @@ package com.mss301.paymentservice.service;
 
 import com.mss301.paymentservice.config.MomoConfig;
 import com.mss301.paymentservice.constant.Status;
+import com.mss301.paymentservice.event.PaymentCompletedEvent;
 import com.mss301.paymentservice.event.PaymentCreatedEvent;
-import com.mss301.paymentservice.event.PaymentStatusUpdatedEvent;
 import com.mss301.paymentservice.model.PaymentCommand;
 import com.mss301.paymentservice.model.dtos.request.MomoRequest;
 import com.mss301.paymentservice.model.dtos.request.PaymentRequest;
@@ -18,7 +18,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -43,20 +42,17 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
-    @Autowired
-    private SubscriptionService subscriptionService;
-
-    @Autowired
-    private UserService userService;
-
     @Override
-    public PaymentResponse createPayment(PaymentRequest request, Long userId) {
-        log.info("Creating payment for user: {}, subscription: {}", userId, request.getSubscriptionId());
+    public PaymentResponse createPayment(PaymentRequest request) {
+        log.info("Creating payment for user: {}, subscription: {}",
+                request.getUserId(), request.getSubscriptionId());
 
-        PaymentCommand payment = createPaymentCommand(request, userId);
+        // ✅ Validate request
+        validatePaymentRequest(request);
+
+        PaymentCommand payment = createPaymentCommand(request);
         PaymentCommand saved = commandRepository.save(payment);
 
-        // Create MoMo payment URL
         try {
             String paymentUrl = createMomoPaymentUrl(saved);
             saved.setPaymentUrl(paymentUrl);
@@ -64,7 +60,8 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
 
             log.info("Payment created successfully with ID: {}", saved.getPaymentId());
         } catch (Exception e) {
-            log.error("Failed to create MoMo payment URL for payment: {}", saved.getPaymentId(), e);
+            log.error("Failed to create MoMo payment URL for payment: {}",
+                    saved.getPaymentId(), e);
             saved.setStatus(Status.FAILED);
             saved = commandRepository.save(saved);
         }
@@ -77,13 +74,13 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
 
     @Override
     public PaymentResponse processPaymentCallback(Map<String, String> params) {
-        String subscriptionId = params.get("orderId");
+        String orderId = params.get("orderId");
         String resultCode = params.get("resultCode");
 
-        PaymentCommand payment = commandRepository.findBySubscriptionId(Long.parseLong(subscriptionId));
-        if (payment == null) {
-            throw new EntityNotFoundException("Payment not found for subscriptionId: " + subscriptionId);
-        }
+        // ✅ Find by paymentId instead of subscriptionId
+        PaymentCommand payment = commandRepository.findById(Long.parseLong(orderId))
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Payment not found for orderId: " + orderId));
 
         Status newStatus = "0".equals(resultCode) ? Status.SUCCESS : Status.FAILED;
         payment.setStatus(newStatus);
@@ -92,19 +89,48 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
 
         PaymentCommand updated = commandRepository.save(payment);
 
-        // Publish event for MongoDB sync
-        eventPublisher.publishEvent(new PaymentStatusUpdatedEvent(updated));
+        // ✅ Publish event để Premium Service xử lý
+        if (newStatus == Status.SUCCESS) {
+            eventPublisher.publishEvent(new PaymentCompletedEvent(
+                    this,
+                    updated.getPaymentId(),
+                    updated.getSubscriptionId(),
+                    updated.getUserId(),
+                    updated.getPlanId(),
+                    updated.getAmount(),
+                    updated.getStatus(),
+                    updated.getMomoTransId(),
+                    updated.getUpdatedAt()
+            ));
+        }
 
-        log.info("Payment callback processed. Status: {}", newStatus);
+        log.info("Payment callback processed. Payment ID: {}, Status: {}",
+                updated.getPaymentId(), newStatus);
 
         return convertToResponse(updated);
     }
 
-    private PaymentCommand createPaymentCommand(PaymentRequest request, Long userId) {
+    private void validatePaymentRequest(PaymentRequest request) {
+        if (request.getUserId() == null) {
+            throw new IllegalArgumentException("User ID is required");
+        }
+        if (request.getSubscriptionId() == null) {
+            throw new IllegalArgumentException("Subscription ID is required");
+        }
+        if (request.getPlanId() == null) {
+            throw new IllegalArgumentException("Plan ID is required");
+        }
+        if (request.getAmount() <= 0) {
+            throw new IllegalArgumentException("Amount must be greater than 0");
+        }
+    }
+
+    private PaymentCommand createPaymentCommand(PaymentRequest request) {
         PaymentCommand payment = new PaymentCommand();
         payment.setSubscriptionId(request.getSubscriptionId());
-        payment.setUserId(userId);
-        payment.setAmount(getAmount(payment.getSubscriptionId()));
+        payment.setUserId(request.getUserId());
+        payment.setAmount(request.getAmount()); // ✅ Lấy từ request
+        payment.setPlanId(request.getPlanId()); // ✅ Lưu planId
         payment.setOrderInfo(request.getOrderInfo());
         payment.setStatus(Status.PENDING);
         return payment;
@@ -114,7 +140,7 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
         MomoRequest momoRequest = new MomoRequest();
         momoRequest.setRequestId(UUID.randomUUID().toString());
         momoRequest.setAmount(payment.getAmount());
-        momoRequest.setSubscriptionId(payment.getSubscriptionId());
+        momoRequest.setSubscriptionId(payment.getPaymentId());
         momoRequest.setOrderInfo(payment.getOrderInfo());
 
         payment.setMomoRequestId(momoRequest.getRequestId());
@@ -141,25 +167,17 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
         }
     }
 
-    private Long getAmount(Long subscriptionId) {
-        ResponseEntity<SubscriptionResponse> subscription = subscriptionService.findBySubscriptionId(subscriptionId);
-        Long planId = subscription.getBody().getPlanId();
-        ResponseEntity<PlanResponse> plan = subscriptionService.findByPlanId(planId);
-        return plan.getBody().getPriceCents();
-    }
-
     private PaymentResponse convertToResponse(PaymentCommand payment) {
-        ResponseEntity<SubscriptionResponse> subscriptionResponse = subscriptionService.findBySubscriptionId(payment.getSubscriptionId());
-        ApiResponse<UserResponse> userResponse = userService.getUserById(payment.getUserId());
-
         return PaymentResponse.builder()
                 .paymentId(payment.getPaymentId())
-                .subscription(subscriptionResponse.getBody())
-                .user(userResponse.getResult())
+                .subscriptionId(payment.getSubscriptionId())
+                .userId(payment.getUserId())
+                .planId(payment.getPlanId())
                 .amount(payment.getAmount())
                 .orderInfo(payment.getOrderInfo())
                 .paymentUrl(payment.getPaymentUrl())
                 .status(payment.getStatus())
+                .momoTransId(payment.getMomoTransId())
                 .createdAt(payment.getCreatedAt())
                 .updatedAt(payment.getUpdatedAt())
                 .build();

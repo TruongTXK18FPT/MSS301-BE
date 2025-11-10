@@ -78,7 +78,7 @@ public class ChatSessionServiceImp implements ChatSessionService {
         // Tạo response từ AI (giả lập)
         RagRequest ragRequest = RagRequest.builder()
                 .queryText(request.getContent())
-                .llmProvider(request.getProvider())
+                .llmProvider(request.getProvider() != null ? request.getProvider() : LLMProvider.MISTRAL)
                 .build();
 
         try {

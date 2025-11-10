@@ -1,6 +1,6 @@
-package com.mss301.paymentservice.model.dtos.response;
+package com.mss301.premiumservice.model.dtos.response;
 
-import com.mss301.paymentservice.constant.Status;
+import com.mss301.premiumservice.constant.Status;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

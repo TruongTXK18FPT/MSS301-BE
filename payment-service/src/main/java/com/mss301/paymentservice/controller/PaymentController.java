@@ -33,24 +33,22 @@ public class PaymentController {
     private PaymentQueryService queryService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<PaymentResponse>> createPayment(
+    public ApiResponse<PaymentResponse> createPayment(
             @RequestBody PaymentRequest request) {
-
         try {
-            PaymentResponse response = commandService.createPayment(request, request.getUserId());
+            PaymentResponse response = commandService.createPayment(request);
 
-            return ResponseEntity.ok(ApiResponse.<PaymentResponse>builder()
+            return ApiResponse.<PaymentResponse>builder()
                     .code(200)
                     .message("Payment created successfully")
                     .result(response)
-                    .build());
+                    .build();
         } catch (Exception e) {
             log.error("Error creating payment", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.<PaymentResponse>builder()
+            return ApiResponse.<PaymentResponse>builder()
                             .code(500)
                             .message("Failed to create payment: " + e.getMessage())
-                            .build());
+                            .build();
         }
     }
 

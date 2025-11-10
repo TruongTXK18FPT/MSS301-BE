@@ -11,12 +11,12 @@ import java.util.List;
 
 @FeignClient(name = "${service.premium.name}", url = "${service.premium.url}")
 public interface SubscriptionService {
-    @GetMapping("/subscriptions/user/{userId}")
+    @GetMapping("/premium/subscriptions/user/{userId}")
     ResponseEntity<List<SubscriptionResponse>> findSubscriptionByUserId(@PathVariable("userId") Long userId);
 
-    @GetMapping("/subscriptions/{subscriptionId}")
+    @GetMapping("/premium/subscriptions/{subscriptionId}")
     ResponseEntity<SubscriptionResponse> findBySubscriptionId(@PathVariable("subscriptionId") Long subscriptionId);
 
-    @GetMapping("/plans/{planId}")
-    ResponseEntity<PlanResponse> findByPlanId(@PathVariable("planId") Long planId);
+//    @GetMapping("/plans/{planId}")
+//    ResponseEntity<PlanResponse> findByPlanId(@PathVariable("planId") Long planId);
 }

@@ -7,11 +7,13 @@ import com.mss301.premiumservice.model.dtos.response.EntitlementResponse;
 import com.mss301.premiumservice.repository.EntitlementRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class EntitlementServiceImp implements EntitlementService {
 
     @Autowired
@@ -42,20 +44,19 @@ public class EntitlementServiceImp implements EntitlementService {
     }
 
     @Override
+    @Transactional
     public EntitlementResponse save(EntitlementRequest entitlement) {
-        Entitlement newEntitlement = new Entitlement(
-                0L,
-                entitlement.getCode(),
-                entitlement.getName(),
-                entitlement.getDescription(),
-                entitlement.getDefaultLimit(),
-                entitlement.getUnit(),
-                null
-        );
+        Entitlement newEntitlement = Entitlement.builder()
+                .code(entitlement.getCode())
+                .name(entitlement.getName())
+                .description(entitlement.getDescription())
+                .defaultLimit(entitlement.getDefaultLimit())
+                .unit(entitlement.getUnit())
+                .build();
 
-        Entitlement saveEntitlement = entitlementRepository.save(newEntitlement);
+        Entitlement savedEntitlement = entitlementRepository.save(newEntitlement);
 
-        return convertToResponse(saveEntitlement);
+        return convertToResponse(savedEntitlement);
     }
 
     @Override
@@ -78,33 +79,29 @@ public class EntitlementServiceImp implements EntitlementService {
     }
 
     @Override
+    @Transactional
     public EntitlementResponse delete(Long entitlementId) {
-        Entitlement entitlementById = entitlementRepository.findById(entitlementId).orElse(null);
-        if (entitlementById != null) {
-            EntitlementResponse response = convertToResponse(entitlementById);
+        Entitlement entitlement = entitlementRepository.findById(entitlementId)
+                .orElse(null);
 
-            // Option 1: Soft delete (nếu có status field)
-            // entitlementById.setStatus(EntitlementStatus.INACTIVE);
-            // entitlementRepository.save(entitlementById);
-
-            // Option 2: Hard delete với cleanup
-            // Remove entitlement khỏi tất cả plans trước khi delete
-            if (entitlementById.getPlans() != null) {
-                for (Plan plan : entitlementById.getPlans()) {
-                    if (plan.getEntitlements() != null) {
-                        plan.getEntitlements().remove(entitlementById);
-                    }
-                }
-            }
-
-            // Clear plans trước khi delete
-            entitlementById.getPlans().clear();
-            entitlementRepository.save(entitlementById); // Save để cleanup join table
-            entitlementRepository.delete(entitlementById);
-
-            return response;
+        if (entitlement == null) {
+            return null;
         }
-        return null;
+
+        EntitlementResponse response = convertToResponse(entitlement);
+
+        // Remove entitlement khỏi tất cả plans trước
+        if (entitlement.getPlans() != null) {
+            for (Plan plan : entitlement.getPlans()) {
+                plan.getEntitlements().remove(entitlement);
+            }
+            entitlement.getPlans().clear();
+        }
+
+        // JPA tự động xóa record trong join table
+        entitlementRepository.delete(entitlement);
+
+        return response;
     }
 
     @Override

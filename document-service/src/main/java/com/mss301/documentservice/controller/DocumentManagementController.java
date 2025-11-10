@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -39,9 +40,13 @@ public class DocumentManagementController {
     public ResponseEntity<ApiResponse<DocumentResponseDto>> uploadPdf(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "title", required = false) String title,
-            @RequestParam(value = "" + "", required = false) String description) {
+            @RequestParam(value = "description", required = false) String description,
+            Authentication authentication) {
 
         try {
+            Long userId = getUserIdFromAuthentication(authentication);
+            log.info("User {} uploading document: {}", userId, file.getOriginalFilename());
+
             Document document = documentService.uploadPdf(file, title, description);
             DocumentResponseDto responseDto = DocumentResponseDto.fromEntity(document);
 
@@ -61,8 +66,12 @@ public class DocumentManagementController {
             summary = "Trigger document processing",
             description = "Triggers processing for the specified document by its ID.")
     public ResponseEntity<ApiResponse<DocumentResponseDto.ProcessingJobDto>> triggerProcessing(
-            @PathVariable String documentId) {
+            @PathVariable String documentId,
+            Authentication authentication) {
         try {
+            Long userId = getUserIdFromAuthentication(authentication);
+            log.info("User {} triggering processing for document: {}", userId, documentId);
+
             ProcessingJob job = documentService.triggerProcessing(documentId);
             DocumentResponseDto.ProcessingJobDto jobDto = DocumentResponseDto.fromEntity(job);
 
@@ -80,9 +89,13 @@ public class DocumentManagementController {
     @GetMapping
     @Operation(summary = "Get all documents", description = "Retrieves all documents, optionally filtered by status.")
     public ResponseEntity<ApiResponse<DocumentListDto>> getAllDocuments(
-            @RequestParam(value = "status", required = false) String status) {
+            @RequestParam(value = "status", required = false) String status,
+            Authentication authentication) {
 
         try {
+            Long userId = getUserIdFromAuthentication(authentication);
+            log.info("User {} fetching all documents with status: {}", userId, status);
+
             List<Document> documents;
 
             if (status != null) {
@@ -113,8 +126,13 @@ public class DocumentManagementController {
     @Operation(
             summary = "Get document processing status",
             description = "Retrieves the processing status for the specified document by its ID.")
-    public ResponseEntity<ApiResponse<ProcessingStatusDto>> getProcessingStatus(@PathVariable String documentId) {
+    public ResponseEntity<ApiResponse<ProcessingStatusDto>> getProcessingStatus(
+            @PathVariable String documentId,
+            Authentication authentication) {
         try {
+            Long userId = getUserIdFromAuthentication(authentication);
+            log.info("User {} fetching processing status for document: {}", userId, documentId);
+
             Optional<ProcessingJob> jobOpt = documentService.getProcessingStatus(documentId);
 
             ProcessingStatusDto statusDto;
@@ -139,8 +157,13 @@ public class DocumentManagementController {
     @Operation(
             summary = "Delete a document",
             description = "Deletes the specified document and all associated data by its ID.")
-    public ResponseEntity<ApiResponse<Void>> deleteDocument(@PathVariable String documentId) {
+    public ResponseEntity<ApiResponse<Void>> deleteDocument(
+            @PathVariable String documentId,
+            Authentication authentication) {
         try {
+            Long userId = getUserIdFromAuthentication(authentication);
+            log.info("User {} deleting document: {}", userId, documentId);
+
             documentService.deleteDocument(documentId);
             return ResponseEntity.ok(ApiResponse.success("Document deleted successfully", null));
 
@@ -163,8 +186,13 @@ public class DocumentManagementController {
     @Operation(
             summary = "Get document by ID",
             description = "Retrieves the specified document by its ID, including processing status if available.")
-    public ResponseEntity<ApiResponse<DocumentResponseDto>> getDocumentById(@PathVariable String documentId) {
+    public ResponseEntity<ApiResponse<DocumentResponseDto>> getDocumentById(
+            @PathVariable String documentId,
+            Authentication authentication) {
         try {
+            Long userId = getUserIdFromAuthentication(authentication);
+            log.info("User {} fetching document: {}", userId, documentId);
+
             Optional<Document> documentOpt = documentService.getDocumentById(documentId);
 
             if (documentOpt.isEmpty()) {
@@ -198,9 +226,13 @@ public class DocumentManagementController {
             @RequestParam(value = "chapter", required = false) Integer chapterNumber,
             @RequestParam(value = "lesson", required = false) Integer lessonNumber,
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size) {
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            Authentication authentication) {
 
         try {
+            Long userId = getUserIdFromAuthentication(authentication);
+            log.info("User {} fetching chunks for document: {}", userId, documentId);
+
             List<Chunk> chunks;
 
             if (chapterNumber != null && lessonNumber != null) {
@@ -236,8 +268,13 @@ public class DocumentManagementController {
             summary = "Get document structure",
             description =
                     "Retrieves the hierarchical structure of the specified document by its ID, including chapters and lessons.")
-    public ResponseEntity<ApiResponse<DocumentStructureDto>> getDocumentStructure(@PathVariable String documentId) {
+    public ResponseEntity<ApiResponse<DocumentStructureDto>> getDocumentStructure(
+            @PathVariable String documentId,
+            Authentication authentication) {
         try {
+            Long userId = getUserIdFromAuthentication(authentication);
+            log.info("User {} fetching structure for document: {}", userId, documentId);
+
             List<Chunk> chunks = chunkingService.findByDocumentIdOrderByChunkIndex(documentId);
 
             Map<Integer, Map<String, Object>> chapters = new HashMap<>();
@@ -316,8 +353,13 @@ public class DocumentManagementController {
 
     @GetMapping("/chunks/{chunkId}")
     @Operation(summary = "Get chunk by ID", description = "Retrieves the specified chunk by its ID.")
-    public ResponseEntity<ApiResponse<ChunkDto>> getChunkById(@PathVariable String chunkId) {
+    public ResponseEntity<ApiResponse<ChunkDto>> getChunkById(
+            @PathVariable String chunkId,
+            Authentication authentication) {
         try {
+            Long userId = getUserIdFromAuthentication(authentication);
+            log.info("User {} fetching chunk: {}", userId, chunkId);
+
             Optional<Chunk> chunkOpt = chunkingService.findById(chunkId);
 
             if (chunkOpt.isEmpty()) {
@@ -341,9 +383,14 @@ public class DocumentManagementController {
             summary = "Search document chunks",
             description = "Searches for chunks within the specified document by its ID that match the given query.")
     public ResponseEntity<ApiResponse<ChunkSearchDto>> searchChunks(
-            @PathVariable String documentId, @RequestParam("q") String query) {
+            @PathVariable String documentId,
+            @RequestParam("q") String query,
+            Authentication authentication) {
 
         try {
+            Long userId = getUserIdFromAuthentication(authentication);
+            log.info("User {} searching chunks in document: {} with query: {}", userId, documentId, query);
+
             List<Chunk> allChunks = chunkingService.findByDocumentIdOrderByChunkIndex(documentId);
 
             // Simple text search (you can enhance this with Elasticsearch full-text search)
@@ -365,8 +412,13 @@ public class DocumentManagementController {
     @Operation(
             summary = "Analyze Table of Contents",
             description = "Analyzes the document to extract and summarize its table of contents.")
-    public ResponseEntity<ApiResponse<TocAnalysisDto>> getTableOfContentsAnalysis(@PathVariable String documentId) {
+    public ResponseEntity<ApiResponse<TocAnalysisDto>> getTableOfContentsAnalysis(
+            @PathVariable String documentId,
+            Authentication authentication) {
         try {
+            Long userId = getUserIdFromAuthentication(authentication);
+            log.info("User {} analyzing table of contents for document: {}", userId, documentId);
+
             List<Chunk> chunks = chunkingService.findByDocumentIdOrderByChunkIndex(documentId);
 
             if (chunks.isEmpty()) {
@@ -395,5 +447,18 @@ public class DocumentManagementController {
             names[i] = statuses[i].name();
         }
         return names;
+    }
+
+    private Long getUserIdFromAuthentication(Authentication authentication) {
+        if (authentication == null || authentication.getPrincipal() == null) {
+            throw new RuntimeException("User not authenticated");
+        }
+
+        // Extract user ID from JWT token claims
+        try {
+            return Long.parseLong(authentication.getName());
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("Invalid user ID in token");
+        }
     }
 }

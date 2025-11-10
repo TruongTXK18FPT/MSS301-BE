@@ -38,7 +38,8 @@ eureka:
     registerWithEureka: true
   instance:
     preferIpAddress: true
-    hostname: profile-service
+    nonSecurePortEnabled: true
+    securePortEnabled: false
 
 management:
   endpoints:

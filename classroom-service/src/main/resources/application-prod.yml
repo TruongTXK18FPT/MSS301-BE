@@ -29,7 +29,8 @@ eureka:
     registerWithEureka: true
   instance:
     preferIpAddress: true
-    hostname: classroom-service
+    nonSecurePortEnabled: true
+    securePortEnabled: false
 
 management:
   endpoints:

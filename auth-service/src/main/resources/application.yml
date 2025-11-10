@@ -28,8 +28,6 @@ spring:
     show-sql: true
 
   cloud:
-    function:
-      definition: profileCreationFailed
     stream:
       bindings:
         sendNotification-out-0:
@@ -42,8 +40,6 @@ spring:
           destination: teacher-registration-topic
         teacherApproval-out-0:
           destination: teacher-approval-topic
-        profileCreationFailed-in-0:
-          destination: profile-creation-failed-topic
       kafka:
         binder:
           brokers: localhost:9092

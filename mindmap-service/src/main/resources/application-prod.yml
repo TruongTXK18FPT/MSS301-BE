@@ -29,7 +29,8 @@ eureka:
     registerWithEureka: true
   instance:
     preferIpAddress: true
-    hostname: mindmap-service
+    nonSecurePortEnabled: true
+    securePortEnabled: false
 
 management:
   endpoints:

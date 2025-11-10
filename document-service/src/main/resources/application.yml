@@ -20,6 +20,9 @@ spring:
     connection-timeout: 10s
     socket-timeout: 30s
 
+jwt:
+  signerKey: "1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij"
+
 eureka:
   client:
     service-url:
@@ -56,7 +59,7 @@ app:
 embedding:
   client:
     url: https://aiportalapi.stu-platform.live/jpe/v1
-    api-key: ${AI_PORTAL_API_KEY:}
+    api-key: ${AI_PORTAL_API_KEY:sk-Z64PdmBB55a3eXZuLcM2zQ}
     model: text-embedding-3-small
 
 chunking:

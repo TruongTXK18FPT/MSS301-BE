@@ -14,7 +14,8 @@ eureka:
     registerWithEureka: true
   instance:
     preferIpAddress: true
-    hostname: rag-service
+    nonSecurePortEnabled: true
+    securePortEnabled: false
 
 # AI API Configuration
 mistral:

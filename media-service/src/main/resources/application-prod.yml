@@ -19,7 +19,8 @@ eureka:
     registerWithEureka: true
   instance:
     preferIpAddress: true
-    hostname: media-service
+    nonSecurePortEnabled: true
+    securePortEnabled: false
 
 # Storage Configuration (if using cloud storage)
 storage:

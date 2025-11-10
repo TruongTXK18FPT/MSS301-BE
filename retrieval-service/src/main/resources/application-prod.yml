@@ -17,7 +17,8 @@ eureka:
     registerWithEureka: true
   instance:
     preferIpAddress: true
-    hostname: retrieval-service
+    nonSecurePortEnabled: true
+    securePortEnabled: false
 
 # FPT AI API Configuration
 fptai:

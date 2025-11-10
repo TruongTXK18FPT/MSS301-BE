@@ -29,7 +29,8 @@ eureka:
     registerWithEureka: true
   instance:
     preferIpAddress: true
-    hostname: chatbot-service
+    nonSecurePortEnabled: true
+    securePortEnabled: false
 
 # Mistral AI Configuration
 mistral:

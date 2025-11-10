@@ -53,9 +53,16 @@ eureka:
       defaultZone: http://eureka-server:8761/eureka/
     fetchRegistry: true
     registerWithEureka: true
+    # Retry configuration for resilient Eureka connection
+    registry-fetch-interval-seconds: 10
+    eureka-service-url-poll-interval-seconds: 30
+    should-enforce-registration-at-init: false
   instance:
     preferIpAddress: true
-    hostname: auth-service
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+    nonSecurePortEnabled: true
+    securePortEnabled: false
 
 jwt:
   secret: ${JWT_SECRET:1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij}

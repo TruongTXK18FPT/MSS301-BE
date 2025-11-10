@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/payments")
+@RequestMapping("/payment")
 @CrossOrigin
 @Slf4j
 public class PaymentController {

@@ -47,9 +47,6 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
     private SubscriptionService subscriptionService;
 
     @Autowired
-    private PlanService planService;
-
-    @Autowired
     private UserService userService;
 
     @Override
@@ -147,7 +144,7 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
     private Long getAmount(Long subscriptionId) {
         ResponseEntity<SubscriptionResponse> subscription = subscriptionService.findBySubscriptionId(subscriptionId);
         Long planId = subscription.getBody().getPlanId();
-        ResponseEntity<PlanResponse> plan = planService.findByPlanId(planId);
+        ResponseEntity<PlanResponse> plan = subscriptionService.findByPlanId(planId);
         return plan.getBody().getPriceCents();
     }
 

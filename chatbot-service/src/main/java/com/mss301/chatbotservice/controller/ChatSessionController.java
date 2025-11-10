@@ -1,6 +1,7 @@
 package com.mss301.chatbotservice.controller;
 
 import com.mss301.chatbotservice.model.dtos.request.ChatRequest;
+import com.mss301.chatbotservice.model.dtos.request.ChatSessionRequest;
 import com.mss301.chatbotservice.model.dtos.response.ApiResponse;
 import com.mss301.chatbotservice.model.dtos.response.ChatResponse;
 import com.mss301.chatbotservice.service.ChatSessionService;
@@ -19,8 +20,8 @@ public class ChatSessionController {
     private ChatSessionService chatSessionService;
 
     @PostMapping("/sessions")
-    public ResponseEntity<ApiResponse<Long>> createSession(@RequestParam Long userId, @RequestParam Long expertProfileId) {
-        Long sessionId = chatSessionService.createSession(userId, expertProfileId);
+    public ResponseEntity<ApiResponse<Long>> createSession(@RequestBody ChatSessionRequest chatSessionRequest) {
+        Long sessionId = chatSessionService.createSession(chatSessionRequest);
         return ResponseEntity.ok(ApiResponse.<Long>builder()
                 .code(200)
                 .message("Session created successfully")
@@ -28,9 +29,9 @@ public class ChatSessionController {
                 .build());
     }
 
-    @PostMapping("/send")
-    public ResponseEntity<ApiResponse<ChatResponse>> sendMessage(@RequestBody ChatRequest request) {
-        ChatResponse response = chatSessionService.sendMessage(request);
+    @PostMapping("/send/{sessionId}")
+    public ResponseEntity<ApiResponse<ChatResponse>> sendMessage(@PathVariable("sessionId") Long sessionId, @RequestBody ChatRequest request) {
+        ChatResponse response = chatSessionService.sendMessage(request, sessionId);
         return ResponseEntity.ok(ApiResponse.<ChatResponse>builder()
                 .code(200)
                 .message("Message sent successfully")

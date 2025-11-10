@@ -29,7 +29,8 @@ public class ChatSession {
     @JoinColumn(name = "expert_profile_id", referencedColumnName = "expert_profiles_id")
     private ExpertProfile expertProfileId;
 
-    @OneToMany(mappedBy = "chat_messages")
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "chat_sessions_id", referencedColumnName = "chat_sessions_id")
     private List<ChatMessage> chatMessages;
 
     @Column(name = "title")

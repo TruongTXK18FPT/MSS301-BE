@@ -7,6 +7,7 @@ import com.mss301.chatbotservice.model.ChatMessage;
 import com.mss301.chatbotservice.model.ChatSession;
 import com.mss301.chatbotservice.model.ExpertProfile;
 import com.mss301.chatbotservice.model.dtos.request.ChatRequest;
+import com.mss301.chatbotservice.model.dtos.request.ChatSessionRequest;
 import com.mss301.chatbotservice.model.dtos.request.RagRequest;
 import com.mss301.chatbotservice.model.dtos.response.ChatResponse;
 import com.mss301.chatbotservice.model.dtos.response.ChatSessionReponse;
@@ -41,12 +42,12 @@ public class ChatSessionServiceImp implements ChatSessionService {
 
     @Override
     @Transactional
-    public Long createSession(Long userId, Long expertProfileId) {
-        ExpertProfile expertProfile = expertProfileRepository.findById(expertProfileId)
+    public Long createSession(ChatSessionRequest chatSessionRequest) {
+        ExpertProfile expertProfile = expertProfileRepository.findById(chatSessionRequest.getExpertProfileId())
                 .orElseThrow(() -> new RuntimeException("Expert profile not found"));
 
         ChatSession session = new ChatSession();
-        session.setUserId(userId);
+        session.setUserId(chatSessionRequest.getUserId());
         session.setExpertProfileId(expertProfile);
         session.setTitle("New Chat Session");
         session.setStatus(true);
@@ -57,8 +58,8 @@ public class ChatSessionServiceImp implements ChatSessionService {
 
     @Override
     @Transactional
-    public ChatResponse sendMessage(ChatRequest request) {
-        ChatSession session = chatSessionRepository.findById(request.getSessionId())
+    public ChatResponse sendMessage(ChatRequest request, Long sessionId) {
+        ChatSession session = chatSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session not found"));
 
         // Lưu tin nhắn của user

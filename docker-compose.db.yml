@@ -44,7 +44,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: auth_db
     ports:
-      - "8081:5432"
+      - "5431:5432"
 
   chatbot_db:
     image: postgres
@@ -62,7 +62,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: chatbot_db
     ports:
-      - "8086:5432"
+      - "5436:5432"
 
   classroom_db:
     image: postgres
@@ -80,7 +80,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: classroom_db
     ports:
-      - "8094:5432"
+      - "5434:5432"
 
   content_db:
     image: postgres
@@ -98,7 +98,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: content_db
     ports:
-      - "8085:5432"
+      - "5435:5432"
 
   mindmap_db:
     image: postgres
@@ -116,7 +116,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: mindmap_db
     ports:
-      - "8084:5432"
+      - "5444:5432"
 
   notification_db:
     image: postgres
@@ -134,7 +134,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: notification_db
     ports:
-      - "8088:5432"
+      - "5438:5432"
 
   premium_db:
     image: postgres
@@ -152,7 +152,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: premium_db
     ports:
-      - "8083:5432"
+      - "5433:5432"
 
   profile_db:
     image: postgres
@@ -170,4 +170,4 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: profile_db
     ports:
-      - "8087:5432"
+      - "5437:5432"

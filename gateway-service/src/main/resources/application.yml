@@ -8,11 +8,11 @@ app:
     prefix: /api/v1
   service-prefix:
     auth: /authenticate
-    payment: /payment
-    premium: /premium
+    payment: /payments
+    premium: /subscriptions
     mindmap: /mindmap
     content: /content
-    chatbot: /chatbot
+    chatbot: /chat
     profile: /profile
     classroom: /classrooms
     media: /media

@@ -8,8 +8,9 @@ spring:
 
 eureka:
   instance:
-    hostname: eureka-server
     preferIpAddress: true
+    nonSecurePortEnabled: true
+    securePortEnabled: false
   client:
     registerWithEureka: false
     fetchRegistry: false

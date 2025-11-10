@@ -22,7 +22,8 @@ eureka:
     registerWithEureka: true
   instance:
     preferIpAddress: true
-    hostname: document-service
+    nonSecurePortEnabled: true
+    securePortEnabled: false
 
 management:
   endpoints:

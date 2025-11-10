@@ -29,7 +29,8 @@ eureka:
     registerWithEureka: true
   instance:
     preferIpAddress: true
-    hostname: content-service
+    nonSecurePortEnabled: true
+    securePortEnabled: false
 
 management:
   endpoints:

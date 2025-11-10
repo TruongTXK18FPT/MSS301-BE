@@ -31,9 +31,22 @@ eureka:
       defaultZone: http://eureka-server:8761/eureka/
     fetchRegistry: true
     registerWithEureka: true
+    # Retry configuration for resilient Eureka connection
+    registry-fetch-interval-seconds: 5
+    eureka-service-url-poll-interval-seconds: 30
+    eureka-server-connect-timeout-seconds: 10
+    eureka-server-read-timeout-seconds: 10
+    # Disable initial registry fetch to avoid blocking on startup
+    should-enforce-registration-at-init: false
   instance:
     preferIpAddress: true
-    hostname: gateway-service
+    # Remove hostname to let Eureka auto-detect container IP
+    # Faster heartbeat for quicker service discovery
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+    # Force non-secure communication
+    nonSecurePortEnabled: true
+    securePortEnabled: false
 
 management:
   endpoints:

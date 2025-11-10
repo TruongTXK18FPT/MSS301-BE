@@ -35,7 +35,8 @@ eureka:
     registerWithEureka: true
   instance:
     preferIpAddress: true
-    hostname: payment-service
+    nonSecurePortEnabled: true
+    securePortEnabled: false
 
 # MoMo Payment Gateway Configuration
 momo:

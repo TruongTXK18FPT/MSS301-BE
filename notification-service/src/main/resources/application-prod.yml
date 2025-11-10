@@ -50,7 +50,8 @@ eureka:
     registerWithEureka: true
   instance:
     preferIpAddress: true
-    hostname: notification-service
+    nonSecurePortEnabled: true
+    securePortEnabled: false
 
 management:
   endpoints:

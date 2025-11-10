@@ -45,11 +45,8 @@ spring:
 
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
-  rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+  # RabbitMQ removed - payment-service uses in-memory events for CQRS pattern
+  # If needed in future, use Kafka for consistency with other services
 
 jwt:
   signerKey: "1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij"

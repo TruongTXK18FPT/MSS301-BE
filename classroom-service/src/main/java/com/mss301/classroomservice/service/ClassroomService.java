@@ -2,6 +2,9 @@ package com.mss301.classroomservice.service;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import com.mss301.classroomservice.dto.request.ClassroomRequest;
 import com.mss301.classroomservice.dto.response.ClassroomResponse;
 import com.mss301.classroomservice.dto.response.StudentResponse;
@@ -18,6 +21,8 @@ public interface ClassroomService {
     List<ClassroomResponse> getMyClassrooms(Long userId); // Get classrooms where user is owner or member
 
     List<ClassroomResponse> getPublicClassrooms();
+
+    Page<ClassroomResponse> getAllClassrooms(Pageable pageable); // Get all classrooms with pagination (admin)
 
     String generateJoinCode(Long id, Long ownerId);
 

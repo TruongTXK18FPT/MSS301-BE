@@ -5,6 +5,8 @@ import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -157,6 +159,12 @@ public class ClassroomServiceImpl implements ClassroomService {
         return classroomRepository.findByIsPublicTrue().stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Page<ClassroomResponse> getAllClassrooms(Pageable pageable) {
+        return classroomRepository.findAll(pageable)
+                .map(this::toResponse);
     }
 
     @Override

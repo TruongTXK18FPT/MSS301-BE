@@ -33,3 +33,6 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    elasticsearch:
+      enabled: false # Disable Elasticsearch health check due to Spring Boot 3.5.5 incompatibility with ES 8.15.0

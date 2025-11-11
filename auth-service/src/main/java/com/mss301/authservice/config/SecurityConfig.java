@@ -39,7 +39,9 @@ public class SecurityConfig {
             "/auth/password-setup-status",
             "/users/register",
             "/users/verify-otp",
-            "/users/resend-otp"
+            "/users/resend-otp",
+            "/actuator/health",
+            "/actuator/health/**"
     };
 
     private final String[] SWAGGER_ENDPOINTS = {

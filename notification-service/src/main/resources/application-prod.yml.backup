@@ -1,13 +1,13 @@
-# Auth Service - Production Configuration
+# Notification Service - Production Configuration
 server:
-  port: 8081
+  port: 8084
 
 spring:
   application:
-    name: auth-service
+    name: notification-service
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/auth_db
+    url: jdbc:postgresql://postgres:5432/notification_db
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:12345}
     driver-class-name: org.postgresql.Driver
@@ -22,14 +22,9 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      properties:
-        spring.json.add.type.headers: false
+    bootstrap-servers: kafka:9092
     consumer:
-      group-id: auth-service-group
+      group-id: notification-service-group
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
@@ -53,29 +48,10 @@ eureka:
       defaultZone: http://eureka-server:8761/eureka/
     fetchRegistry: true
     registerWithEureka: true
-    # Retry configuration for resilient Eureka connection
-    registry-fetch-interval-seconds: 10
-    eureka-service-url-poll-interval-seconds: 30
-    should-enforce-registration-at-init: false
   instance:
     preferIpAddress: true
-    lease-renewal-interval-in-seconds: 10
-    lease-expiration-duration-in-seconds: 30
     nonSecurePortEnabled: true
     securePortEnabled: false
-
-jwt:
-  secret: ${JWT_SECRET:1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij}
-  expiration: 86400000
-
-google:
-  oauth:
-    client-id: ${GOOGLE_OAUTH_CLIENT_ID}
-    client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET}
-    redirect-uri: ${GOOGLE_OAUTH_REDIRECT_URI:https://api.mss301.me/api/v1/authenticate/auth/google/callback}
-
-frontend:
-  base-url: ${FRONTEND_BASE_URL:https://mss301.me}
 
 management:
   endpoints:

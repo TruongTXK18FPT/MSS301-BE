@@ -7,7 +7,7 @@ spring:
     name: auth-service
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/auth_db
+    url: jdbc:postgresql://postgres:5432/auth_db
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:12345}
     driver-class-name: org.postgresql.Driver
@@ -22,7 +22,7 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+    bootstrap-servers: kafka:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer

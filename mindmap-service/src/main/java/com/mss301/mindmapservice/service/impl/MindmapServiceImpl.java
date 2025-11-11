@@ -195,6 +195,28 @@ public class MindmapServiceImpl implements MindmapService {
 
     @Override
     @Transactional(readOnly = true)
+    public MindmapResponse viewMindmap(Long id, Long userId) {
+        log.info("Viewing mindmap: {} by user: {}", id, userId);
+
+        // Find mindmap by ID first
+        Mindmap mindmap = mindmapRepository
+                .findById(id)
+                .orElseThrow(() -> new RuntimeException("Mindmap not found"));
+
+        // Check if user can view: must be owner OR mindmap must be PUBLIC
+        if (!mindmap.getUserId().equals(userId) && mindmap.getVisibility() != Mindmap.Visibility.PUBLIC) {
+            throw new RuntimeException("You don't have permission to view this mindmap");
+        }
+
+        // Increment access count
+        mindmap.incrementAccessCount();
+        mindmapRepository.save(mindmap);
+
+        return mapToResponse(mindmap);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<MindmapNodeResponse> getMindmapNodes(Long mindmapId, Long userId) {
         log.info("Getting nodes for mindmap: {} by user: {}", mindmapId, userId);
 
@@ -202,6 +224,29 @@ public class MindmapServiceImpl implements MindmapService {
         Mindmap mindmap = mindmapRepository
                 .findByIdAndUserId(mindmapId, userId)
                 .orElseThrow(() -> new RuntimeException("Mindmap not found"));
+
+        // Get all nodes for this mindmap
+        List<MindmapNode> nodes = mindmapNodeRepository.findByMindmapIdOrderByLevelAndOrderIndex(mindmapId);
+        
+        return nodes.stream()
+                .map(this::mapNodeToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MindmapNodeResponse> viewMindmapNodes(Long mindmapId, Long userId) {
+        log.info("Viewing nodes for mindmap: {} by user: {}", mindmapId, userId);
+
+        // Find mindmap by ID first
+        Mindmap mindmap = mindmapRepository
+                .findById(mindmapId)
+                .orElseThrow(() -> new RuntimeException("Mindmap not found"));
+
+        // Check if user can view: must be owner OR mindmap must be PUBLIC
+        if (!mindmap.getUserId().equals(userId) && mindmap.getVisibility() != Mindmap.Visibility.PUBLIC) {
+            throw new RuntimeException("You don't have permission to view this mindmap");
+        }
 
         // Get all nodes for this mindmap
         List<MindmapNode> nodes = mindmapNodeRepository.findByMindmapIdOrderByLevelAndOrderIndex(mindmapId);
@@ -250,7 +295,14 @@ public class MindmapServiceImpl implements MindmapService {
         mindmap.setDescription(request.getDescription());
         mindmap.setGrade(request.getGrade());
         mindmap.setSubject(request.getSubject());
-        mindmap.setIsPublic(request.getIsPublic());
+        if (request.getIsPublic() != null) {
+            mindmap.setIsPublic(request.getIsPublic());
+        }
+        if (request.getVisibility() != null) {
+            mindmap.setVisibility(request.getVisibility());
+            // Sync isPublic with visibility for backward compatibility
+            mindmap.setIsPublic(request.getVisibility() == Mindmap.Visibility.PUBLIC);
+        }
         mindmap.setUpdatedAt(LocalDateTime.now());
 
         Mindmap updatedMindmap = mindmapRepository.save(mindmap);
@@ -274,7 +326,14 @@ public class MindmapServiceImpl implements MindmapService {
         if (request.getDescription() != null) mindmap.setDescription(request.getDescription());
         if (request.getGrade() != null) mindmap.setGrade(request.getGrade());
         if (request.getSubject() != null) mindmap.setSubject(request.getSubject());
-        if (request.getIsPublic() != null) mindmap.setIsPublic(request.getIsPublic());
+        if (request.getIsPublic() != null) {
+            mindmap.setIsPublic(request.getIsPublic());
+        }
+        if (request.getVisibility() != null) {
+            mindmap.setVisibility(request.getVisibility());
+            // Sync isPublic with visibility for backward compatibility
+            mindmap.setIsPublic(request.getVisibility() == Mindmap.Visibility.PUBLIC);
+        }
         mindmap.setUpdatedAt(LocalDateTime.now());
         mindmapRepository.save(mindmap);
 
@@ -698,6 +757,7 @@ public class MindmapServiceImpl implements MindmapService {
                 .grade(mindmap.getGrade())
                 .subject(mindmap.getSubject())
                 .isPublic(mindmap.getIsPublic())
+                .visibility(mindmap.getVisibility())
                 .isAiGenerated(mindmap.getIsAiGenerated())
                 .aiProvider(mindmap.getAiProvider())
                 .aiModel(mindmap.getAiModel())

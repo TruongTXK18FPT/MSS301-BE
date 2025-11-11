@@ -14,11 +14,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ClassroomContentRequest {
-    @NotNull
-    private Long contentId;
+    private Long contentId; // Nullable for lessons (embedded content)
 
     @NotNull
     private String type; // LESSON/ASSIGNMENT/QUIZ/RESOURCE
+
+    // Fields for embedded content (lessons)
+    private String title;
+    private String description;
+    private String content; // Lesson content stored directly
 
     private Boolean visible = true;
     private Integer orderIndex;

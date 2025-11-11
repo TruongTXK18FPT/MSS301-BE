@@ -3,6 +3,8 @@ package com.mss301.mindmapservice.dto.response;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.mss301.mindmapservice.entity.Mindmap.Visibility;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,6 +23,7 @@ public class MindmapResponse {
     private String grade;
     private String subject;
     private Boolean isPublic;
+    private Visibility visibility;
     private Boolean isAiGenerated;
     private String aiProvider;
     private String aiModel;

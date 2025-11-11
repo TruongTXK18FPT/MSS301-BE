@@ -832,9 +832,9 @@ public class AiServiceImpl implements AiService {
         
         prompt.append("1️⃣ ENTITY DATA ĐẦY ĐỦ:\n");
         prompt.append("   ✓ MỖI node PHẢI có đầy đủ entity data theo đúng nodeType\n");
-        prompt.append("   ✓ CONCEPT: definition min 50 từ, explanation min 100 từ, ít nhất 2 examples\n");
-        prompt.append("   ✓ FORMULA: description min 80 từ, usageExample phải có số liệu và tính toán\n");
-        prompt.append("   ✓ EXERCISE: solution min 100 từ giải chi tiết từng bước\n");
+        prompt.append("   ✓ CONCEPT: definition 30-50 từ, explanation 50-80 từ, ít nhất 2 examples ngắn gọn\n");
+        prompt.append("   ✓ FORMULA: description 40-60 từ, usageExample phải có số liệu và tính toán\n");
+        prompt.append("   ✓ EXERCISE: solution 60-100 từ giải chi tiết từng bước\n");
         prompt.append("   ❌ KHÔNG được để trống, dùng \"...\", hoặc viết \"Nội dung sẽ được bổ sung\"\n\n");
         
         prompt.append("2️⃣ ĐA DẠNG NODE TYPE:\n");
@@ -844,13 +844,13 @@ public class AiServiceImpl implements AiService {
         
         prompt.append("3️⃣ SỐ LƯỢNG VÀ ĐỘ SÂU:\n");
         prompt.append("   ✓ Tối thiểu 10-15 nodes (4-5 branches × 2-3 sub-branches mỗi branch)\n");
-        prompt.append("   ✓ Content mỗi node: 100-300 từ với emoji và ký hiệu toán học\n");
+        prompt.append("   ✓ Content mỗi node: 50-150 từ ngắn gọn với emoji và ký hiệu toán học\n");
         prompt.append("   ✓ Mỗi khái niệm quan trọng phải có công thức và bài tập đi kèm\n\n");
         
         prompt.append("4️⃣ CHẤT LƯỢNG NỘI DUNG:\n");
-        prompt.append("   ✓ Definition/Explanation: Khoa học, chính xác, dễ hiểu\n");
+        prompt.append("   ✓ Definition/Explanation: Súc tích, khoa học, chính xác\n");
         prompt.append("   ✓ Examples: Cụ thể với số liệu, không chung chung\n");
-        prompt.append("   ✓ Formula: Có cả text và LaTeX, giải thích đầy đủ biến số\n");
+        prompt.append("   ✓ Formula: Có cả text và LaTeX, giải thích ngắn gọn biến số\n");
         prompt.append("   ✓ Exercise: Câu hỏi rõ ràng, lời giải từng bước, có kiểm tra\n");
         prompt.append("   ✓ Sử dụng emoji phù hợp: 📐 🔢 ✏️ 🎯 💡 ⚠️ ✓\n\n");
         
@@ -874,10 +874,10 @@ public class AiServiceImpl implements AiService {
         prompt.append("    hệ thống SẼ TỰ ĐỘNG TẠO DEFAULT DATA và đánh dấu là LOW QUALITY.\n");
         prompt.append("    Điều này làm giảm giá trị của mindmap!\n\n");
         
-        prompt.append("✅  Hãy đảm bảo TỪNG NODE đều có entity data ĐẦY ĐỦ, CHI TIẾT:\n");
-        prompt.append("    - Concept: name + definition (50-100 từ) + explanation (100-200 từ) + examples (2-3) + keyPoints + commonMistakes + tips\n");
-        prompt.append("    - Formula: name + formulaText + formulaLatex + variables + description (80-150 từ) + usageExample (với số liệu)\n");
-        prompt.append("    - Exercise: question + answer + solution (100-200 từ chi tiết) + difficulty + cognitiveLevel + hints + estimatedTime\n\n");
+        prompt.append("✅  Hãy đảm bảo TỪNG NODE đều có entity data ĐẦY ĐỦ, SÚCÍCH:\n");
+        prompt.append("    - Concept: name + definition (30-50 từ) + explanation (50-80 từ) + examples (2-3 ngắn) + keyPoints + commonMistakes + tips\n");
+        prompt.append("    - Formula: name + formulaText + formulaLatex + variables + description (40-60 từ) + usageExample (với số liệu)\n");
+        prompt.append("    - Exercise: question + answer + solution (60-100 từ chi tiết) + difficulty + cognitiveLevel + hints + estimatedTime\n\n");
         
         prompt.append("🔥 QUAN TRỌNG NHẤT:\n");
         prompt.append("    CHỈ TRẢ VỀ JSON THUẦN TÚY, KHÔNG CÓ TEXT GIẢI THÍCH THÊM, KHÔNG CÓ MARKDOWN CODE BLOCK ```json.\n");
@@ -963,7 +963,7 @@ public class AiServiceImpl implements AiService {
                         .role("user")
                         .build()))
                 .generationConfig(GeminiRequest.GeminiGenerationConfig.builder()
-                        .maxOutputTokens(30000)  // Increased to 30k for comprehensive mindmap content
+                        .maxOutputTokens(16000)  // Reduced to 16k to prevent truncation while keeping quality
                         .temperature(0.7)
                         .topP(0.95)
                         .topK(40.0)

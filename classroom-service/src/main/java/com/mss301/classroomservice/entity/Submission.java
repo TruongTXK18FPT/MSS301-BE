@@ -42,6 +42,16 @@ public class Submission {
     @Column(nullable = false)
     private SubmissionType type;
 
+    @Column(length = 50)
+    @Builder.Default
+    private String status = "SUBMITTED"; // SUBMITTED, GRADED, LATE
+
+    @Column(columnDefinition = "TEXT")
+    private String content; // Text answer or file IDs
+
+    @Column
+    private String fileIds; // Comma-separated file IDs
+
     @Column
     private LocalDateTime submittedAt;
 }

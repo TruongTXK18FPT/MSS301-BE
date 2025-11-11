@@ -10,12 +10,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import com.mss301.classroomservice.dto.ApiResponse;
 import com.mss301.classroomservice.dto.request.ClassroomRequest;
 import com.mss301.classroomservice.dto.request.JoinClassroomRequest;
 import com.mss301.classroomservice.dto.response.ClassroomResponse;
+import com.mss301.classroomservice.dto.response.ClassroomSummaryResponse;
 import com.mss301.classroomservice.dto.response.StudentResponse;
 import com.mss301.classroomservice.service.ClassroomService;
 
@@ -55,7 +57,21 @@ public class ClassroomController {
     @Operation(summary = "Update classroom")
     public ResponseEntity<ApiResponse<ClassroomResponse>> update(
             @PathVariable Long id, @Valid @RequestBody ClassroomRequest request, Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
+        // Check if user is admin - if so, bypass ownership check
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(auth -> auth.equals("ROLE_ADMIN") || auth.equals("ADMIN"));
+        
+        Long userId = null;
+        if (!isAdmin) {
+            // Only parse userId if not admin - admin can update any classroom
+            try {
+                userId = Long.parseLong(authentication.getName());
+            } catch (NumberFormatException e) {
+                System.out.println("Principal is not numeric: " + authentication.getName());
+            }
+        }
+
         ClassroomResponse response = classroomService.update(id, request, userId);
         return ResponseEntity.ok(ApiResponse.success("Classroom updated successfully", response));
     }
@@ -63,7 +79,20 @@ public class ClassroomController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete classroom")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id, Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
+        // Check if user is admin - if so, bypass ownership check
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(auth -> auth.equals("ROLE_ADMIN") || auth.equals("ADMIN"));
+        
+        Long userId = null;
+        if (!isAdmin) {
+            // Only parse userId if not admin - admin can delete any classroom
+            try {
+                userId = Long.parseLong(authentication.getName());
+            } catch (NumberFormatException e) {
+                System.out.println("Principal is not numeric: " + authentication.getName());
+            }
+        }
         classroomService.delete(id, userId);
         return ResponseEntity.ok(ApiResponse.success("Classroom deleted successfully", null));
     }
@@ -141,5 +170,14 @@ public class ClassroomController {
         Long teacherId = Long.parseLong(authentication.getName());
         classroomService.removeStudentFromClassroom(id, studentId, teacherId);
         return ResponseEntity.ok(ApiResponse.success("Student removed successfully", null));
+    }
+
+    @GetMapping("/{id}/summary")
+    @Operation(summary = "Get classroom summary with stats, students, content, and deadlines")
+    public ResponseEntity<ApiResponse<ClassroomSummaryResponse>> getClassroomSummary(
+            @PathVariable Long id, Authentication authentication) {
+        Long userId = Long.parseLong(authentication.getName());
+        ClassroomSummaryResponse summary = classroomService.getClassroomSummary(id, userId);
+        return ResponseEntity.ok(ApiResponse.success("Classroom summary retrieved successfully", summary));
     }
 }

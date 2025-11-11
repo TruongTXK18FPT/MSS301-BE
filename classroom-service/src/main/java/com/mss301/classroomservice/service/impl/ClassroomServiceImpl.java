@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.mss301.classroomservice.dto.request.ClassroomRequest;
 import com.mss301.classroomservice.dto.response.ClassroomResponse;
+import com.mss301.classroomservice.dto.response.ClassroomSummaryResponse;
 import com.mss301.classroomservice.dto.response.StudentResponse;
 import com.mss301.classroomservice.entity.Classroom;
 import com.mss301.classroomservice.entity.ClassroomMember;
@@ -20,7 +21,9 @@ import com.mss301.classroomservice.repository.AssignmentRepository;
 import com.mss301.classroomservice.repository.ClassroomContentRepository;
 import com.mss301.classroomservice.repository.ClassroomMemberRepository;
 import com.mss301.classroomservice.repository.ClassroomRepository;
+import com.mss301.classroomservice.repository.GradeRepository;
 import com.mss301.classroomservice.repository.QuizRepository;
+import com.mss301.classroomservice.repository.SubmissionRepository;
 import com.mss301.classroomservice.service.ClassroomService;
 
 import lombok.RequiredArgsConstructor;
@@ -34,6 +37,8 @@ public class ClassroomServiceImpl implements ClassroomService {
     private final AssignmentRepository assignmentRepository;
     private final QuizRepository quizRepository;
     private final ClassroomContentRepository classroomContentRepository;
+    private final SubmissionRepository submissionRepository;
+    private final GradeRepository gradeRepository;
 
     @Override
     @Transactional
@@ -52,6 +57,8 @@ public class ClassroomServiceImpl implements ClassroomService {
                 .password(request.getPassword())
                 .joinCode(joinCode)
                 .maxStudents(request.getMaxStudents() != null ? request.getMaxStudents() : 50)
+                .subject(request.getSubject() != null ? request.getSubject() : "Toán học")
+                .grade(request.getGrade())
                 .ownerId(ownerId)
                 .build();
         classroom = classroomRepository.save(classroom);
@@ -93,16 +100,24 @@ public class ClassroomServiceImpl implements ClassroomService {
     public ClassroomResponse update(Long id, ClassroomRequest request, Long ownerId) {
         Classroom classroom = classroomRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Classroom not found"));
-        if (!classroom.getOwnerId().equals(ownerId)) {
+
+        // Skip ownership check if ownerId is null (admin context)
+        // Admin endpoints should validate authorization at controller level
+        if (ownerId != null && !classroom.getOwnerId().equals(ownerId)) {
             throw new RuntimeException("Forbidden");
         }
         classroom.setName(request.getName());
         classroom.setDescription(request.getDescription());
         classroom.setIsPublic(Boolean.TRUE.equals(request.getIsPublic()));
         classroom.setPassword(request.getPassword());
-        classroom.setJoinCode(request.getJoinCode());
+        // Don't update joinCode during updates - only during creation
+        if (request.getJoinCode() != null && !request.getJoinCode().trim().isEmpty()) {
+            classroom.setJoinCode(request.getJoinCode());
+        }
         classroom.setMaxStudents(
                 request.getMaxStudents() != null ? request.getMaxStudents() : classroom.getMaxStudents());
+        classroom.setSubject(request.getSubject() != null ? request.getSubject() : classroom.getSubject());
+        classroom.setGrade(request.getGrade() != null ? request.getGrade() : classroom.getGrade());
         return toResponse(classroomRepository.save(classroom));
     }
 
@@ -111,7 +126,9 @@ public class ClassroomServiceImpl implements ClassroomService {
     public void delete(Long id, Long ownerId) {
         Classroom classroom = classroomRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Classroom not found"));
-        if (!classroom.getOwnerId().equals(ownerId)) {
+
+        // Skip ownership check if ownerId is null (admin context)
+        if (ownerId != null && !classroom.getOwnerId().equals(ownerId)) {
             throw new RuntimeException("Forbidden");
         }
         classroomRepository.delete(classroom);
@@ -302,6 +319,8 @@ public class ClassroomServiceImpl implements ClassroomService {
                 .quizCount(quizCount)
                 .contentCount(contentCount)
                 .ownerId(classroom.getOwnerId())
+                .subject(classroom.getSubject())
+                .grade(classroom.getGrade())
                 .createdAt(classroom.getCreatedAt())
                 .updatedAt(classroom.getUpdatedAt())
                 .build();
@@ -315,6 +334,162 @@ public class ClassroomServiceImpl implements ClassroomService {
                 .fullName("Student " + member.getUserId()) // Placeholder
                 .joinedAt(member.getJoinedAt())
                 .role(member.getRole().name())
+                .build();
+    }
+
+    @Override
+    public ClassroomSummaryResponse getClassroomSummary(Long classroomId, Long userId) {
+        // Verify classroom exists and user has access
+        Classroom classroom = classroomRepository.findById(classroomId)
+                .orElseThrow(() -> new RuntimeException("Classroom not found"));
+        
+        boolean isMember = classroomMemberRepository.findByClassroomIdAndUserId(classroomId, userId).isPresent();
+        boolean isOwner = classroom.getOwnerId().equals(userId);
+        
+        if (!isOwner && !Boolean.TRUE.equals(classroom.getIsPublic()) && !isMember) {
+            throw new RuntimeException("Forbidden: You don't have access to this classroom");
+        }
+
+        // 1. Build Stats
+        List<ClassroomMember> students = classroomMemberRepository.findByClassroomIdAndRole(classroomId, Role.STUDENT);
+        List<com.mss301.classroomservice.entity.ClassroomContent> allContent = 
+            classroomContentRepository.findByClassroomIdOrderByOrderIndexAsc(classroomId);
+        
+        long totalMindmaps = allContent.stream()
+            .filter(c -> c.getType() == com.mss301.classroomservice.entity.ClassroomContent.ContentType.RESOURCE)
+            .count();
+        long totalLessons = allContent.stream()
+            .filter(c -> c.getType() == com.mss301.classroomservice.entity.ClassroomContent.ContentType.LESSON)
+            .count();
+        long totalAssignments = allContent.stream()
+            .filter(c -> c.getType() == com.mss301.classroomservice.entity.ClassroomContent.ContentType.ASSIGNMENT)
+            .count();
+        long totalQuizzes = allContent.stream()
+            .filter(c -> c.getType() == com.mss301.classroomservice.entity.ClassroomContent.ContentType.QUIZ)
+            .count();
+        
+        // Count submissions
+        long totalSubmissions = allContent.stream()
+            .mapToLong(c -> submissionRepository.countByClassroomContentId(c.getId()))
+            .sum();
+        
+        // Count graded submissions
+        long gradedSubmissions = submissionRepository.findAll().stream()
+            .filter(s -> gradeRepository.findBySubmissionId(s.getId()).isPresent())
+            .count();
+        
+        // Calculate average score
+        Double avgScore = students.isEmpty() ? 0.0 : 
+            students.stream()
+                .mapToDouble(s -> {
+                    Double score = gradeRepository.getAverageScoreByStudent(s.getUserId());
+                    return score != null ? score : 0.0;
+                })
+                .average()
+                .orElse(0.0);
+
+        ClassroomSummaryResponse.ClassroomStats stats = ClassroomSummaryResponse.ClassroomStats.builder()
+                .totalStudents(students.size())
+                .totalMindmaps((int) totalMindmaps)
+                .totalLessons((int) totalLessons)
+                .totalAssignments((int) totalAssignments)
+                .totalQuizzes((int) totalQuizzes)
+                .pendingSubmissions((int) (totalSubmissions - gradedSubmissions))
+                .gradedSubmissions((int) gradedSubmissions)
+                .averageScore(avgScore)
+                .build();
+
+        // 2. Build Student Summaries
+        List<ClassroomSummaryResponse.StudentSummary> studentSummaries = students.stream()
+                .map(member -> {
+                    List<com.mss301.classroomservice.entity.Submission> studentSubmissions = 
+                        submissionRepository.findByStudentId(member.getUserId());
+                    
+                    long completedAssignments = studentSubmissions.stream()
+                        .filter(s -> s.getType() == com.mss301.classroomservice.entity.Submission.SubmissionType.ASSIGNMENT)
+                        .count();
+                    
+                    long completedQuizzes = studentSubmissions.stream()
+                        .filter(s -> s.getType() == com.mss301.classroomservice.entity.Submission.SubmissionType.QUIZ)
+                        .count();
+                    
+                    Double studentAvgScore = gradeRepository.getAverageScoreByStudent(member.getUserId());
+                    
+                    return ClassroomSummaryResponse.StudentSummary.builder()
+                            .userId(member.getUserId())
+                            .fullName("Student " + member.getUserId()) // TODO: Fetch from user service
+                            .email("user" + member.getUserId() + "@example.com") // TODO: Fetch from user service
+                            .joinedAt(member.getJoinedAt())
+                            .completedAssignments((int) completedAssignments)
+                            .completedQuizzes((int) completedQuizzes)
+                            .averageScore(studentAvgScore != null ? studentAvgScore : 0.0)
+                            .status("ACTIVE")
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // 3. Build Content Item Summaries
+        List<ClassroomSummaryResponse.ContentItemSummary> contentSummaries = allContent.stream()
+                .map(content -> {
+                    long submissionCount = submissionRepository.countByClassroomContentId(content.getId());
+                    
+                    return ClassroomSummaryResponse.ContentItemSummary.builder()
+                            .id(content.getId())
+                            .type(content.getType().name())
+                            .contentId(content.getContentId())
+                            .title("Content " + content.getContentId()) // TODO: Fetch actual title from content service
+                            .description("")
+                            .visible(content.getVisible())
+                            .publishAt(content.getPublishAt())
+                            .dueAt(content.getDueAt())
+                            .maxPoints(content.getMaxPoints())
+                            .submissionCount((int) submissionCount)
+                            .viewCount(0) // TODO: Implement view tracking
+                            .createdAt(content.getCreatedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // 4. Build Recent Activities (placeholder - would need activity logging)
+        List<ClassroomSummaryResponse.RecentActivity> recentActivities = List.of();
+
+        // 5. Build Upcoming Deadlines
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        List<ClassroomSummaryResponse.UpcomingDeadline> upcomingDeadlines = allContent.stream()
+                .filter(c -> c.getDueAt() != null)
+                .filter(c -> c.getType() == com.mss301.classroomservice.entity.ClassroomContent.ContentType.ASSIGNMENT ||
+                            c.getType() == com.mss301.classroomservice.entity.ClassroomContent.ContentType.QUIZ)
+                .map(content -> {
+                    long submittedCount = submissionRepository.countByClassroomContentId(content.getId());
+                    boolean isOverdue = content.getDueAt().isBefore(now);
+                    
+                    return ClassroomSummaryResponse.UpcomingDeadline.builder()
+                            .contentId(content.getId())
+                            .type(content.getType().name())
+                            .title("Content " + content.getContentId())
+                            .dueAt(content.getDueAt())
+                            .submittedCount((int) submittedCount)
+                            .totalStudents(students.size())
+                            .isOverdue(isOverdue)
+                            .build();
+                })
+                .sorted((a, b) -> a.getDueAt().compareTo(b.getDueAt()))
+                .limit(10)
+                .collect(Collectors.toList());
+
+        // Build final response
+        return ClassroomSummaryResponse.builder()
+                .id(classroom.getId())
+                .name(classroom.getName())
+                .description(classroom.getDescription())
+                .joinCode(classroom.getJoinCode())
+                .subject(classroom.getSubject())
+                .grade(classroom.getGrade())
+                .stats(stats)
+                .students(studentSummaries)
+                .contentItems(contentSummaries)
+                .recentActivities(recentActivities)
+                .upcomingDeadlines(upcomingDeadlines)
                 .build();
     }
 }

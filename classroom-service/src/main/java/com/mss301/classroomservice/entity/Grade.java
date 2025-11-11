@@ -31,13 +31,16 @@ public class Grade {
     @Column(nullable = false)
     private Long submissionId;
 
+    @Column(nullable = false)
+    private Long studentId;
+
     @Column
     private Integer points;
 
     @Column
     private Long graderId;
 
-    @Column
+    @Column(length = 2000)
     private String feedback;
 
     @Column

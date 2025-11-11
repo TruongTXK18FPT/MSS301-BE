@@ -29,9 +29,19 @@ public interface MindmapService {
     MindmapResponse getMindmapById(Long id, Long userId);
 
     /**
+     * View any mindmap (public or owned by user)
+     */
+    MindmapResponse viewMindmap(Long id, Long userId);
+
+    /**
      * Get nodes for a mindmap
      */
     List<MindmapNodeResponse> getMindmapNodes(Long mindmapId, Long userId);
+
+    /**
+     * View nodes for any mindmap (public or owned by user)
+     */
+    List<MindmapNodeResponse> viewMindmapNodes(Long mindmapId, Long userId);
 
     /**
      * Get all mindmaps for a user

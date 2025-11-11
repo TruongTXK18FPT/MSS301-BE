@@ -13,4 +13,7 @@ public interface SubmissionService {
     Submission submitAssignment(Long classroomContentId, Long studentId, AssignmentSubmissionRequest request);
 
     List<Submission> mySubmissions(Long classroomContentId, Long studentId);
+    
+    // Teacher: Get all submissions for a classroom content (assignment or quiz)
+    List<Submission> getAllSubmissions(Long classroomContentId, Long teacherId);
 }

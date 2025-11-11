@@ -5,6 +5,8 @@ import java.util.List;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+import com.mss301.mindmapservice.entity.Mindmap.Visibility;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,6 +33,8 @@ public class MindmapRequest {
 
     @Builder.Default
     private Boolean isPublic = false;
+
+    private Visibility visibility;
 
     // For bulk update of nodes and edges
     private List<MindmapNodeRequest> nodes;

@@ -70,6 +70,18 @@ public class MindmapController {
         return ResponseEntity.ok(ApiResponse.success("Mindmap retrieved successfully", response));
     }
 
+    @GetMapping("/view/{id}")
+    @Operation(summary = "View any mindmap (public or owned)", description = "View a mindmap if it's public or owned by the user")
+    public ResponseEntity<ApiResponse<MindmapResponse>> viewMindmap(
+            @PathVariable Long id, Authentication authentication) {
+
+        Long userId = getUserIdFromAuthentication(authentication);
+        log.info("Viewing mindmap: {} by user: {}", id, userId);
+
+        MindmapResponse response = mindmapService.viewMindmap(id, userId);
+        return ResponseEntity.ok(ApiResponse.success("Mindmap retrieved successfully", response));
+    }
+
     @GetMapping("/{id}/nodes")
     @Operation(summary = "Get mindmap nodes", description = "Get all nodes for a specific mindmap")
     public ResponseEntity<ApiResponse<List<MindmapNodeResponse>>> getMindmapNodes(
@@ -79,6 +91,18 @@ public class MindmapController {
         log.info("Getting nodes for mindmap: {} by user: {}", id, userId);
 
         List<MindmapNodeResponse> nodes = mindmapService.getMindmapNodes(id, userId);
+        return ResponseEntity.ok(ApiResponse.success("Nodes retrieved successfully", nodes));
+    }
+
+    @GetMapping("/view/{id}/nodes")
+    @Operation(summary = "View mindmap nodes (public or owned)", description = "Get all nodes for a mindmap if it's public or owned by the user")
+    public ResponseEntity<ApiResponse<List<MindmapNodeResponse>>> viewMindmapNodes(
+            @PathVariable Long id, Authentication authentication) {
+
+        Long userId = getUserIdFromAuthentication(authentication);
+        log.info("Viewing nodes for mindmap: {} by user: {}", id, userId);
+
+        List<MindmapNodeResponse> nodes = mindmapService.viewMindmapNodes(id, userId);
         return ResponseEntity.ok(ApiResponse.success("Nodes retrieved successfully", nodes));
     }
 

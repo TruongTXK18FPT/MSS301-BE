@@ -12,7 +12,7 @@ spring:
       max-request-size: 50MB
 
   elasticsearch:
-    uris: http://elasticsearch:9200
+    uris: ${ELASTICSEARCH_URIS:http://elasticsearch:9200}
 
 eureka:
   client:

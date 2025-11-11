@@ -1,13 +1,13 @@
-# Profile Service - Production Configuration
+# Mindmap Service - Production Configuration
 server:
-  port: 8083
+  port: 8091
 
 spring:
   application:
-    name: profile-service
+    name: mindmap-service
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/profile_db
+    url: jdbc:postgresql://postgres:5432/mindmap_db
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:12345}
     driver-class-name: org.postgresql.Driver
@@ -20,15 +20,6 @@ spring:
       hibernate:
         format_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
-
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
-    consumer:
-      group-id: profile-service-group
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "*"
 
 eureka:
   client:

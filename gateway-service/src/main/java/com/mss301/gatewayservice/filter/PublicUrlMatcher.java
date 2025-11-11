@@ -11,7 +11,31 @@ public class PublicUrlMatcher {
         private static final AntPathMatcher pathMatcher = new AntPathMatcher();
 
         private static final Set<String> PUBLIC_EXACT_PATHS = Set.of(
-                        // Authentication endpoints (AuthenticationController with /auth prefix)
+                        // Authentication endpoints (with /api/v1 prefix)
+                        "/api/v1/authenticate/auth/login",
+                        "/api/v1/authenticate/auth/introspect",
+                        "/api/v1/authenticate/auth/logout",
+                        "/api/v1/authenticate/auth/refresh",
+                        "/api/v1/authenticate/auth/verify-email",
+                        "/api/v1/authenticate/auth/reset-password",
+                        "/api/v1/authenticate/auth/google/redirect",
+                        "/api/v1/authenticate/auth/google/callback",
+                        "/api/v1/authenticate/auth/password-setup-status",
+                        "/api/v1/authenticate/auth/send-email-verification",
+                        "/api/v1/authenticate/auth/resend-email-verification",
+                        "/api/v1/authenticate/auth/otp-info",
+                        "/api/v1/authenticate/auth/send-password-reset",
+
+                        // User endpoints (with /api/v1 prefix)
+                        "/api/v1/authenticate/users/register",
+                        "/api/v1/authenticate/users/verify-otp",
+                        "/api/v1/authenticate/users/resend",
+                        "/api/v1/authenticate/users/forgot-password/reset",
+                        "/api/v1/authenticate/users/forgot-password/verify",
+                        "/api/v1/authenticate/users/my-profile-status",
+
+                        // Authentication endpoints (AuthenticationController with /auth prefix - legacy
+                        // paths)
                         "/authenticate/auth/login",
                         "/authenticate/auth/introspect",
                         "/authenticate/auth/logout",
@@ -26,7 +50,7 @@ public class PublicUrlMatcher {
                         "/authenticate/auth/otp-info",
                         "/authenticate/auth/send-password-reset",
 
-                        // User endpoints (UserController with /users prefix)
+                        // User endpoints (UserController with /users prefix - legacy paths)
                         "/authenticate/users/register",
                         "/authenticate/users/verify-otp",
                         "/authenticate/users/resend",
@@ -49,8 +73,13 @@ public class PublicUrlMatcher {
                         "/content/contents",
                         "/profile/profiles");
 
-        private static final List<String> PUBLIC_WILDCARD_PATTERNS = List.of("/premium/premiums/*",
-                        "/content/contents/*", "/profile/profiles/*");
+        private static final List<String> PUBLIC_WILDCARD_PATTERNS = List.of(
+                        "/api/v1/premium/premiums/*",
+                        "/api/v1/content/contents/*",
+                        "/api/v1/profile/profiles/*",
+                        "/premium/premiums/*",
+                        "/content/contents/*",
+                        "/profile/profiles/*");
 
         public boolean isPublicUrl(String path) {
                 boolean isExactMatch = PUBLIC_EXACT_PATHS.contains(path);

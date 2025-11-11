@@ -15,51 +15,59 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-    private final JwtDecoder jwtDecoder;
+        private final JwtDecoder jwtDecoder;
 
-    public SecurityConfig(JwtDecoder jwtDecoder) {
-        this.jwtDecoder = jwtDecoder;
-    }
+        public SecurityConfig(JwtDecoder jwtDecoder) {
+                this.jwtDecoder = jwtDecoder;
+        }
 
-    private final String[] PUBLIC_GET_ENDPOINTS = {
-            "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**", "/swagger.json/**", "/actuator/**"
-    };
+        private final String[] PUBLIC_GET_ENDPOINTS = {
+                        "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**", "/swagger.json/**", "/actuator/**"
+        };
 
-    // No public POST endpoints for profile-service since all operations require
-    // authentication
-    private final String[] PUBLIC_POST_ENDPOINTS = {
-            "/actuator/health", "/actuator/health/**"
-    };
+        private final String[] PUBLIC_HEAD_ENDPOINTS = {
+                        "/actuator/**" // Allow HEAD requests for health checks
+        };
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.csrf(AbstractHttpConfigurer::disable)
-                .cors(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(
-                        org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(requests -> requests.requestMatchers(HttpMethod.GET, PUBLIC_GET_ENDPOINTS)
-                        .permitAll()
-                        .requestMatchers(HttpMethod.POST, PUBLIC_POST_ENDPOINTS)
-                        .permitAll()
-                        .anyRequest()
-                        .authenticated());
+        // No public POST endpoints for profile-service since all operations require
+        // authentication
+        private final String[] PUBLIC_POST_ENDPOINTS = {
+                        "/actuator/health", "/actuator/health/**"
+        };
 
-        httpSecurity.oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt.decoder(jwtDecoder).jwtAuthenticationConverter(jwtAuthenticationConverter())));
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
+                httpSecurity.csrf(AbstractHttpConfigurer::disable)
+                                .cors(AbstractHttpConfigurer::disable)
+                                .sessionManagement(session -> session.sessionCreationPolicy(
+                                                org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
+                                .authorizeHttpRequests(requests -> requests
+                                                .requestMatchers(HttpMethod.GET, PUBLIC_GET_ENDPOINTS)
+                                                .permitAll()
+                                                .requestMatchers(HttpMethod.HEAD, PUBLIC_HEAD_ENDPOINTS)
+                                                .permitAll()
+                                                .requestMatchers(HttpMethod.POST, PUBLIC_POST_ENDPOINTS)
+                                                .permitAll()
+                                                .anyRequest()
+                                                .authenticated());
 
-        return httpSecurity.build();
-    }
+                httpSecurity.oauth2ResourceServer(oauth2 -> oauth2
+                                .jwt(jwt -> jwt.decoder(jwtDecoder)
+                                                .jwtAuthenticationConverter(jwtAuthenticationConverter())));
 
-    @Bean
-    public JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        authoritiesConverter.setAuthorityPrefix("ROLE_");
-        authoritiesConverter.setAuthoritiesClaimName("role");
+                return httpSecurity.build();
+        }
 
-        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
-        return converter;
-    }
+        @Bean
+        public JwtAuthenticationConverter jwtAuthenticationConverter() {
+                JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
+                authoritiesConverter.setAuthorityPrefix("ROLE_");
+                authoritiesConverter.setAuthoritiesClaimName("role");
 
-    // CORS is handled by Gateway service, no need for CORS filter here
+                JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+                converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+                return converter;
+        }
+
+        // CORS is handled by Gateway service, no need for CORS filter here
 }

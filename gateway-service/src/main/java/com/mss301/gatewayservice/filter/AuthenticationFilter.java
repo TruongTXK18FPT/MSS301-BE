@@ -42,47 +42,28 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String originalPath = exchange.getRequest().getURI().getPath();
-        String path = originalPath.replace(API_PREFIX, "");
 
-        // Strip query parameters for public URL matching
-        String pathWithoutQuery = path;
-        if (path.contains("?")) {
-            pathWithoutQuery = path.substring(0, path.indexOf("?"));
-        }
-        String originalPathWithoutQuery = originalPath;
+        // Don't strip API_PREFIX - let RewritePath filter handle it
+        // Just remove query parameters for public URL matching
+        String pathWithoutQuery = originalPath;
         if (originalPath.contains("?")) {
-            originalPathWithoutQuery = originalPath.substring(0, originalPath.indexOf("?"));
+            pathWithoutQuery = originalPath.substring(0, originalPath.indexOf("?"));
         }
 
-        log.info("Original path: {}, Stripped path: {}, API_PREFIX: {}", originalPath, path, API_PREFIX);
+        log.info("Original path: {}, API_PREFIX: {}", originalPath, API_PREFIX);
 
-        // Check if path is public (exact match or wildcard) - use path without query
-        // parameters
+        // Check if path is public (exact match or wildcard)
         boolean isPathPublic = publicUrlMatcher.isPublicUrl(pathWithoutQuery);
-        boolean isOriginalPathPublic = publicUrlMatcher.isPublicUrl(originalPathWithoutQuery);
 
-        log.info("isPathPublic: {}, isOriginalPathPublic: {}", isPathPublic, isOriginalPathPublic);
-        log.info("Public URLs check: path='{}', originalPath='{}'", pathWithoutQuery, originalPathWithoutQuery);
+        log.info("Public URLs check: path='{}'", pathWithoutQuery);
+        log.info("isPathPublic: {}", isPathPublic);
 
-        // Debug for otp-info endpoint
-        if (pathWithoutQuery != null && pathWithoutQuery.contains("otp-info")) {
-            log.info("DEBUG AuthenticationFilter - pathWithoutQuery: '{}'", pathWithoutQuery);
-            log.info("DEBUG AuthenticationFilter - isPathPublic: {}", isPathPublic);
-        }
-
-        // Debug: Check if this specific path matches
-        if (path.contains("google/setup-password")) {
-            log.info("DEBUG: Checking google/setup-password path specifically");
-            log.info("DEBUG: path='{}', originalPath='{}'", path, originalPath);
-            log.info("DEBUG: isPathPublic={}, isOriginalPathPublic={}", isPathPublic, isOriginalPathPublic);
-        }
-
-        if (isPathPublic || isOriginalPathPublic) {
-            log.info("Path {} is public, allowing access", isPathPublic ? path : originalPath);
+        if (isPathPublic) {
+            log.info("Path {} is public, allowing access", originalPath);
             return chain.filter(exchange);
         }
 
-        log.info("Path {} is not public, checking authentication", path);
+        log.info("Path {} is not public, checking authentication", originalPath);
 
         List<String> authHeader = exchange.getRequest().getHeaders().get(HttpHeaders.AUTHORIZATION);
         if (CollectionUtils.isEmpty(authHeader)) {

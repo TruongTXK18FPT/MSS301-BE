@@ -41,6 +41,15 @@
         <module>media-service</module>
     </modules>
 
+    <!-- Common dependencies inherited by ALL child modules -->
+    <dependencies>
+        <!-- Spring Boot Actuator for health checks -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+    </dependencies>
+
     <dependencyManagement>
         <dependencies>
             <dependency>

@@ -19,8 +19,7 @@ import java.time.LocalDateTime;
 public class Subscription { 
  
     @Id
-    @Column(name = "subscription_id")
-    @GeneratedValue(strategy = GenerationType.IDENTITY) 
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long subscriptionId;
 
     @Column(name = "user_id", nullable = false, length = 100)

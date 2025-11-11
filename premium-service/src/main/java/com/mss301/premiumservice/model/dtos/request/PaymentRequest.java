@@ -1,4 +1,4 @@
-package com.mss301.paymentservice.model.dtos.request;
+package com.mss301.premiumservice.model.dtos.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,12 +13,11 @@ public class PaymentRequest {
 
     private Long userId;
 
-    // subscription là đơn hàng
+    // Mã đơn hàng bên hệ thống của bạn
     private Long subscriptionId;
 
-    // plan là sản phẩm, ng dùng mua plan
     private Long planId;
-    private long amount;
+    private Long amount;
 
     // thông tin đơn hàng
     private String orderInfo;

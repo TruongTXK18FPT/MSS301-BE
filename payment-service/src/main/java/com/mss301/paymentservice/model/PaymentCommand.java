@@ -28,6 +28,9 @@ public class PaymentCommand {
     @Column(name = "user_id")
     private Long userId;
 
+    @Column(name = "plan_id", nullable = false) // ✅ Thêm planId
+    private Long planId;
+
     @Column(name = "amount")
     private Long amount;
 

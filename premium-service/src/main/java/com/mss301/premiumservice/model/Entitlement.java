@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.mss301.premiumservice.constant.Unit;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.format.annotation.DurationFormat;
@@ -13,6 +14,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "entitlements")
 // quyền lợi
@@ -38,12 +40,7 @@ public class Entitlement {
     @Column(name = "unit", nullable = false)
     private Unit unit;
 
-    @ManyToMany
+    @ManyToMany(mappedBy = "entitlements")
     @JsonIgnore
-    @JoinTable(
-            name = "plan_entitlements",
-            joinColumns = @JoinColumn(name = "entitlement_id"),
-            inverseJoinColumns = @JoinColumn(name = "plan_id")
-    )
     private List<Plan> plans;
 }

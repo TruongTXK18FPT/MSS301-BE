@@ -20,7 +20,7 @@ public class SubscriptionResponse {
 
     private UserResponse user;
 
-    private Long planId;
+    private Plan plan;
 
     private LocalDateTime startDate;
 

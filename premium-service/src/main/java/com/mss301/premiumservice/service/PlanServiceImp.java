@@ -8,6 +8,7 @@ import com.mss301.premiumservice.model.dtos.response.PlanResponse;
 import com.mss301.premiumservice.repository.PlanRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class PlanServiceImp implements PlanService {
 
     @Autowired
@@ -41,34 +43,24 @@ public class PlanServiceImp implements PlanService {
     }
 
     @Override
+    @Transactional
     public PlanResponse save(PlanRequest plan) {
         List<Entitlement> entitlements = getAllEntitlementFromIds(plan.getEntitlementsId());
 
-        Plan newPlan = new Plan(
-                0L,
-                plan.getCode(),
-                plan.getName(),
-                plan.getDescription(),
-                plan.getBillingCycle(),
-                plan.getPriceCents(),
-                plan.getCurrency(),
-                PlanStatus.ACTIVE,
-                LocalDateTime.now(),
-                LocalDateTime.now(),
-                entitlements
-        );
+        Plan newPlan = Plan.builder()
+                .code(plan.getCode())
+                .name(plan.getName())
+                .description(plan.getDescription())
+                .billingCycle(plan.getBillingCycle())
+                .priceCents(plan.getPriceCents())
+                .currency(plan.getCurrency())
+                .status(PlanStatus.ACTIVE)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .entitlements(entitlements)
+                .build();
 
         Plan savedPlan = planRepository.save(newPlan);
-
-        // Synchronize quan hệ 2 chiều
-        for (Entitlement entitlement : entitlements) {
-            if (entitlement.getPlans() == null) {
-                entitlement.setPlans(new ArrayList<>());
-            }
-            if (!entitlement.getPlans().contains(savedPlan)) {
-                entitlement.getPlans().add(savedPlan);
-            }
-        }
 
         return convertToResponse(savedPlan);
     }
@@ -116,33 +108,29 @@ public class PlanServiceImp implements PlanService {
     }
 
     @Override
+    @Transactional
     public PlanResponse delete(Long planId) {
-        Plan planById = planRepository.findById(planId).orElse(null);
-        if (planById != null) {
-//            PlanResponse response = convertToResponse(planById);
-//
-//            // Remove plan khỏi tất cả entitlements
-//            if (planById.getEntitlements() != null) {
-//                for (Entitlement entitlement : planById.getEntitlements()) {
-//                    if (entitlement.getPlans() != null) {
-//                        entitlement.getPlans().remove(planById);
-//                    }
-//                }
-//            }
-//
-//            // Clear entitlements trước khi delete
-//            planById.getEntitlements().clear();
-//            planRepository.save(planById); // Save để cleanup join table
-//            planRepository.delete(planById);
-
-            planById.setStatus(PlanStatus.INACTIVE);
-            planById.setUpdatedAt(LocalDateTime.now());
-
-            Plan savedPlan = planRepository.save(planById);
-
-            return convertToResponse(savedPlan);
+        Plan plan = planRepository.findById(planId).orElse(null);
+        if (plan == null) {
+            return null;
         }
-        return null;
+
+        PlanResponse response = convertToResponse(plan);
+
+        // Remove plan khỏi tất cả entitlements trước
+        if (plan.getEntitlements() != null) {
+            for (Entitlement entitlement : plan.getEntitlements()) {
+                if (entitlement.getPlans() != null) {
+                    entitlement.getPlans().remove(plan);
+                }
+            }
+            plan.getEntitlements().clear();
+        }
+
+        // JPA tự động xóa record trong join table
+        planRepository.delete(plan);
+
+        return response;
     }
 
     @Override

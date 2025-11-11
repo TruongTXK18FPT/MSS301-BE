@@ -44,10 +44,20 @@ public class UsageMeter {
     @Column(name = "used")
     private long used;
 
-    @Column(name = "limit")
+    @Column(name = "limit_usage")
     private long limit;
 
     @Column(name = "updated_at")
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-} 
+
+    public UsageMeter(Long userId, Entitlement entitlement, LocalDateTime periodStart, LocalDateTime periodEnd, long used, long limit, LocalDateTime updatedAt) {
+        this.userId = userId;
+        this.entitlement = entitlement;
+        this.periodStart = periodStart;
+        this.periodEnd = periodEnd;
+        this.used = used;
+        this.limit = limit;
+        this.updatedAt = updatedAt;
+    }
+}

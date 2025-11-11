@@ -8,6 +8,5 @@ import java.util.List;
  
 @Repository 
 public interface EntitlementRepository extends JpaRepository<Entitlement, Long> { 
-   Entitlement findByEntitlementId(Long entitlementId);
    List<Entitlement> findAll();
 } 

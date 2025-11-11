@@ -1,25 +1,20 @@
-package com.mss301.premiumservice.service; 
- 
+package com.mss301.premiumservice.service;
+
 import com.mss301.premiumservice.model.Subscription;
 import com.mss301.premiumservice.model.UsageMeter;
 import com.mss301.premiumservice.model.dtos.request.SubscriptionRequest;
 import com.mss301.premiumservice.model.dtos.request.UsageMeterRequest;
 import com.mss301.premiumservice.model.dtos.response.SubscriptionResponse;
+import com.mss301.premiumservice.model.dtos.response.SubscriptionWithPaymentResponse;
 import com.mss301.premiumservice.model.dtos.response.UsageMeterResponse;
 
-import java.util.List; 
- 
-public interface SubscriptionService { 
-   List<SubscriptionResponse> findAllSubscription();
+import java.util.List;
 
-   SubscriptionResponse findBySubscriptionId(Long subscriptionId);
-   UsageMeterResponse findByUsageMeterId(Long usageMeterId);
+public interface SubscriptionService {
+    SubscriptionWithPaymentResponse createSubscriptionWithPayment(
+            SubscriptionRequest request);
 
-   SubscriptionResponse subscription(SubscriptionRequest subscription);
+    List<SubscriptionResponse> findSubscriptionByUserId(Long userId);
 
-   SubscriptionResponse update(Long subscriptionId, SubscriptionRequest subscription);
-   SubscriptionResponse delete(Long subscriptionId);
-
-   List<SubscriptionResponse> findSubscriptionByUserId(Long userId);
-
+    SubscriptionResponse findBySubscriptionId(Long id);
 }

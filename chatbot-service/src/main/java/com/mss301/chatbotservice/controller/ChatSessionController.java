@@ -20,7 +20,9 @@ public class ChatSessionController {
     private ChatSessionService chatSessionService;
 
     @PostMapping("/sessions")
-    public ResponseEntity<ApiResponse<Long>> createSession(@RequestBody ChatSessionRequest chatSessionRequest) {
+    public ResponseEntity<ApiResponse<Long>> createSession(
+            @RequestHeader("Authorization") String token,
+            @RequestBody ChatSessionRequest chatSessionRequest) {
         Long sessionId = chatSessionService.createSession(chatSessionRequest);
         return ResponseEntity.ok(ApiResponse.<Long>builder()
                 .code(200)
@@ -29,8 +31,10 @@ public class ChatSessionController {
                 .build());
     }
 
-    @PostMapping("/send/{sessionId}")
-    public ResponseEntity<ApiResponse<ChatResponse>> sendMessage(@PathVariable("sessionId") Long sessionId, @RequestBody ChatRequest request) {
+    @PostMapping("/sessions/{sessionId}")
+    public ResponseEntity<ApiResponse<ChatResponse>> sendMessage(
+            @RequestHeader("Authorization") String token,
+            @PathVariable("sessionId") Long sessionId, @RequestBody ChatRequest request) {
         ChatResponse response = chatSessionService.sendMessage(request, sessionId);
         return ResponseEntity.ok(ApiResponse.<ChatResponse>builder()
                 .code(200)
@@ -39,8 +43,10 @@ public class ChatSessionController {
                 .build());
     }
 
-    @GetMapping("/sessions/{sessionId}/messages")
-    public ResponseEntity<ApiResponse<List<ChatResponse>>> getSessionMessages(@PathVariable Long sessionId) {
+    @GetMapping("/sessions/{sessionId}")
+    public ResponseEntity<ApiResponse<List<ChatResponse>>> getSessionMessages(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long sessionId) {
         List<ChatResponse> messages = chatSessionService.getSessionMessages(sessionId);
         return ResponseEntity.ok(ApiResponse.<List<ChatResponse>>builder()
                 .code(200)
@@ -50,7 +56,9 @@ public class ChatSessionController {
     }
 
     @DeleteMapping("/sessions/{sessionId}")
-    public ResponseEntity<ApiResponse<Void>> deleteSession(@PathVariable Long sessionId) {
+    public ResponseEntity<ApiResponse<Void>> deleteSession(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long sessionId) {
         chatSessionService.deleteSession(sessionId);
         return ResponseEntity.ok(ApiResponse.<Void>builder()
                 .code(200)

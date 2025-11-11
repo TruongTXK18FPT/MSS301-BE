@@ -47,8 +47,8 @@ public class PaymentQueryServiceImp implements PaymentQueryService {
 
         return PaymentResponse.builder()
                 .paymentId(payment.getPaymentId())
-                .subscription(payment.getSubscription())
-                .user(payment.getUser())
+                .subscriptionId(payment.getSubscription().getSubscriptionId())
+                .userId(Long.parseLong(payment.getUser().getId()))
                 .amount(payment.getAmount())
                 .orderInfo(payment.getOrderInfo())
                 .paymentUrl(payment.getPaymentUrl())

@@ -61,93 +61,153 @@ spring:
             - id: auth-service
               uri: lb://auth-service
               predicates:
-                - Path: "${app.api.prefix}${app.service-prefix.auth}/**"
+                - name: Path
+                  args:
+                    pattern: "${app.api.prefix}${app.service-prefix.auth}/**"
               filters:
-                - RewritePath: "${app.api.prefix}${app.service-prefix.auth}/(?<segment>.*), /${segment}"
+                - name: RewritePath
+                  args:
+                    regexp: "${app.api.prefix}${app.service-prefix.auth}/(?<segment>.*)"
+                    replacement: "/${segment}"
 
             - id: payment-service
               uri: lb://payment-service
               predicates:
-                - Path: "${app.api.prefix}${app.service-prefix.payment}/**"
+                - name: Path
+                  args:
+                    pattern: "${app.api.prefix}${app.service-prefix.payment}/**"
               filters:
-                - RewritePath: "${app.api.prefix}${app.service-prefix.payment}/(?<segment>.*), /${segment}"
+                - name: RewritePath
+                  args:
+                    regexp: "${app.api.prefix}${app.service-prefix.payment}/(?<segment>.*)"
+                    replacement: "/${segment}"
 
             - id: premium-service
               uri: lb://premium-service
               predicates:
-                - Path: "${app.api.prefix}${app.service-prefix.premium}/**"
+                - name: Path
+                  args:
+                    pattern: "${app.api.prefix}${app.service-prefix.premium}/**"
               filters:
-                - RewritePath: "${app.api.prefix}${app.service-prefix.premium}/(?<segment>.*), /${segment}"
+                - name: RewritePath
+                  args:
+                    regexp: "${app.api.prefix}${app.service-prefix.premium}/(?<segment>.*)"
+                    replacement: "/${segment}"
 
             - id: mindmap-service
               uri: lb://mindmap-service
               predicates:
-                - Path: "${app.api.prefix}${app.service-prefix.mindmap}/**"
+                - name: Path
+                  args:
+                    pattern: "${app.api.prefix}${app.service-prefix.mindmap}/**"
               filters:
-                - StripPrefix: 2
+                - name: StripPrefix
+                  args:
+                    parts: 2
 
             - id: content-service
               uri: lb://content-service
               predicates:
-                - Path: "${app.api.prefix}${app.service-prefix.content}/**,${app.api.prefix}/submissions/**,${app.api.prefix}/quiz-attempts/**"
+                - name: Path
+                  args:
+                    patterns: "${app.api.prefix}${app.service-prefix.content}/**,${app.api.prefix}/submissions/**,${app.api.prefix}/quiz-attempts/**"
               filters:
-                - StripPrefix: 3
+                - name: StripPrefix
+                  args:
+                    parts: 3
 
             - id: chatbot-service
               uri: lb://chatbot-service
               predicates:
-                - Path: "${app.api.prefix}${app.service-prefix.chatbot}/**"
+                - name: Path
+                  args:
+                    pattern: "${app.api.prefix}${app.service-prefix.chatbot}/**"
               filters:
-                - RewritePath: "${app.api.prefix}${app.service-prefix.chatbot}/(?<segment>.*), /${segment}"
+                - name: RewritePath
+                  args:
+                    regexp: "${app.api.prefix}${app.service-prefix.chatbot}/(?<segment>.*)"
+                    replacement: "/${segment}"
 
             - id: profile-service
               uri: lb://profile-service
               predicates:
-                - Path: "${app.api.prefix}${app.service-prefix.profile}/**"
+                - name: Path
+                  args:
+                    pattern: "${app.api.prefix}${app.service-prefix.profile}/**"
               filters:
-                - RewritePath: "${app.api.prefix}${app.service-prefix.profile}/(?<segment>.*), /${segment}"
+                - name: RewritePath
+                  args:
+                    regexp: "${app.api.prefix}${app.service-prefix.profile}/(?<segment>.*)"
+                    replacement: "/${segment}"
 
             - id: classroom-service
               uri: lb://classroom-service
               predicates:
-                - Path: "${app.api.prefix}${app.service-prefix.classroom}/**"
+                - name: Path
+                  args:
+                    pattern: "${app.api.prefix}${app.service-prefix.classroom}/**"
               filters:
-                - StripPrefix: 2
+                - name: StripPrefix
+                  args:
+                    parts: 2
 
             - id: media-service
               uri: lb://media-service
               predicates:
-                - Path: "${app.api.prefix}${app.service-prefix.media}/**"
+                - name: Path
+                  args:
+                    pattern: "${app.api.prefix}${app.service-prefix.media}/**"
               filters:
-                - StripPrefix: 0
+                - name: StripPrefix
+                  args:
+                    parts: 0
 
             - id: document-service
               uri: lb://document-service
               predicates:
-                - Path: "${app.api.prefix}${app.service-prefix.document}/**"
+                - name: Path
+                  args:
+                    pattern: "${app.api.prefix}${app.service-prefix.document}/**"
               filters:
-                - RewritePath: "${app.api.prefix}${app.service-prefix.document}/(?<segment>.*), /${segment}"
+                - name: RewritePath
+                  args:
+                    regexp: "${app.api.prefix}${app.service-prefix.document}/(?<segment>.*)"
+                    replacement: "/${segment}"
 
             - id: retrieval-service
               uri: lb://retrieval-service
               predicates:
-                - Path: "${app.api.prefix}${app.service-prefix.retrieval}/**"
+                - name: Path
+                  args:
+                    pattern: "${app.api.prefix}${app.service-prefix.retrieval}/**"
               filters:
-                - RewritePath: "${app.api.prefix}${app.service-prefix.retrieval}/(?<segment>.*), /${segment}"
+                - name: RewritePath
+                  args:
+                    regexp: "${app.api.prefix}${app.service-prefix.retrieval}/(?<segment>.*)"
+                    replacement: "/${segment}"
 
             - id: rag-service
               uri: lb://rag-service
               predicates:
-                - Path: "${app.api.prefix}${app.service-prefix.rag}/**"
+                - name: Path
+                  args:
+                    pattern: "${app.api.prefix}${app.service-prefix.rag}/**"
               filters:
-                - RewritePath: "${app.api.prefix}${app.service-prefix.rag}/(?<segment>.*), /${segment}"
+                - name: RewritePath
+                  args:
+                    regexp: "${app.api.prefix}${app.service-prefix.rag}/(?<segment>.*)"
+                    replacement: "/${segment}"
 
             - id: notification-service
               uri: lb://notification-service
               predicates:
-                - Path: "${app.api.prefix}/notification/**"
+                - name: Path
+                  args:
+                    pattern: "${app.api.prefix}/notification/**"
               filters:
-                - StripPrefix: 2
+                - name: StripPrefix
+                  args:
+                    parts: 2
 
 eureka:
   client:

@@ -1,6 +1,6 @@
 # Media Service - Production Configuration
 server:
-  port: 8093
+  port: 8080
 
 spring:
   application:

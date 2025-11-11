@@ -1,6 +1,6 @@
 # Notification Service - Production Configuration
 server:
-  port: 8084
+  port: 8080
 
 spring:
   application:

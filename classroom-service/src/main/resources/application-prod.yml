@@ -1,6 +1,6 @@
 # Classroom Service - Production Configuration
 server:
-  port: 8089
+  port: 8080
 
 spring:
   application:

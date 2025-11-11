@@ -110,12 +110,19 @@ spring:
           filters:
             - StripPrefix=0
 
+        - id: document-service-root #8091
+          uri: lb://document-service
+          predicates:
+            - Path=/api/v1/document
+          filters:
+            - SetPath=/api/v1/documents
+
         - id: document-service #8091
           uri: lb://document-service
           predicates:
-            - Path=${app.api.prefix}${app.service-prefix.document}/**
+            - Path=/api/v1/document/**
           filters:
-            - RewritePath=${app.api.prefix}${app.service-prefix.document}/(?<segment>.*), /${segment}
+            - RewritePath=/api/v1/document/(?<segment>.*), /api/v1/documents/${segment}
 
         - id: retrieval-service #8092
           uri: lb://retrieval-service

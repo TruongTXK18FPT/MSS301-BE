@@ -29,7 +29,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/v1/documents")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
+// @CrossOrigin removed - CORS is handled by gateway-service
+// Adding @CrossOrigin here causes duplicate CORS headers
 public class DocumentManagementController {
 
     private final DocumentService documentService;

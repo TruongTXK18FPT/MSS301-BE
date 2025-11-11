@@ -57,4 +57,12 @@ public class SubmissionController {
         Long userId = Long.parseLong(authentication.getName());
         return ResponseEntity.ok(submissionService.mySubmissions(classroomContentId, userId));
     }
+
+    @GetMapping("/all")
+    @Operation(summary = "List all submissions for this classroom content (teacher only)")
+    public ResponseEntity<List<Submission>> allSubmissions(
+            @PathVariable("id") Long classroomContentId, Authentication authentication) {
+        Long teacherId = Long.parseLong(authentication.getName());
+        return ResponseEntity.ok(submissionService.getAllSubmissions(classroomContentId, teacherId));
+    }
 }

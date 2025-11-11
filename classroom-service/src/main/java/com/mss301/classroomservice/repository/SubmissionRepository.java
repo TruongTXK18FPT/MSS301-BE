@@ -8,4 +8,7 @@ import com.mss301.classroomservice.entity.Submission;
 
 public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     List<Submission> findByClassroomContentIdAndStudentId(Long classroomContentId, Long studentId);
+    List<Submission> findByClassroomContentId(Long classroomContentId);
+    List<Submission> findByStudentId(Long studentId);
+    long countByClassroomContentId(Long classroomContentId);
 }

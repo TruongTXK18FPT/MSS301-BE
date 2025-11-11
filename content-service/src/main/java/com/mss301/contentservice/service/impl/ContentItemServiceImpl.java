@@ -30,7 +30,9 @@ import com.mss301.contentservice.repository.QuizRepository;
 import com.mss301.contentservice.service.ContentItemService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ContentItemServiceImpl implements ContentItemService {
@@ -258,42 +260,56 @@ public class ContentItemServiceImpl implements ContentItemService {
                 .createdAt(item.getCreatedAt())
                 .updatedAt(item.getUpdatedAt());
 
-        if (item.getType() == Type.QUIZ) {
-            final Long contentId = item.getId();
-            quizRepository.findById(contentId).ifPresent(q -> {
-                List<QuizQuestion> questions = quizQuestionRepository.findByQuizIdOrderByIdAsc(contentId);
-                List<QuizQuestionDto> questionDtos = new ArrayList<>();
-                for (QuizQuestion qq : questions) {
-                    List<QuizOption> options = quizOptionRepository.findByQuestionIdOrderByIdAsc(qq.getId());
-                    List<QuizOptionDto> optionDtos = options.stream()
-                            .map(o -> QuizOptionDto.builder()
-                                    .id(o.getId())
-                                    .text(o.getText())
-                                    .correct(o.getIsCorrect())
-                                    .build())
-                            .collect(Collectors.toList());
-                    questionDtos.add(QuizQuestionDto.builder()
-                            .id(qq.getId())
-                            .text(qq.getText())
-                            .points(qq.getPoints())
-                            .type(qq.getType())
-                            .options(optionDtos)
+        try {
+            if (item.getType() == Type.QUIZ) {
+                final Long contentId = item.getId();
+                quizRepository.findById(contentId).ifPresent(q -> {
+                    try {
+                        List<QuizQuestion> questions = quizQuestionRepository.findByQuizIdOrderByIdAsc(contentId);
+                        List<QuizQuestionDto> questionDtos = new ArrayList<>();
+                        for (QuizQuestion qq : questions) {
+                            List<QuizOption> options = quizOptionRepository.findByQuestionIdOrderByIdAsc(qq.getId());
+                            List<QuizOptionDto> optionDtos = options.stream()
+                                    .map(o -> QuizOptionDto.builder()
+                                            .id(o.getId())
+                                            .text(o.getText())
+                                            .correct(o.getIsCorrect())
+                                            .build())
+                                    .collect(Collectors.toList());
+                            questionDtos.add(QuizQuestionDto.builder()
+                                    .id(qq.getId())
+                                    .text(qq.getText())
+                                    .points(qq.getPoints())
+                                    .type(qq.getType())
+                                    .options(optionDtos)
+                                    .build());
+                        }
+                        builder.quiz(QuizResponsePayload.builder()
+                                .timeLimitSec(q.getTimeLimitSec())
+                                .shuffleQuestions(q.getShuffleQuestions())
+                                .questions(questionDtos)
+                                .build());
+                    } catch (Exception e) {
+                        log.error("Error loading quiz details for contentId: {}", contentId, e);
+                        // Return quiz with empty questions list instead of failing
+                        builder.quiz(QuizResponsePayload.builder()
+                                .timeLimitSec(q.getTimeLimitSec())
+                                .shuffleQuestions(q.getShuffleQuestions())
+                                .questions(new ArrayList<>())
+                                .build());
+                    }
+                });
+            } else if (item.getType() == Type.ASSIGNMENT) {
+                assignmentDetailRepository.findById(item.getId()).ifPresent(a -> {
+                    builder.assignment(AssignmentDetailResponse.builder()
+                            .instructions(a.getInstructions())
+                            .submissionType(a.getSubmissionType())
+                            .attachmentFileIds(a.getAttachmentFileIds())
                             .build());
-                }
-                builder.quiz(QuizResponsePayload.builder()
-                        .timeLimitSec(q.getTimeLimitSec())
-                        .shuffleQuestions(q.getShuffleQuestions())
-                        .questions(questionDtos)
-                        .build());
-            });
-        } else if (item.getType() == Type.ASSIGNMENT) {
-            assignmentDetailRepository.findById(item.getId()).ifPresent(a -> {
-                builder.assignment(AssignmentDetailResponse.builder()
-                        .instructions(a.getInstructions())
-                        .submissionType(a.getSubmissionType())
-                        .attachmentFileIds(a.getAttachmentFileIds())
-                        .build());
-            });
+                });
+            }
+        } catch (Exception e) {
+            log.error("Error loading details for content item: {}", item.getId(), e);
         }
 
         return builder.build();

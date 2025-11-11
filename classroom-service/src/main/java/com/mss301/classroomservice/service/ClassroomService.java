@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 
 import com.mss301.classroomservice.dto.request.ClassroomRequest;
 import com.mss301.classroomservice.dto.response.ClassroomResponse;
+import com.mss301.classroomservice.dto.response.ClassroomSummaryResponse;
 import com.mss301.classroomservice.dto.response.StudentResponse;
 
 public interface ClassroomService {
@@ -39,4 +40,7 @@ public interface ClassroomService {
     
     // Xóa học sinh khỏi lớp
     void removeStudentFromClassroom(Long classroomId, Long studentId, Long teacherId);
+    
+    // Lấy tổng quan chi tiết về lớp học (cho teacher và student)
+    ClassroomSummaryResponse getClassroomSummary(Long classroomId, Long userId);
 }

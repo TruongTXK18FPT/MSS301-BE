@@ -33,12 +33,20 @@ public class ClassroomContent {
     @Column(nullable = false)
     private Long classroomId;
 
-    @Column(nullable = false)
-    private Long contentId; // reference to content-service ContentItem
+    private Long contentId; // reference to content-service ContentItem (nullable for lessons)
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ContentType type;
+
+    // Embedded content fields (for lessons/direct content)
+    private String title;
+    
+    @Column(length = 1000)
+    private String description;
+    
+    @Column(columnDefinition = "TEXT")
+    private String content; // Lesson content stored directly
 
     private Boolean visible = true;
     private Integer orderIndex;

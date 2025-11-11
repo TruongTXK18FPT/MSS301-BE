@@ -9,12 +9,14 @@ import org.springframework.transaction.annotation.Transactional;
 import com.mss301.classroomservice.dto.request.AssignmentSubmissionRequest;
 import com.mss301.classroomservice.dto.request.QuizAttemptRequest;
 import com.mss301.classroomservice.entity.AssignmentSubmission;
+import com.mss301.classroomservice.entity.ClassroomContent;
 import com.mss301.classroomservice.entity.QuizAttempt;
 import com.mss301.classroomservice.entity.QuizAttemptAnswer;
 import com.mss301.classroomservice.entity.Submission;
 import com.mss301.classroomservice.entity.Submission.SubmissionType;
 import com.mss301.classroomservice.repository.AssignmentSubmissionRepository;
 import com.mss301.classroomservice.repository.ClassroomContentRepository;
+import com.mss301.classroomservice.repository.ClassroomRepository;
 import com.mss301.classroomservice.repository.QuizAttemptAnswerRepository;
 import com.mss301.classroomservice.repository.QuizAttemptRepository;
 import com.mss301.classroomservice.repository.SubmissionRepository;
@@ -27,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 public class SubmissionServiceImpl implements SubmissionService {
 
     private final ClassroomContentRepository classroomContentRepository;
+    private final ClassroomRepository classroomRepository;
     private final SubmissionRepository submissionRepository;
     private final QuizAttemptRepository quizAttemptRepository;
     private final QuizAttemptAnswerRepository quizAttemptAnswerRepository;
@@ -90,5 +93,21 @@ public class SubmissionServiceImpl implements SubmissionService {
     @Override
     public List<Submission> mySubmissions(Long classroomContentId, Long studentId) {
         return submissionRepository.findByClassroomContentIdAndStudentId(classroomContentId, studentId);
+    }
+
+    @Override
+    public List<Submission> getAllSubmissions(Long classroomContentId, Long teacherId) {
+        // Verify teacher owns the classroom
+        ClassroomContent content = classroomContentRepository.findById(classroomContentId)
+                .orElseThrow(() -> new RuntimeException("Classroom content not found"));
+        
+        com.mss301.classroomservice.entity.Classroom classroom = classroomRepository.findById(content.getClassroomId())
+                .orElseThrow(() -> new RuntimeException("Classroom not found"));
+        
+        if (!classroom.getOwnerId().equals(teacherId)) {
+            throw new RuntimeException("Forbidden: Only classroom owner can view all submissions");
+        }
+        
+        return submissionRepository.findByClassroomContentId(classroomContentId);
     }
 }

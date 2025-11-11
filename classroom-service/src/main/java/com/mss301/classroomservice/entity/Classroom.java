@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Builder.Default;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -33,15 +34,24 @@ public class Classroom {
     private Long ownerId; // teacher userId
 
     @Column(nullable = false)
+    @Default
     private Boolean isPublic = false;
 
     private String joinCode;
-    
+
     @Column(length = 255)
     private String password; // Mật khẩu để vào lớp
-    
+
     @Column(nullable = false)
+    @Default
     private Integer maxStudents = 50; // Số học sinh tối đa
+
+    @Column(length = 100)
+    @Default
+    private String subject = "Toán học"; // Môn học, mặc định là Toán học
+
+    @Column(length = 100)
+    private String grade; // Khối lớp (6, 7, 8, 9, 10, 11, 12)
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -16,6 +16,9 @@ public class ClassroomContentResponse {
     private Long classroomId;
     private Long contentId;
     private String type;
+    private String title;
+    private String description;
+    private String content;
     private Boolean visible;
     private Integer orderIndex;
     private LocalDateTime publishAt;

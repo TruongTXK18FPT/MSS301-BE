@@ -48,104 +48,104 @@ spring:
             locator:
               enabled: true
               lower-case-service-id: true
-          routes:
-            - id: auth-service #8081
-              uri: lb://auth-service
-              predicates:
-                - Path=${app.api.prefix}${app.service-prefix.auth}/**
-              filters:
-                - RewritePath=${app.api.prefix}${app.service-prefix.auth}/(?<segment>.*), /${segment}
+      routes:
+        - id: auth-service #8081
+          uri: lb://auth-service
+          predicates:
+            - Path=${app.api.prefix}${app.service-prefix.auth}/**
+          filters:
+            - RewritePath=${app.api.prefix}${app.service-prefix.auth}/(?<segment>.*), /${segment}
 
-            - id: payment-service #8082
-              uri: lb://payment-service
-              predicates:
-                - Path=${app.api.prefix}${app.service-prefix.payment}/**
-              filters:
-                - RewritePath=${app.api.prefix}${app.service-prefix.payment}/(?<segment>.*), /${segment}
+        - id: payment-service #8082
+          uri: lb://payment-service
+          predicates:
+            - Path=${app.api.prefix}${app.service-prefix.payment}/**
+          filters:
+            - RewritePath=${app.api.prefix}${app.service-prefix.payment}/(?<segment>.*), /${segment}
 
-            - id: premium-service #8083
-              uri: lb://premium-service
-              predicates:
-                - Path=${app.api.prefix}${app.service-prefix.premium}/**
-              filters:
-                - RewritePath=${app.api.prefix}${app.service-prefix.premium}/(?<segment>.*), /${segment}
+        - id: premium-service #8083
+          uri: lb://premium-service
+          predicates:
+            - Path=${app.api.prefix}${app.service-prefix.premium}/**
+          filters:
+            - RewritePath=${app.api.prefix}${app.service-prefix.premium}/(?<segment>.*), /${segment}
 
-            - id: mindmap-service #8084
-              uri: lb://mindmap-service
-              predicates:
-                - Path=${app.api.prefix}${app.service-prefix.mindmap}/**
-              filters:
-                - StripPrefix=2
+        - id: mindmap-service #8084
+          uri: lb://mindmap-service
+          predicates:
+            - Path=${app.api.prefix}${app.service-prefix.mindmap}/**
+          filters:
+            - StripPrefix=2
 
-            - id: content-service #8085
-              uri: lb://content-service
-              predicates:
-                - Path=${app.api.prefix}${app.service-prefix.content}/**,${app.api.prefix}/submissions/**,${app.api.prefix}/quiz-attempts/**
-              filters:
-                - StripPrefix=3
+        - id: content-service #8085
+          uri: lb://content-service
+          predicates:
+            - Path=${app.api.prefix}${app.service-prefix.content}/**,${app.api.prefix}/submissions/**,${app.api.prefix}/quiz-attempts/**
+          filters:
+            - StripPrefix=3
 
-            - id: chatbot-service #8086
-              uri: lb://chatbot-service
-              predicates:
-                - Path=${app.api.prefix}${app.service-prefix.chatbot}/**
-              filters:
-                - RewritePath=${app.api.prefix}${app.service-prefix.chatbot}/(?<segment>.*), /${segment}
+        - id: chatbot-service #8086
+          uri: lb://chatbot-service
+          predicates:
+            - Path=${app.api.prefix}${app.service-prefix.chatbot}/**
+          filters:
+            - RewritePath=${app.api.prefix}${app.service-prefix.chatbot}/(?<segment>.*), /${segment}
 
-            - id: profile-service #8087
-              uri: lb://profile-service
-              predicates:
-                - Path=${app.api.prefix}${app.service-prefix.profile}/**
-              filters:
-                - RewritePath=${app.api.prefix}${app.service-prefix.profile}/(?<segment>.*), /${segment}
+        - id: profile-service #8087
+          uri: lb://profile-service
+          predicates:
+            - Path=${app.api.prefix}${app.service-prefix.profile}/**
+          filters:
+            - RewritePath=${app.api.prefix}${app.service-prefix.profile}/(?<segment>.*), /${segment}
 
-            - id: classroom-service #8094
-              uri: lb://classroom-service
-              predicates:
-                - Path=${app.api.prefix}${app.service-prefix.classroom}/**
-              filters:
-                - StripPrefix=2
+        - id: classroom-service #8094
+          uri: lb://classroom-service
+          predicates:
+            - Path=${app.api.prefix}${app.service-prefix.classroom}/**
+          filters:
+            - StripPrefix=2
 
-            - id: media-service #8089
-              uri: lb://media-service
-              predicates:
-                - Path=${app.api.prefix}${app.service-prefix.media}/**
-              filters:
-                - StripPrefix=0
+        - id: media-service #8089
+          uri: lb://media-service
+          predicates:
+            - Path=${app.api.prefix}${app.service-prefix.media}/**
+          filters:
+            - StripPrefix=0
 
-            - id: document-service-root #8091
-              uri: lb://document-service
-              predicates:
-                - Path=/api/v1/document
-              filters:
-                - SetPath=/api/v1/documents
+        - id: document-service-root #8091
+          uri: lb://document-service
+          predicates:
+            - Path=/api/v1/document
+          filters:
+            - SetPath=/api/v1/documents
 
-            - id: document-service #8091
-              uri: lb://document-service
-              predicates:
-                - Path=/api/v1/document/**
-              filters:
-                - RewritePath=/api/v1/document/(?<segment>.*), /api/v1/documents/${segment}
+        - id: document-service #8091
+          uri: lb://document-service
+          predicates:
+            - Path=/api/v1/document/**
+          filters:
+            - RewritePath=/api/v1/document/(?<segment>.*), /api/v1/documents/${segment}
 
-            - id: retrieval-service #8092
-              uri: lb://retrieval-service
-              predicates:
-                - Path=${app.api.prefix}${app.service-prefix.retrieval}/**
-              filters:
-                - RewritePath=${app.api.prefix}${app.service-prefix.retrieval}/(?<segment>.*), /${segment}
+        - id: retrieval-service #8092
+          uri: lb://retrieval-service
+          predicates:
+            - Path=${app.api.prefix}${app.service-prefix.retrieval}/**
+          filters:
+            - RewritePath=${app.api.prefix}${app.service-prefix.retrieval}/(?<segment>.*), /${segment}
 
-            - id: rag-service #8093
-              uri: lb://rag-service
-              predicates:
-                - Path=${app.api.prefix}${app.service-prefix.rag}/**
-              filters:
-                - RewritePath=${app.api.prefix}${app.service-prefix.rag}/(?<segment>.*), /${segment}
+        - id: rag-service #8093
+          uri: lb://rag-service
+          predicates:
+            - Path=${app.api.prefix}${app.service-prefix.rag}/**
+          filters:
+            - RewritePath=${app.api.prefix}${app.service-prefix.rag}/(?<segment>.*), /${segment}
 
-            - id: notification-service #8088
-              uri: lb://notification-service
-              predicates:
-                - Path=${app.api.prefix}/notification/**
-              filters:
-                - StripPrefix=2
+        - id: notification-service #8088
+          uri: lb://notification-service
+          predicates:
+            - Path=${app.api.prefix}/notification/**
+          filters:
+            - StripPrefix=2
 
 eureka:
   client:

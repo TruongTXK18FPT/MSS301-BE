@@ -61,14 +61,93 @@ spring:
             - id: auth-service
               uri: lb://auth-service
               predicates:
-                - name: Path
-                  args:
-                    pattern: "${app.api.prefix}${app.service-prefix.auth}/**"
+                - Path=/api/v1/authenticate/**
               filters:
-                - name: RewritePath
-                  args:
-                    regexp: "${app.api.prefix}${app.service-prefix.auth}/(?<segment>.*)"
-                    replacement: "/${segment}"
+                - RewritePath=/api/v1/authenticate/(?<segment>.*), /${segment}
+
+            - id: payment-service
+              uri: lb://payment-service
+              predicates:
+                - Path=/api/v1/payment/**
+              filters:
+                - RewritePath=/api/v1/payment/(?<segment>.*), /${segment}
+
+            - id: premium-service
+              uri: lb://premium-service
+              predicates:
+                - Path=/api/v1/premium/**
+              filters:
+                - RewritePath=/api/v1/premium/(?<segment>.*), /${segment}
+
+            - id: mindmap-service
+              uri: lb://mindmap-service
+              predicates:
+                - Path=/api/v1/mindmap/**
+              filters:
+                - StripPrefix=2
+
+            - id: content-service
+              uri: lb://content-service
+              predicates:
+                - Path=/api/v1/content/**,/api/v1/submissions/**,/api/v1/quiz-attempts/**
+              filters:
+                - StripPrefix=3
+
+            - id: chatbot-service
+              uri: lb://chatbot-service
+              predicates:
+                - Path=/api/v1/chatbot/**
+              filters:
+                - RewritePath=/api/v1/chatbot/(?<segment>.*), /${segment}
+
+            - id: profile-service
+              uri: lb://profile-service
+              predicates:
+                - Path=/api/v1/profile/**
+              filters:
+                - RewritePath=/api/v1/profile/(?<segment>.*), /${segment}
+
+            - id: classroom-service
+              uri: lb://classroom-service
+              predicates:
+                - Path=/api/v1/classrooms/**
+              filters:
+                - StripPrefix=2
+
+            - id: media-service
+              uri: lb://media-service
+              predicates:
+                - Path=/api/v1/media/**
+              filters:
+                - StripPrefix=0
+
+            - id: document-service
+              uri: lb://document-service
+              predicates:
+                - Path=/api/v1/document/**
+              filters:
+                - RewritePath=/api/v1/document/(?<segment>.*), /${segment}
+
+            - id: retrieval-service
+              uri: lb://retrieval-service
+              predicates:
+                - Path=/api/v1/retrieval/**
+              filters:
+                - RewritePath=/api/v1/retrieval/(?<segment>.*), /${segment}
+
+            - id: rag-service
+              uri: lb://rag-service
+              predicates:
+                - Path=/api/v1/rag/**
+              filters:
+                - RewritePath=/api/v1/rag/(?<segment>.*), /${segment}
+
+            - id: notification-service
+              uri: lb://notification-service
+              predicates:
+                - Path=/api/v1/notification/**
+              filters:
+                - StripPrefix=2
 
             - id: payment-service
               uri: lb://payment-service

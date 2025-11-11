@@ -35,3 +35,6 @@ build/
 ### Uploads ###
 uploads/
 document-service/uploads/
+
+# Maven generated files
+effective-pom.xml

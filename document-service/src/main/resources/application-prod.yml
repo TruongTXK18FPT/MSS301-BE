@@ -1,6 +1,6 @@
 # Document Service - Production Configuration
 server:
-  port: 8085
+  port: 8080
 
 spring:
   application:

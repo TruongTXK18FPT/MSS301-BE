@@ -1,6 +1,6 @@
 # Mindmap Service - Production Configuration
 server:
-  port: 8091
+  port: 8080
 
 spring:
   application:

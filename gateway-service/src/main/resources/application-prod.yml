@@ -36,11 +36,13 @@ spring:
             pool:
               max-connections: 1000
               max-idle-time: 30s
-          # Discovery locator DISABLED - using custom Java RouteLocator instead
-          # Reason: Auto-generated routes conflict with custom routing logic
+          # Discovery locator ENABLED - Gateway will auto-create routes from Eureka
+          # Static routes in config will also be loaded
           discovery:
             locator:
-              enabled: false
+              enabled: true
+              lower-case-service-id: true
+              url-expression: "'http://'+serviceId"
           globalcors:
             corsConfigurations:
               "[/**]":
@@ -70,14 +72,14 @@ spring:
                   args:
                     regexp: /api/v1/authenticate/(?<segment>.*)
                     replacement: /${segment}
-            
+
             - id: payment-service
               uri: lb://payment-service
               predicates:
                 - name: Path
                   args:
                     pattern: /api/v1/payment/**
-            
+
             - id: premium-service-plans
               uri: lb://premium-service
               predicates:
@@ -89,7 +91,7 @@ spring:
                   args:
                     regexp: /api/v1/premium/plans/(?<segment>.*)
                     replacement: /plans/${segment}
-            
+
             - id: premium-service-entitlements
               uri: lb://premium-service
               predicates:
@@ -101,7 +103,7 @@ spring:
                   args:
                     regexp: /api/v1/premium/entitlements/(?<segment>.*)
                     replacement: /entitlements/${segment}
-            
+
             - id: mindmap-service
               uri: lb://mindmap-service
               predicates:
@@ -112,28 +114,28 @@ spring:
                 - name: StripPrefix
                   args:
                     parts: 3
-            
+
             - id: content-service
               uri: lb://content-service
               predicates:
                 - name: Path
                   args:
                     pattern: /api/v1/content/**
-            
+
             - id: chatbot-service
               uri: lb://chatbot-service
               predicates:
                 - name: Path
                   args:
                     pattern: /api/v1/chatbot/**
-            
+
             - id: profile-service
               uri: lb://profile-service
               predicates:
                 - name: Path
                   args:
                     pattern: /api/v1/profile/**
-            
+
             - id: classroom-service
               uri: lb://classroom-service
               predicates:
@@ -144,14 +146,14 @@ spring:
                 - name: StripPrefix
                   args:
                     parts: 3
-            
+
             - id: media-service
               uri: lb://media-service
               predicates:
                 - name: Path
                   args:
                     pattern: /api/v1/media/**
-            
+
             - id: document-service
               uri: lb://document-service
               predicates:
@@ -163,21 +165,21 @@ spring:
                   args:
                     regexp: /api/v1/documents/(?<segment>.*)
                     replacement: /api/v1/documents/${segment}
-            
+
             - id: retrieval-service
               uri: lb://retrieval-service
               predicates:
                 - name: Path
                   args:
                     pattern: /api/v1/retrieval/**
-            
+
             - id: rag-service
               uri: lb://rag-service
               predicates:
                 - name: Path
                   args:
                     pattern: /api/v1/rag/**
-            
+
             - id: notification-service
               uri: lb://notification-service
               predicates:

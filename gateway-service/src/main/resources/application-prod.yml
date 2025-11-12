@@ -89,7 +89,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: "health,info,metrics,gateway,gateway-routes"
+        include: "health,info,metrics,routes"
       base-path: /actuator
   endpoint:
     health:

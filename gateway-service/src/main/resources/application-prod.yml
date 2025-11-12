@@ -36,10 +36,11 @@ spring:
             pool:
               max-connections: 1000
               max-idle-time: 30s
+          # Discovery locator DISABLED - using custom Java RouteLocator instead
+          # Reason: Auto-generated routes conflict with custom routing logic
           discovery:
             locator:
-              enabled: true
-              lower-case-service-id: true
+              enabled: false
           globalcors:
             corsConfigurations:
               "[/**]":
@@ -88,7 +89,8 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,gateway
+        include: "health,info,metrics,gateway,gateway-routes"
+      base-path: /actuator
   endpoint:
     health:
       show-details: always

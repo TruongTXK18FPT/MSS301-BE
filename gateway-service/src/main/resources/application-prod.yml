@@ -28,6 +28,16 @@ spring:
       ribbon:
         enabled: false
     gateway:
+      # Discovery locator ENABLED - Gateway will auto-create routes from Eureka
+      # Static routes in config will also be loaded
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+          # Use LoadBalancer (lb://) for service discovery
+          url-expression: "'lb://'+serviceId"
+          # Include all services from Eureka
+          include-expression: "true"
       server:
         webflux:
           httpclient:
@@ -36,163 +46,153 @@ spring:
             pool:
               max-connections: 1000
               max-idle-time: 30s
-          # Discovery locator ENABLED - Gateway will auto-create routes from Eureka
-          # Static routes in config will also be loaded
-          discovery:
-            locator:
-              enabled: true
-              lower-case-service-id: true
-              # Use LoadBalancer (lb://) for service discovery
-              url-expression: "'lb://'+serviceId"
-              # Include all services from Eureka
-              include-expression: "true"
-          globalcors:
-            corsConfigurations:
-              "[/**]":
-                allowedOriginPatterns:
-                  - "https://mss301.me"
-                  - "https://*.mss301.me"
-                  - "http://localhost:*"
-                allowedMethods:
-                  - GET
-                  - POST
-                  - PUT
-                  - DELETE
-                  - PATCH
-                  - OPTIONS
-                allowedHeaders: "*"
-                allowCredentials: true
-                maxAge: 3600
-          routes:
-            - id: auth-service
-              uri: lb://auth-service
-              predicates:
-                - name: Path
-                  args:
-                    pattern: /api/v1/authenticate/**
-              filters:
-                - name: RewritePath
-                  args:
-                    regexp: /api/v1/authenticate/(?<segment>.*)
-                    replacement: /${segment}
+      globalcors:
+        corsConfigurations:
+          "[/**]":
+            allowedOriginPatterns:
+              - "https://mss301.me"
+              - "https://*.mss301.me"
+              - "http://localhost:*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+      routes:
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - name: Path
+              args:
+                pattern: /api/v1/authenticate/**
+          filters:
+            - name: RewritePath
+              args:
+                regexp: /api/v1/authenticate/(?<segment>.*)
+                replacement: /${segment}
 
-            - id: payment-service
-              uri: lb://payment-service
-              predicates:
-                - name: Path
-                  args:
-                    pattern: /api/v1/payment/**
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - name: Path
+              args:
+                pattern: /api/v1/payment/**
 
-            - id: premium-service-plans
-              uri: lb://premium-service
-              predicates:
-                - name: Path
-                  args:
-                    pattern: /api/v1/premium/plans/**
-              filters:
-                - name: RewritePath
-                  args:
-                    regexp: /api/v1/premium/plans/(?<segment>.*)
-                    replacement: /plans/${segment}
+        - id: premium-service-plans
+          uri: lb://premium-service
+          predicates:
+            - name: Path
+              args:
+                pattern: /api/v1/premium/plans/**
+          filters:
+            - name: RewritePath
+              args:
+                regexp: /api/v1/premium/plans/(?<segment>.*)
+                replacement: /plans/${segment}
 
-            - id: premium-service-entitlements
-              uri: lb://premium-service
-              predicates:
-                - name: Path
-                  args:
-                    pattern: /api/v1/premium/entitlements/**
-              filters:
-                - name: RewritePath
-                  args:
-                    regexp: /api/v1/premium/entitlements/(?<segment>.*)
-                    replacement: /entitlements/${segment}
+        - id: premium-service-entitlements
+          uri: lb://premium-service
+          predicates:
+            - name: Path
+              args:
+                pattern: /api/v1/premium/entitlements/**
+          filters:
+            - name: RewritePath
+              args:
+                regexp: /api/v1/premium/entitlements/(?<segment>.*)
+                replacement: /entitlements/${segment}
 
-            - id: mindmap-service
-              uri: lb://mindmap-service
-              predicates:
-                - name: Path
-                  args:
-                    pattern: /api/v1/mindmap/**
-              filters:
-                - name: StripPrefix
-                  args:
-                    parts: 3
+        - id: mindmap-service
+          uri: lb://mindmap-service
+          predicates:
+            - name: Path
+              args:
+                pattern: /api/v1/mindmap/**
+          filters:
+            - name: StripPrefix
+              args:
+                parts: 3
 
-            - id: content-service
-              uri: lb://content-service
-              predicates:
-                - name: Path
-                  args:
-                    pattern: /api/v1/content/**
+        - id: content-service
+          uri: lb://content-service
+          predicates:
+            - name: Path
+              args:
+                pattern: /api/v1/content/**
 
-            - id: chatbot-service
-              uri: lb://chatbot-service
-              predicates:
-                - name: Path
-                  args:
-                    pattern: /api/v1/chatbot/**
+        - id: chatbot-service
+          uri: lb://chatbot-service
+          predicates:
+            - name: Path
+              args:
+                pattern: /api/v1/chatbot/**
 
-            - id: profile-service
-              uri: lb://profile-service
-              predicates:
-                - name: Path
-                  args:
-                    pattern: /api/v1/profile/**
+        - id: profile-service
+          uri: lb://profile-service
+          predicates:
+            - name: Path
+              args:
+                pattern: /api/v1/profile/**
 
-            - id: classroom-service
-              uri: lb://classroom-service
-              predicates:
-                - name: Path
-                  args:
-                    pattern: /api/v1/classroom/**
-              filters:
-                - name: StripPrefix
-                  args:
-                    parts: 3
+        - id: classroom-service
+          uri: lb://classroom-service
+          predicates:
+            - name: Path
+              args:
+                pattern: /api/v1/classroom/**
+          filters:
+            - name: StripPrefix
+              args:
+                parts: 3
 
-            - id: media-service
-              uri: lb://media-service
-              predicates:
-                - name: Path
-                  args:
-                    pattern: /api/v1/media/**
+        - id: media-service
+          uri: lb://media-service
+          predicates:
+            - name: Path
+              args:
+                pattern: /api/v1/media/**
 
-            - id: document-service
-              uri: lb://document-service
-              predicates:
-                - name: Path
-                  args:
-                    pattern: /api/v1/documents/**
-              filters:
-                - name: RewritePath
-                  args:
-                    regexp: /api/v1/documents/(?<segment>.*)
-                    replacement: /api/v1/documents/${segment}
+        - id: document-service
+          uri: lb://document-service
+          predicates:
+            - name: Path
+              args:
+                pattern: /api/v1/documents/**
+          filters:
+            - name: RewritePath
+              args:
+                regexp: /api/v1/documents/(?<segment>.*)
+                replacement: /api/v1/documents/${segment}
 
-            - id: retrieval-service
-              uri: lb://retrieval-service
-              predicates:
-                - name: Path
-                  args:
-                    pattern: /api/v1/retrieval/**
+        - id: retrieval-service
+          uri: lb://retrieval-service
+          predicates:
+            - name: Path
+              args:
+                pattern: /api/v1/retrieval/**
 
-            - id: rag-service
-              uri: lb://rag-service
-              predicates:
-                - name: Path
-                  args:
-                    pattern: /api/v1/rag/**
+        - id: rag-service
+          uri: lb://rag-service
+          predicates:
+            - name: Path
+              args:
+                pattern: /api/v1/rag/**
 
-            - id: notification-service
-              uri: lb://notification-service
-              predicates:
-                - name: Path
-                  args:
-                    pattern: /api/v1/notification/**
-              filters:
-                - name: StripPrefix
-                  args:
-                    parts: 3
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - name: Path
+              args:
+                pattern: /api/v1/notification/**
+          filters:
+            - name: StripPrefix
+              args:
+                parts: 3
 
 eureka:
   client:

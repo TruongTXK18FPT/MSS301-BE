@@ -15,11 +15,12 @@ import java.time.LocalDateTime;
 public class PaymentResponse {
     private String orderId;
     private Long userId;
+    private Long subscriptionId;
+    private Long planId;
     private Long amount;
     private String orderInfo;
-    private Long planId;
-//    private String momoRequestId;
-    private String momoTransId;
+    private String payosPaymentLinkId;
+    private String payosTransactionRef;
     private String paymentUrl;
     private Status status;
     private LocalDateTime createdAt;

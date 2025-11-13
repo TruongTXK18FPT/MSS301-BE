@@ -52,7 +52,7 @@ public class PlanServiceImp implements PlanService {
                 .name(plan.getName())
                 .description(plan.getDescription())
                 .billingCycle(plan.getBillingCycle())
-                .priceCents(plan.getPriceCents())
+                .price(plan.getPrice())
                 .currency(plan.getCurrency())
                 .status(PlanStatus.ACTIVE)
                 .createdAt(LocalDateTime.now())
@@ -83,7 +83,7 @@ public class PlanServiceImp implements PlanService {
             planById.setName(planRequest.getName());
             planById.setDescription(planRequest.getDescription());
             planById.setBillingCycle(planRequest.getBillingCycle());
-            planById.setPriceCents(planRequest.getPriceCents());
+            planById.setPrice(planRequest.getPrice());
             planById.setCurrency(planRequest.getCurrency());
             planById.setUpdatedAt(LocalDateTime.now());
 
@@ -139,19 +139,24 @@ public class PlanServiceImp implements PlanService {
     }
 
     private PlanResponse convertToResponse(Plan plan) {
-        return PlanResponse.builder()
+        PlanResponse planResponse = PlanResponse.builder()
                 .planId(plan.getPlanId())
                 .code(plan.getCode())
                 .name(plan.getName())
                 .description(plan.getDescription())
                 .billingCycle(plan.getBillingCycle())
-                .priceCents(plan.getPriceCents())
+                .price(plan.getPrice())
                 .currency(plan.getCurrency())
                 .planStatus(plan.getStatus())
                 .createdAt(plan.getCreatedAt())
                 .updatedAt(plan.getUpdatedAt())
                 .entitlements(plan.getEntitlements())
                 .build();
+        // Debug log to verify price is being set correctly
+        if (planResponse.getPrice() == 0) {
+            System.err.println("WARNING: Plan " + plan.getCode() + " has price = 0. Entity price: " + plan.getPrice());
+        }
+        return planResponse;
     }
 
     private List<Entitlement> getAllEntitlementFromIds(List<Long> entitlementsId) {
@@ -166,4 +171,4 @@ public class PlanServiceImp implements PlanService {
 
         return entitlements;
     }
-} 
+}

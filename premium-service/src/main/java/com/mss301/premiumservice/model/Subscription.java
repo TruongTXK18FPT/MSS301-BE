@@ -1,5 +1,5 @@
-package com.mss301.premiumservice.model; 
- 
+package com.mss301.premiumservice.model;
+
 import com.mss301.premiumservice.constant.SubscriptionStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -10,13 +10,13 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
-@NoArgsConstructor 
-@AllArgsConstructor 
-@Entity 
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
 @Table(name = "subscriptions")
 // đăng ký
-public class Subscription { 
- 
+public class Subscription {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long subscriptionId;
@@ -35,7 +35,7 @@ public class Subscription {
     private LocalDateTime endDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 12)
+    @Column(name = "status", nullable = false, length = 20)
     private SubscriptionStatus subscriptionStatus;
 
     @Column(name = "renewal", columnDefinition = "boolean default false")
@@ -48,4 +48,4 @@ public class Subscription {
     @Column(name = "updated_at")
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-} 
+}

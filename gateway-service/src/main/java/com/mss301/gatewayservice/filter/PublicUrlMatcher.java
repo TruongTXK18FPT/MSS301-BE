@@ -39,6 +39,10 @@ public class PublicUrlMatcher {
                         "/api/v1/authenticate/users/forgot-password/verify",
                         "/api/v1/authenticate/users/my-profile-status",
 
+                        // PayOS webhook endpoint (no auth required)
+                        "/api/v1/payment/callback/payos",
+                        "/api/v1/payment/callback/payos/return",
+
                         // Authentication endpoints (AuthenticationController with /auth prefix - legacy
                         // paths)
                         "/authenticate/auth/login",
@@ -76,18 +80,22 @@ public class PublicUrlMatcher {
                         // Public content endpoints
                         "/premium/premiums",
                         "/content/contents",
-                        "/profile/profiles");
+                        "/profile/profiles",
+                        // Public plans endpoint - allow viewing plans without authentication
+                        "/api/v1/premium/plans");
 
         private static final List<String> PUBLIC_WILDCARD_PATTERNS = List.of(
                         // Actuator endpoints
                         "/actuator/**",
                         // Premium/Content/Profile public endpoints
-                        "/api/v1/premium/premiums/**",
-                        "/api/v1/content/contents/**",
-                        "/api/v1/profile/profiles/**",
-                        "/premium/premiums/**",
-                        "/content/contents/**",
-                        "/profile/profiles/**");
+                        "/api/v1/premium/premiums/*",
+                        "/api/v1/premium/plans/**",
+                        "/api/v1/content/contents/*",
+                        "/api/v1/profile/profiles/*",
+                        "/premium/premiums/*",
+                        "/premium/plans/**",
+                        "/content/contents/*",
+                        "/profile/profiles/*");
 
         public boolean isPublicUrl(String path) {
                 boolean isExactMatch = PUBLIC_EXACT_PATHS.contains(path);

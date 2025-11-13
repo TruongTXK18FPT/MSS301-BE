@@ -19,13 +19,22 @@ spring:
     show-sql: false
     properties:
       hibernate:
-        format_sql: false
+        "[format_sql]": false
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
   # MongoDB - Read Database (Query/Read Model)
   data:
     mongodb:
       uri: mongodb://${MONGO_USER:mongo}:${MONGO_PASSWORD:12345}@${MONGO_HOST:mongodb}:${MONGO_PORT:27017}/payment_db?authSource=admin
+
+  # Kafka Configuration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        "[spring.json.add.type.headers]": false
 
 eureka:
   client:
@@ -40,15 +49,35 @@ eureka:
     nonSecurePortEnabled: true
     securePortEnabled: false
 
-# MoMo Payment Gateway Configuration
-momo:
-  partner-code: ${MOMO_PARTNER_CODE:MOMO}
-  access-key: ${MOMO_ACCESS_KEY:F8BBA842ECF85}
-  secret-key: ${MOMO_SECRET_KEY:K951B6PE1waDMi640xX08PD3vg6EkVlz}
-  endpoint: https://test-payment.momo.vn
-  return-url: ${MOMO_RETURN_URL:https://mss301.me/payment/return}
-  ipn-url: ${MOMO_IPN_URL:https://api.mss301.me/api/v1/payment/momo/ipn}
-  redirect-url: ${MOMO_REDIRECT_URL:https://mss301.me/payment/success}
+# PayOS Payment Gateway Configuration for Production
+# All URLs use production domain (mss301.me)
+# Can be overridden with environment variables if needed
+payment:
+  payos:
+    client-id: ${PAYOS_CLIENT_ID:dd239d22-5ff6-4113-bc74-8c71f55147fd}
+    api-key: ${PAYOS_API_KEY:9f1a0f8b-fbae-495a-b2f6-52e72ac155ca}
+    checksum-key: ${PAYOS_CHECKSUM_KEY:e53324608b59a5614972388adfc79b36b12c2ae5e141470a0d51b82ca6bebc92}
+    base-url: https://api-merchant.payos.vn
+    # Production URLs - can be overridden with environment variables
+    webhook-url: ${PAYOS_WEBHOOK_URL:https://api.mss301.me/api/v1/payment/callback/payos}
+    return-url: ${PAYOS_RETURN_URL:https://mss301.me/payment/success}
+    cancel-url: ${PAYOS_CANCEL_URL:https://mss301.me/payment/cancel}
+
+# Kafka Topics
+kafka:
+  topic:
+    payment-completed: payment-completed-topic
+    subscription-request: subscription-request-topic
+    subscription-response: subscription-response-topic
+
+# External Service URLs
+service:
+  url: http://gateway-service:8080/api/v1
+  user: auth-service
+  premium: premium-service
+
+jwt:
+  signerKey: ${JWT_SIGNER_KEY:1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij}
 
 management:
   endpoints:

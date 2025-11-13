@@ -71,7 +71,7 @@ spring:
                 - name: RewritePath
                   args:
                     regexp: "${app.api.prefix}${app.service-prefix.payment}/(?<segment>.*)"
-                    replacement: "/${segment}"
+                    replacement: "/payment/${segment}"
 
             - id: premium-service #8083
               uri: lb://premium-service
@@ -83,7 +83,7 @@ spring:
                 - name: RewritePath
                   args:
                     regexp: "${app.api.prefix}${app.service-prefix.premium}/(?<segment>.*)"
-                    replacement: "/${segment}"
+                    replacement: "/premium/${segment}"
 
             - id: mindmap-service #8084
               uri: lb://mindmap-service

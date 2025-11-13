@@ -18,17 +18,14 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class PaymentCommand {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "payment_id")
-    private Long paymentId;
-
-    @Column(name = "subscription_id")
-    private Long subscriptionId;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "order_id")
+    private String orderId;
 
     @Column(name = "user_id")
     private Long userId;
 
-    @Column(name = "plan_id", nullable = false) // ✅ Thêm planId
+    @Column(name = "plan_id", nullable = false)
     private Long planId;
 
     @Column(name = "amount")
@@ -47,13 +44,12 @@ public class PaymentCommand {
     private String paymentUrl;
 
     @CreationTimestamp
-    @Column(name = "created_at")
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-
 
     @Column(name = "status")
     @Enumerated(EnumType.STRING)

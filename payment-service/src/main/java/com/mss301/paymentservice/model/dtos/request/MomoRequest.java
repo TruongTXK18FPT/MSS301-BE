@@ -20,19 +20,22 @@ public class MomoRequest {
     private long amount;
 
     // Mã đơn hàng bên hệ thống của bạn
-    private Long subscriptionId;
+//    private Long subscriptionId;
+
+    // Mã sản phẩm bên hệ thống của bạn
+    private Long planId;
 
     // thông tin đơn hàng
     private String orderInfo;
 
-    public String getSubscriptionId() {
-        return subscriptionId != null ? subscriptionId.toString() : null;
+    public String getPlanId() {
+        return planId != null ? planId.toString() : null;
     }
 
-    public MomoRequest(PaymentRequest paymentRequest, long amount) {
+    public MomoRequest(PaymentRequest paymentRequest) {
         this.requestId = UUID.randomUUID().toString();
-        this.amount = amount;
-        this.subscriptionId = paymentRequest.getSubscriptionId();
+        this.amount = paymentRequest.getAmount();
+        this.planId = paymentRequest.getPlanId();
         this.orderInfo = paymentRequest.getOrderInfo();
     }
 }

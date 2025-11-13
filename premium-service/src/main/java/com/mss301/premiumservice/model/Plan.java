@@ -3,10 +3,7 @@ package com.mss301.premiumservice.model;
 import com.mss301.premiumservice.constant.Currency;
 import com.mss301.premiumservice.constant.PlanStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -14,7 +11,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -38,7 +36,7 @@ public class Plan {
     private String description;
 
     @Column(name = "billing_cycle", nullable = false)
-    private int billingCycle;
+    private int billingCycle; // month
 
     @Column(name = "price_cents", nullable = false)
     private long priceCents;
@@ -67,28 +65,4 @@ public class Plan {
     )
     private List<Entitlement> entitlements;
 
-    // Helper methods để sync quan hệ
-    public void addEntitlement(Entitlement entitlement) {
-        if (this.entitlements == null) {
-            this.entitlements = new ArrayList<>();
-        }
-        if (!this.entitlements.contains(entitlement)) {
-            this.entitlements.add(entitlement);
-            if (entitlement.getPlans() == null) {
-                entitlement.setPlans(new ArrayList<>());
-            }
-            if (!entitlement.getPlans().contains(this)) {
-                entitlement.getPlans().add(this);
-            }
-        }
-    }
-
-    public void removeEntitlement(Entitlement entitlement) {
-        if (this.entitlements != null) {
-            this.entitlements.remove(entitlement);
-            if (entitlement.getPlans() != null) {
-                entitlement.getPlans().remove(this);
-            }
-        }
-    }
 }

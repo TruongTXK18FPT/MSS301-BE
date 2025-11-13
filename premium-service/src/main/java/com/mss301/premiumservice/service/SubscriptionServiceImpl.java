@@ -82,7 +82,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         // 3. ✅ Call Payment Service với đầy đủ thông tin
         PaymentRequest paymentRequest = PaymentRequest.builder()
                 .userId(request.getUserId())
-                .subscriptionId(savedSubscription.getSubscriptionId())
+//                .subscriptionId(savedSubscription.getSubscriptionId())
                 .planId(plan.getPlanId())
                 .amount(plan.getPriceCents()) // ✅ Gửi số tiền
                 .orderInfo("Subscription for plan: " + plan.getName())

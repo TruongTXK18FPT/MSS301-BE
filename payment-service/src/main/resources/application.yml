@@ -53,12 +53,9 @@ jwt:
 
 # external values
 service:
-  user:
-    name: auth-service
-    url: http://localhost:8081
-  premium:
-    name: premium-service
-    url: http://localhost:8083
+  url: http://localhost:8080/api/v1
+  user: auth-service
+  premium: premium-service
 
 # MOMO payment gateway configuration
 momo:

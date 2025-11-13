@@ -30,10 +30,9 @@ public class PaymentQueryServiceImp implements PaymentQueryService {
     }
 
     @Override
-    public PaymentResponse findBySubscriptionId(Long subscriptionId) {
-        log.info("Finding payment by subscription ID: {}", subscriptionId);
-        PaymentQuery payment = queryRepository.findBySubscription(subscriptionId);
-        return payment != null ? convertToResponse(payment) : null;
+    public PaymentResponse findByOrderId(String orderId) {
+        PaymentQuery query = queryRepository.findByOrderId(orderId);
+        return convertToResponse(query);
     }
 
     @Override
@@ -46,9 +45,9 @@ public class PaymentQueryServiceImp implements PaymentQueryService {
     private PaymentResponse convertToResponse(PaymentQuery payment) {
 
         return PaymentResponse.builder()
-                .paymentId(payment.getPaymentId())
-                .subscriptionId(payment.getSubscription().getSubscriptionId())
-                .userId(Long.parseLong(payment.getUser().getId()))
+                .orderId(payment.getOrderId())
+                .planId(payment.getPlanId())
+                .userId(payment.getUserId())
                 .amount(payment.getAmount())
                 .orderInfo(payment.getOrderInfo())
                 .paymentUrl(payment.getPaymentUrl())

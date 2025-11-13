@@ -9,21 +9,19 @@ import java.time.LocalDateTime;
 @Getter
 public class PaymentCompletedEvent extends ApplicationEvent {
 
-    private final Long paymentId;
-    private final Long subscriptionId;
-    private final Long userId;
+    private final String orderId;
     private final Long planId;
+    private final Long userId;
     private final Long amount;
     private final Status status;
     private final String momoTransId;
     private final LocalDateTime completedAt;
 
-    public PaymentCompletedEvent(Object source, Long paymentId, Long subscriptionId,
+    public PaymentCompletedEvent(Object source, String orderId,
                                   Long userId, Long planId, Long amount, Status status,
                                   String momoTransId, LocalDateTime completedAt) {
         super(source);
-        this.paymentId = paymentId;
-        this.subscriptionId = subscriptionId;
+        this.orderId = orderId;
         this.userId = userId;
         this.planId = planId;
         this.amount = amount;

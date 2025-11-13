@@ -221,8 +221,19 @@ management:
   endpoints:
     web:
       exposure:
-        include: "health,info,metrics,routes"
+        include: "health,info,metrics,routes,gateway"
       base-path: /actuator
   endpoint:
     health:
       show-details: always
+    gateway:
+      enabled: true
+
+# Enable debug logging for Gateway routing
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.gateway.filter: DEBUG
+    org.springframework.cloud.gateway.route: DEBUG
+    org.springframework.cloud.loadbalancer: DEBUG
+    reactor.netty: INFO

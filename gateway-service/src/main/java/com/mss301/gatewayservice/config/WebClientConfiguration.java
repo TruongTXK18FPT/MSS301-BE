@@ -34,7 +34,8 @@ public class WebClientConfiguration {
 
     /**
      * CORS configuration for local development only.
-     * In production (profile: prod), CORS is configured via spring.cloud.gateway.globalcors
+     * In production (profile: prod), CORS is configured via
+     * spring.cloud.gateway.globalcors
      * in application-prod.yml to avoid duplicate headers.
      */
     @Bean

@@ -43,6 +43,10 @@ spring:
           auth: true
           starttls:
             enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+    # Don't test connection at startup - allow service to start even if SMTP is down
+    test-connection: false
 
 eureka:
   client:

@@ -11,6 +11,11 @@ public class PublicUrlMatcher {
         private static final AntPathMatcher pathMatcher = new AntPathMatcher();
 
         private static final Set<String> PUBLIC_EXACT_PATHS = Set.of(
+                        // Health check endpoints
+                        "/actuator/health",
+                        "/api/v1/authenticate/health",
+                        "/health",
+
                         // Authentication endpoints (with /api/v1 prefix)
                         "/api/v1/authenticate/auth/login",
                         "/api/v1/authenticate/auth/introspect",
@@ -74,6 +79,9 @@ public class PublicUrlMatcher {
                         "/profile/profiles");
 
         private static final List<String> PUBLIC_WILDCARD_PATTERNS = List.of(
+                        // Actuator endpoints
+                        "/actuator/**",
+                        // Premium/Content/Profile public endpoints
                         "/api/v1/premium/premiums/*",
                         "/api/v1/content/contents/*",
                         "/api/v1/profile/profiles/*",

@@ -18,7 +18,9 @@ eureka:
     fetchRegistry: true
     registerWithEureka: true
   instance:
-    preferIpAddress: true
+    # Use hostname instead of IP for Docker networking
+    preferIpAddress: false
+    hostname: media-service
     nonSecurePortEnabled: true
     securePortEnabled: false
 

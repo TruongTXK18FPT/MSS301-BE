@@ -101,11 +101,36 @@ spring:
               predicates:
                 - name: Path
                   args:
-                    patterns: "${app.api.prefix}${app.service-prefix.content}/**,${app.api.prefix}/submissions/**,${app.api.prefix}/quiz-attempts/**"
+                    pattern: "${app.api.prefix}${app.service-prefix.content}/**"
               filters:
-                - name: StripPrefix
+                - name: RewritePath
                   args:
-                    parts: 3
+                    regexp: "${app.api.prefix}${app.service-prefix.content}/(?<segment>.*)"
+                    replacement: "/${segment}"
+
+            - id: submissions-service #8085
+              uri: lb://content-service
+              predicates:
+                - name: Path
+                  args:
+                    pattern: "${app.api.prefix}/submissions/**"
+              filters:
+                - name: RewritePath
+                  args:
+                    regexp: "${app.api.prefix}/submissions/(?<segment>.*)"
+                    replacement: "/submissions/${segment}"
+
+            - id: quiz-attempts-service #8085
+              uri: lb://content-service
+              predicates:
+                - name: Path
+                  args:
+                    pattern: "${app.api.prefix}/quiz-attempts/**"
+              filters:
+                - name: RewritePath
+                  args:
+                    regexp: "${app.api.prefix}/quiz-attempts/(?<segment>.*)"
+                    replacement: "/quiz-attempts/${segment}"
 
             - id: chatbot-service #8086
               uri: lb://chatbot-service
@@ -117,7 +142,7 @@ spring:
                 - name: RewritePath
                   args:
                     regexp: "${app.api.prefix}${app.service-prefix.chatbot}/(?<segment>.*)"
-                    replacement: "/${segment}"
+                    replacement: "/chatbot/${segment}"
 
             - id: profile-service #8087
               uri: lb://profile-service

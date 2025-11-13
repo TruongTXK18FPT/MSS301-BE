@@ -22,23 +22,17 @@ public class PaymentEventHandler {
     @Autowired
     private PaymentQueryRepository queryRepository;
 
-    @Autowired
-    private SubscriptionService subscriptionService;
-
-    @Autowired
-    private UserService userService;
-
     @EventListener
     @Async
     public void handlePaymentCreated(PaymentCreatedEvent event) {
         log.info("Handling PaymentCreatedEvent for subscriptionId: {}",
-                event.getPayment().getSubscriptionId());
+                event.getPayment().getPlanId());
         try {
             PaymentCommand command = event.getPayment();
             PaymentQuery query = convertToQuery(command);
 
             queryRepository.save(query);
-            log.info("Payment view saved to MongoDB with ID: {}", query.getPaymentId());
+            log.info("Payment view saved to MongoDB with ID: {}", query.getPlanId());
         } catch (Exception e) {
             log.error("Failed to save payment view to MongoDB", e);
         }
@@ -48,11 +42,11 @@ public class PaymentEventHandler {
     @Async
     public void handlePaymentStatusUpdated(PaymentStatusUpdatedEvent event) {
         log.info("Handling PaymentStatusUpdatedEvent for subscriptionId: {}",
-                event.getPayment().getSubscriptionId());
+                event.getPayment().getPlanId());
 
         try {
             PaymentCommand command = event.getPayment();
-            PaymentQuery existing = queryRepository.findBySubscription(command.getSubscriptionId());
+            PaymentQuery existing = queryRepository.findByOrderId(command.getOrderId());
 
             if (existing != null) {
                 existing.setStatus(command.getStatus());
@@ -60,9 +54,9 @@ public class PaymentEventHandler {
                 existing.setUpdatedAt(command.getUpdatedAt());
 
                 queryRepository.save(existing);
-                log.info("Payment view updated in MongoDB for ID: {}", existing.getPaymentId());
+                log.info("Payment view updated in MongoDB for ID: {}", existing.getPlanId());
             } else {
-                log.warn("Payment view not found for subscriptionId: {}", command.getSubscriptionId());
+                log.warn("Payment view not found for subscriptionId: {}", command.getPlanId());
             }
         } catch (Exception e) {
             log.error("Failed to update payment view in MongoDB", e);
@@ -71,15 +65,11 @@ public class PaymentEventHandler {
 
     private PaymentQuery convertToQuery(PaymentCommand command) {
 
-        ResponseEntity<SubscriptionResponse> subscriptionResponse = subscriptionService.findBySubscriptionId(command.getSubscriptionId());
-        ApiResponse<UserResponse> userResponse = userService.getUserById(command.getUserId());
-
         return new PaymentQuery(
-                null, // MongoDB will generate ID
-                command.getPaymentId(),
-                subscriptionResponse.getBody(),
-                userResponse.getResult(),
+                command.getOrderId(),
+                command.getUserId(),
                 command.getAmount(),
+                command.getPlanId(),
                 command.getOrderInfo(),
                 command.getMomoRequestId(),
                 command.getMomoTransId(),

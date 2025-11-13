@@ -1,5 +1,6 @@
 package com.mss301.chatbotservice.model;
 
+import com.mss301.chatbotservice.enums.LLMProvider;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -25,10 +26,16 @@ public class ExpertProfile {
     @Column(name = "description")
     private String description;
 
-    @Column(name = "prompt_config")
+    @Column(name = "prompt_config", columnDefinition = "TEXT")
     private String promptConfig;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "llm_provider")
+    private LLMProvider llmProvider;
+
+    @Column(name = "use_rag")
+    private Boolean useRag = false; // Sử dụng RAG service để chat theo giáo trình
 
     @Column(name = "active")
     private Boolean active;
-
 }

@@ -9,7 +9,7 @@ import java.util.List;
 public interface PaymentQueryService {
     List<PaymentResponse> findAllPayments();
 
-    PaymentResponse findBySubscriptionId(Long subscriptionId);
+    PaymentResponse findByOrderId(String orderId);
 
     Page<PaymentResponse> findByUserId(Long userId, Pageable pageable);
 }

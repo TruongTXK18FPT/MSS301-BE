@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,13 +27,30 @@ public class ContentItemController {
 
     private final ContentItemService service;
 
+    private Long getUserId(Authentication authentication) {
+        try {
+            if (authentication instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken jwtAuth) {
+                Object uid = jwtAuth.getTokenAttributes().get("userId");
+                if (uid == null) {
+                    uid = jwtAuth.getTokenAttributes().get("sub");
+                }
+                if (uid != null) {
+                    return Long.parseLong(uid.toString());
+                }
+            }
+            return Long.parseLong(authentication.getName());
+        } catch (Exception e) {
+            throw new AccessDeniedException("Invalid principal");
+        }
+    }
+
     @PostMapping
     @Operation(summary = "Create content")
     public ResponseEntity<ApiResponse<ContentItemResponse>> create(
             @Valid @RequestBody ContentItemRequest request, 
             @RequestParam(required = false) Long classroomId,
             Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = getUserId(authentication);
         ContentItemResponse response = service.create(request, userId, classroomId);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
@@ -41,7 +59,7 @@ public class ContentItemController {
     @Operation(summary = "Update content")
     public ResponseEntity<ApiResponse<ContentItemResponse>> update(
             @PathVariable Long id, @Valid @RequestBody ContentItemRequest request, Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = getUserId(authentication);
         ContentItemResponse response = service.update(id, request, userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -49,7 +67,7 @@ public class ContentItemController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete content")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id, Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = getUserId(authentication);
         service.delete(id, userId);
         return ResponseEntity.ok(ApiResponse.success("Xóa thành công", null));
     }
@@ -57,7 +75,7 @@ public class ContentItemController {
     @GetMapping("/{id}")
     @Operation(summary = "Get content by id")
     public ResponseEntity<ApiResponse<ContentItemResponse>> getById(@PathVariable Long id, Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = getUserId(authentication);
         ContentItemResponse response = service.getById(id, userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -68,7 +86,7 @@ public class ContentItemController {
             @RequestParam(required = false) Long classroomId,
             @RequestParam(required = false) String type,
             Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = getUserId(authentication);
         List<ContentItemResponse> responses = service.getMyContents(userId, classroomId, type);
         return ResponseEntity.ok(ApiResponse.success(responses));
     }
@@ -100,7 +118,7 @@ public class ContentItemController {
             @PathVariable Long classroomId,
             @RequestParam(required = false) String type,
             Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = getUserId(authentication);
         List<ContentItemResponse> responses = service.getByClassroom(classroomId, type, userId);
         return ResponseEntity.ok(ApiResponse.success(responses));
     }

@@ -37,4 +37,7 @@ public class Document {
     private String contentType;
     private Integer totalPages;
     private String description;
+
+    // Google File Search Store integration
+    private String googleFileSearchStoreName; // Store name in Google File Search
 }

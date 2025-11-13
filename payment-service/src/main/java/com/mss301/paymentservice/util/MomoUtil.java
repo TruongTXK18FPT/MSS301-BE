@@ -20,7 +20,7 @@ public class MomoUtil {
                 request.getAmount(),
                 config.getExtraData(),
                 config.getIpnUrl(),
-                request.getSubscriptionId(),
+                request.getPlanId(),
                 request.getOrderInfo(),
                 config.getPartnerCode(),
                 config.getRedirectUrl(),
@@ -35,7 +35,7 @@ public class MomoUtil {
         requestBody.put("accessKey", config.getAccessKey());
         requestBody.put("requestId", request.getRequestId());
         requestBody.put("amount", request.getAmount());
-        requestBody.put("orderId", request.getSubscriptionId());
+        requestBody.put("orderId", request.getPlanId());
         requestBody.put("orderInfo", request.getOrderInfo());
         requestBody.put("redirectUrl", config.getRedirectUrl());
         requestBody.put("ipnUrl", config.getIpnUrl());

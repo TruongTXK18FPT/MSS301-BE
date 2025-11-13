@@ -10,5 +10,6 @@ import java.util.Optional;
 @Repository 
 public interface ExpertProfileRepository extends JpaRepository<ExpertProfile, Long> {
    Optional<ExpertProfile> findById(Long id);
+   Optional<ExpertProfile> findByCode(String code);
    List<ExpertProfile> findAll(); 
 } 

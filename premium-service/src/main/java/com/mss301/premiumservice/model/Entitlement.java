@@ -3,15 +3,13 @@ package com.mss301.premiumservice.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.mss301.premiumservice.constant.Unit;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.format.annotation.DurationFormat;
 
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

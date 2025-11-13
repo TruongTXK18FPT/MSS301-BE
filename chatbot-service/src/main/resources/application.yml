@@ -5,6 +5,13 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka
+  instance:
+    prefer-ip-address: true
+    hostname: localhost
+    ip-address: 127.0.0.1
+    instance-id: ${spring.application.name}:${server.port}
+    non-secure-port-enabled: true
+    secure-port-enabled: false
 
 springdoc:
   api-docs:
@@ -13,6 +20,13 @@ springdoc:
 spring:
   application:
     name: chatbot-service
+  main:
+    banner-mode: off
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.mistralai.autoconfigure.MistralAiChatAutoConfiguration
+      - org.springframework.ai.model.mistralai.autoconfigure.MistralAiEmbeddingAutoConfiguration
+      - org.springframework.ai.model.mistralai.autoconfigure.MistralAiModerationAutoConfiguration
   datasource:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://localhost:5432/chatbot_db
@@ -35,3 +49,16 @@ service:
   rag:
     url: http://localhost:8093
     name: rag-service
+
+chat:
+  api: ${CHAT_API_URL:}
+  apiKey: ${CHAT_API_KEY:}
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-2.5-flash}
+
+mistral:
+  api-key: ${MISTRAL_API_KEY:}
+  model: ${MISTRAL_MODEL:mistral-large-latest}
+  api-url: ${MISTRAL_API_URL:https://api.mistral.ai/v1/chat/completions}

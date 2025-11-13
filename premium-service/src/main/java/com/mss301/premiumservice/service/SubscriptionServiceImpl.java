@@ -36,8 +36,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Autowired
     private UsageMeterRepository usageMeterRepository;
 
-    @Autowired
-    private PaymentService paymentService;
+//    @Autowired
+//    private PaymentService paymentService;
 
     @Autowired
     private UserService userService;
@@ -55,7 +55,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         Subscription subscription = new Subscription();
         subscription.setUserId(request.getUserId());
         subscription.setPlan(plan);
-        subscription.setSubscriptionStatus(SubscriptionStatus.PENDING);
+        subscription.setSubscriptionStatus(SubscriptionStatus.SUBSCRIBED);
         subscription.setStartDate(LocalDateTime.now());
         subscription.setEndDate(LocalDateTime.now().plusMonths(plan.getBillingCycle()));
         subscription.setRenewal(request.isRenewal());
@@ -79,35 +79,35 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         Subscription savedSubscription = subscriptionRepository.save(subscription);
 
-        // 3. ✅ Call Payment Service với đầy đủ thông tin
-        PaymentRequest paymentRequest = PaymentRequest.builder()
-                .userId(request.getUserId())
-                .subscriptionId(savedSubscription.getSubscriptionId())
-                .planId(plan.getPlanId())
-                .amount(plan.getPriceCents()) // ✅ Gửi số tiền
-                .orderInfo("Subscription for plan: " + plan.getName())
-                .build();
-
-        try {
-            ApiResponse<PaymentResponse> paymentResponse = paymentService.createPayment(paymentRequest);
-
+//        // 3. ✅ Call Payment Service với đầy đủ thông tin
+//        PaymentRequest paymentRequest = PaymentRequest.builder()
+//                .userId(request.getUserId())
+////                .subscriptionId(savedSubscription.getSubscriptionId())
+//                .planId(plan.getPlanId())
+//                .amount(plan.getPriceCents()) // ✅ Gửi số tiền
+//                .orderInfo("Subscription for plan: " + plan.getName())
+//                .build();
+//
+//        try {
+//            ApiResponse<PaymentResponse> paymentResponse = paymentService.createPayment(paymentRequest);
+//
             return SubscriptionWithPaymentResponse.builder()
                     .subscriptionId(savedSubscription.getSubscriptionId())
                     .planId(plan.getPlanId())
                     .planName(plan.getName())
                     .amount(plan.getPriceCents())
-                    .paymentUrl(paymentResponse.getResult().getPaymentUrl())
+                    .paymentUrl("")
                     .build();
-
-        } catch (Exception e) {
-            log.error("Failed to create payment for subscription: {}",
-                    savedSubscription.getSubscriptionId(), e);
-
-            // Rollback subscription
-            subscriptionRepository.delete(savedSubscription);
-
-            throw new RuntimeException("Failed to create payment", e);
-        }
+//
+//        } catch (Exception e) {
+//            log.error("Failed to create payment for subscription: {}",
+//                    savedSubscription.getSubscriptionId(), e);
+//
+//            // Rollback subscription
+//            subscriptionRepository.delete(savedSubscription);
+//
+//            throw new RuntimeException("Failed to create payment", e);
+//        }
     }
 
     @Override

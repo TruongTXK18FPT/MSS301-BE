@@ -1,9 +1,7 @@
 package com.mss301.premiumservice.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
@@ -15,7 +13,8 @@ import java.time.LocalDateTime;
 * 4. Theo dõi usage và kiểm tra giới hạn khi user sử dụng tính năng
 * 5. Reset usage khi bắt đầu chu kỳ mới
 */
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity

@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.google.gson.Gson;
 import com.mss301.contentservice.dto.QuizAttemptResponse;
 import com.mss301.contentservice.dto.SubmitQuizRequest;
 import com.mss301.contentservice.entity.ContentItem;
@@ -43,57 +44,82 @@ public class QuizAttemptServiceImpl implements QuizAttemptService {
     @Override
     @Transactional
     public QuizAttemptResponse startQuizAttempt(Long quizId, Long studentId, String studentName) {
-        // Verify quiz exists
-        ContentItem quiz = contentItemRepository.findById(quizId)
-                .orElseThrow(() -> new RuntimeException("Quiz not found"));
+        try {
+            // Verify quiz exists
+            ContentItem quiz = contentItemRepository.findById(quizId)
+                    .orElseThrow(() -> new RuntimeException("Quiz not found with id: " + quizId));
 
-        if (!ContentItem.Type.QUIZ.equals(quiz.getType())) {
-            throw new RuntimeException("Content item is not a quiz");
+            if (!ContentItem.Type.QUIZ.equals(quiz.getType())) {
+                throw new RuntimeException("Content item with id " + quizId + " is not a quiz. Type: " + quiz.getType());
+            }
+
+            // Check if there's already an active attempt
+            var activeAttempt = quizAttemptRepository.findFirstByQuizIdAndStudentIdAndSubmittedAtIsNullOrderByStartedAtDesc(
+                    quizId, studentId);
+            
+            if (activeAttempt.isPresent()) {
+                return toResponse(activeAttempt.get());
+            }
+
+            // Create new attempt
+            QuizAttempt attempt = QuizAttempt.builder()
+                    .quizId(quizId)
+                    .studentId(studentId)
+                    .studentName(studentName != null ? studentName : "Student " + studentId)
+                    .build();
+
+            attempt = quizAttemptRepository.save(attempt);
+            return toResponse(attempt);
+        } catch (RuntimeException e) {
+            throw e; // Re-throw runtime exceptions
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to start quiz attempt: " + e.getMessage(), e);
         }
-
-        // Check if there's already an active attempt
-        var activeAttempt = quizAttemptRepository.findFirstByQuizIdAndStudentIdAndSubmittedAtIsNullOrderByStartedAtDesc(
-                quizId, studentId);
-        
-        if (activeAttempt.isPresent()) {
-            return toResponse(activeAttempt.get());
-        }
-
-        // Create new attempt
-        QuizAttempt attempt = QuizAttempt.builder()
-                .quizId(quizId)
-                .studentId(studentId)
-                .studentName(studentName)
-                .build();
-
-        attempt = quizAttemptRepository.save(attempt);
-        return toResponse(attempt);
     }
 
     @Override
     @Transactional
     public QuizAttemptResponse submitQuizAttempt(Long attemptId, Long studentId, SubmitQuizRequest request) {
-        QuizAttempt attempt = quizAttemptRepository.findById(attemptId)
-                .orElseThrow(() -> new RuntimeException("Quiz attempt not found"));
+        try {
+            QuizAttempt attempt = quizAttemptRepository.findById(attemptId)
+                    .orElseThrow(() -> new RuntimeException("Quiz attempt not found with id: " + attemptId));
 
-        // Verify it's the student's attempt
-        if (!attempt.getStudentId().equals(studentId)) {
-            throw new RuntimeException("Access denied");
+            // Verify it's the student's attempt
+            if (!attempt.getStudentId().equals(studentId)) {
+                throw new RuntimeException("Access denied: Attempt belongs to different student");
+            }
+
+            // Check if already submitted
+            if (attempt.getSubmittedAt() != null) {
+                throw new RuntimeException("Quiz already submitted at: " + attempt.getSubmittedAt());
+            }
+
+            // Validate answers
+            if (request.getAnswers() == null || request.getAnswers().trim().isEmpty()) {
+                throw new RuntimeException("Answers cannot be null or empty");
+            }
+
+            // Validate JSON format
+            try {
+                // Try to parse as JSON to validate format
+                new Gson().fromJson(request.getAnswers(), Object.class);
+            } catch (Exception e) {
+                throw new RuntimeException("Invalid JSON format in answers: " + e.getMessage());
+            }
+
+            attempt.setSubmittedAt(LocalDateTime.now());
+            attempt.setAnswers(request.getAnswers());
+            
+            // TODO: Calculate score based on correct answers
+            // For now, set score to null (will be graded later or auto-graded)
+
+            attempt = quizAttemptRepository.save(attempt);
+            return toResponse(attempt);
+        } catch (RuntimeException e) {
+            throw e; // Re-throw runtime exceptions
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to submit quiz attempt: " + e.getMessage(), e);
         }
-
-        // Check if already submitted
-        if (attempt.getSubmittedAt() != null) {
-            throw new RuntimeException("Quiz already submitted");
-        }
-
-        attempt.setSubmittedAt(LocalDateTime.now());
-        attempt.setAnswers(request.getAnswers());
-        
-        // TODO: Calculate score based on correct answers
-        // For now, set score to null (will be graded later or auto-graded)
-
-        attempt = quizAttemptRepository.save(attempt);
-        return toResponse(attempt);
     }
 
     @Override

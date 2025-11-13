@@ -139,6 +139,7 @@ public class ContentItemServiceImpl implements ContentItemService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ContentItemResponse> getMyContents(Long ownerId) {
         return repository.findByOwnerId(ownerId).stream()
                 .map(this::toResponseWithDetails)
@@ -146,6 +147,7 @@ public class ContentItemServiceImpl implements ContentItemService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ContentItemResponse> getPublicContents() {
         return repository.findByIsPublicTrue().stream()
                 .map(this::toResponseWithDetails)
@@ -153,6 +155,7 @@ public class ContentItemServiceImpl implements ContentItemService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ContentItemResponse> searchPublic(String subject, String grade, String keyword) {
         return repository.searchPublic(subject, grade, keyword).stream()
                 .map(this::toResponseWithDetails)
@@ -190,6 +193,7 @@ public class ContentItemServiceImpl implements ContentItemService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ContentItemResponse> getMyContents(Long ownerId, Long classroomId, String type) {
         List<ContentItem> items = repository.findByOwnerId(ownerId);
         
@@ -205,6 +209,7 @@ public class ContentItemServiceImpl implements ContentItemService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ContentItemResponse> getPublicContents(String type, String subject, String grade) {
         List<ContentItem> items = repository.findByIsPublicTrue();
         
@@ -254,7 +259,7 @@ public class ContentItemServiceImpl implements ContentItemService {
                 .content(item.getContent())
                 .subject(item.getSubject())
                 .grade(item.getGrade())
-                .tags(item.getTags())
+                .tags(parseTags(item.getTags())) // Convert comma-separated string to List
                 .isPublic(item.getIsPublic())
                 .classroomId(item.getClassroomId())  // Include classroom association
                 .createdAt(item.getCreatedAt())
@@ -354,5 +359,20 @@ public class ContentItemServiceImpl implements ContentItemService {
                 .attachmentFileIds(attachmentFileIds)
                 .build();
         assignmentDetailRepository.save(detail);
+    }
+
+    /**
+     * Parse comma-separated tags string into List<String>
+     * @param tagsString comma-separated string like "math,algebra,grade6"
+     * @return List of tag strings, or empty list if null/empty
+     */
+    private List<String> parseTags(String tagsString) {
+        if (tagsString == null || tagsString.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        return java.util.Arrays.stream(tagsString.split(","))
+                .map(String::trim)
+                .filter(tag -> !tag.isEmpty())
+                .collect(Collectors.toList());
     }
 }

@@ -138,6 +138,10 @@ spring:
             - name: Path
               args:
                 pattern: /api/v1/profile/**
+          filters:
+            - name: StripPrefix
+              args:
+                parts: 3
 
         - id: classroom-service
           uri: lb://classroom-service

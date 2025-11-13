@@ -43,7 +43,7 @@ public class ContentItem {
     @Column(length = 2000)
     private String description;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String content;
 
     @Column(length = 100)

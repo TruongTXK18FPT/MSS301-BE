@@ -71,35 +71,6 @@ public class PaymentController {
         }
     }
 
-    @GetMapping("/subscription/{subscriptionId}")
-    public ResponseEntity<ApiResponse<PaymentResponse>> findByOrderId(
-            @PathVariable("subscriptionId") Long subscriptionId) {
-
-        try {
-            PaymentResponse payment = queryService.findBySubscriptionId(subscriptionId);
-            if (payment == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(ApiResponse.<PaymentResponse>builder()
-                                .code(404)
-                                .message("Payment not found")
-                                .build());
-            }
-
-            return ResponseEntity.ok(ApiResponse.<PaymentResponse>builder()
-                    .code(200)
-                    .message("Payment found")
-                    .result(payment)
-                    .build());
-        } catch (Exception e) {
-            log.error("Error finding payment by subscription ID: {}", subscriptionId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.<PaymentResponse>builder()
-                            .code(500)
-                            .message("Failed to find payment")
-                            .build());
-        }
-    }
-
     @GetMapping("/user/{userId}")
     public ResponseEntity<ApiResponse<Page<PaymentResponse>>> findByUserId(
             @PathVariable("userId") Long userId,

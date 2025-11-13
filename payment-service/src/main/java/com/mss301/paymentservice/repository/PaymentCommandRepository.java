@@ -8,6 +8,6 @@ import java.util.Optional;
 
 // Command Repository
 @Repository
-public interface PaymentCommandRepository extends JpaRepository<PaymentCommand, Long> {
-   Optional<PaymentCommand> findBySubscriptionId(Long orderId);
+public interface PaymentCommandRepository extends JpaRepository<PaymentCommand, String> {
+
 }

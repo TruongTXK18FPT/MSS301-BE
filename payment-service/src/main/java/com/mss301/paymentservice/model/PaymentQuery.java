@@ -17,11 +17,10 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class PaymentQuery {
     @Id
-    private String id;
-    private Long paymentId;
-    private SubscriptionResponse subscription;
-    private UserResponse user;
+    private String orderId;
+    private Long userId;
     private Long amount;
+    private Long planId;
     private String orderInfo;
     private String momoRequestId;
     private String momoTransId;

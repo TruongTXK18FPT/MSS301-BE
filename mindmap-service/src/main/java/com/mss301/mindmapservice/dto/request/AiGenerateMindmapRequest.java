@@ -56,6 +56,9 @@ public class AiGenerateMindmapRequest {
     private Long chapterId;
     private Long lessonId;
 
+    // Visibility setting for the mindmap
+    private String visibility; // PRIVATE, PUBLIC, CLASSROOM
+
     public enum AiProvider {
         MISTRAL("Mistral"),
         GEMINI("Gemini");

@@ -1,8 +1,7 @@
-package com.mss301.chatbotservice.model.dtos.response;
+package com.mss301.chatbotservice.dtos.response;
 
-
-import com.mss301.chatbotservice.enums.LLMProvider;
-import com.mss301.chatbotservice.enums.ResponseMode;
+import com.mss301.ragservice.enums.LLMProvider;
+import com.mss301.ragservice.enums.ResponseMode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,3 +19,4 @@ public class RagResponse {
     private LocalDateTime timestamp;
     private int chunksUsed;
 }
+

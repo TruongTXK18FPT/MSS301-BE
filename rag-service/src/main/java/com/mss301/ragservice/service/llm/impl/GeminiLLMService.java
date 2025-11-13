@@ -38,6 +38,22 @@ public class GeminiLLMService implements LLMService {
         this.promptTemplateFactory = promptTemplateFactory;
         log.info("GeminiLLMService initialized");
     }
+    
+    @jakarta.annotation.PostConstruct
+    public void validateConfiguration() {
+        // Validate API key after Spring injection
+        if (apiKey == null || apiKey.isBlank()) {
+            log.error("Gemini API key is not set! Please set GEMINI_API_KEY environment variable or gemini.api-key property.");
+            throw new IllegalStateException("Gemini API key is not configured");
+        }
+        
+        if (model == null || model.isBlank()) {
+            log.error("Gemini model is not set! Please set gemini.model property.");
+            throw new IllegalStateException("Gemini model is not configured");
+        }
+        
+        log.info("GeminiLLMService configuration validated - API key (length: {}), model: {}", apiKey.length(), model);
+    }
 
     @Override
     public String generateResponse(String query, String context, ResponseMode mode) {
@@ -90,19 +106,22 @@ public class GeminiLLMService implements LLMService {
 
     @Override
     public boolean isAvailable() {
-        try {
-            log.debug("Checking Gemini AI availability");
-            
-            // Simple ping test
-            generateResponse("ping", "", ResponseMode.CHAT);
-            
-            log.debug("Gemini AI is available");
-            return true;
-
-        } catch (Exception e) {
-            log.warn("Gemini AI is not available: {}", e.getMessage());
+        // Check if API key is set
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("Gemini API key is not set");
             return false;
         }
+        
+        // Check if model is set
+        if (model == null || model.isBlank()) {
+            log.warn("Gemini model is not set");
+            return false;
+        }
+        
+        // Optionally do a lightweight availability check
+        // For now, just check if configuration is valid
+        log.debug("Gemini AI configuration is valid (API key and model are set)");
+        return true;
     }
 
     private String buildPrompt(String query, String context, ResponseMode mode) {

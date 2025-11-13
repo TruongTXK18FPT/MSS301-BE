@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
@@ -31,7 +32,14 @@ public class WebClientConfiguration {
                 .build();
     }
 
+    /**
+     * CORS configuration for local development only.
+     * In production (profile: prod), CORS is configured via
+     * spring.cloud.gateway.globalcors
+     * in application-prod.yml to avoid duplicate headers.
+     */
     @Bean
+    @Profile("!prod")
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
 

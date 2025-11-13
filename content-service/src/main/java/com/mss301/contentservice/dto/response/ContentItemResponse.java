@@ -1,6 +1,7 @@
 package com.mss301.contentservice.dto.response;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,7 +21,7 @@ public class ContentItemResponse {
     private String content;
     private String subject;
     private String grade;
-    private String tags;
+    private List<String> tags; // Changed from String to List<String>
     private Boolean isPublic;
     private Long classroomId;  // Classroom association
     private LocalDateTime createdAt;

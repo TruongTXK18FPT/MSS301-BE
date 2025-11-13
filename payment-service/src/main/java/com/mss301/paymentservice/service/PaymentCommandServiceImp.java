@@ -45,7 +45,7 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
     @Override
     public PaymentResponse createPayment(PaymentRequest request) {
         log.info("Creating payment for user: {}, subscription: {}",
-                request.getUserId(), request.getSubscriptionId());
+                request.getUserId(), request.getPlanId());
 
         // ✅ Validate request
         validatePaymentRequest(request);
@@ -58,10 +58,10 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
             saved.setPaymentUrl(paymentUrl);
             saved = commandRepository.save(saved);
 
-            log.info("Payment created successfully with ID: {}", saved.getPaymentId());
+            log.info("Payment created successfully with ID: {}", saved.getOrderId());
         } catch (Exception e) {
             log.error("Failed to create MoMo payment URL for payment: {}",
-                    saved.getPaymentId(), e);
+                    saved.getOrderId(), e);
             saved.setStatus(Status.FAILED);
             saved = commandRepository.save(saved);
         }
@@ -78,7 +78,7 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
         String resultCode = params.get("resultCode");
 
         // ✅ Find by paymentId instead of subscriptionId
-        PaymentCommand payment = commandRepository.findById(Long.parseLong(orderId))
+        PaymentCommand payment = commandRepository.findById(orderId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Payment not found for orderId: " + orderId));
 
@@ -93,8 +93,7 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
         if (newStatus == Status.SUCCESS) {
             eventPublisher.publishEvent(new PaymentCompletedEvent(
                     this,
-                    updated.getPaymentId(),
-                    updated.getSubscriptionId(),
+                    updated.getOrderId(),
                     updated.getUserId(),
                     updated.getPlanId(),
                     updated.getAmount(),
@@ -105,7 +104,7 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
         }
 
         log.info("Payment callback processed. Payment ID: {}, Status: {}",
-                updated.getPaymentId(), newStatus);
+                updated.getOrderId(), newStatus);
 
         return convertToResponse(updated);
     }
@@ -114,7 +113,7 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
         if (request.getUserId() == null) {
             throw new IllegalArgumentException("User ID is required");
         }
-        if (request.getSubscriptionId() == null) {
+        if (request.getPlanId() == null) {
             throw new IllegalArgumentException("Subscription ID is required");
         }
         if (request.getPlanId() == null) {
@@ -127,7 +126,7 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
 
     private PaymentCommand createPaymentCommand(PaymentRequest request) {
         PaymentCommand payment = new PaymentCommand();
-        payment.setSubscriptionId(request.getSubscriptionId());
+        payment.setPlanId(request.getPlanId());
         payment.setUserId(request.getUserId());
         payment.setAmount(request.getAmount()); // ✅ Lấy từ request
         payment.setPlanId(request.getPlanId()); // ✅ Lưu planId
@@ -140,7 +139,7 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
         MomoRequest momoRequest = new MomoRequest();
         momoRequest.setRequestId(UUID.randomUUID().toString());
         momoRequest.setAmount(payment.getAmount());
-        momoRequest.setSubscriptionId(payment.getPaymentId());
+        momoRequest.setPlanId(payment.getPlanId());
         momoRequest.setOrderInfo(payment.getOrderInfo());
 
         payment.setMomoRequestId(momoRequest.getRequestId());
@@ -169,8 +168,7 @@ public class PaymentCommandServiceImp implements PaymentCommandService {
 
     private PaymentResponse convertToResponse(PaymentCommand payment) {
         return PaymentResponse.builder()
-                .paymentId(payment.getPaymentId())
-                .subscriptionId(payment.getSubscriptionId())
+                .orderId(payment.getOrderId())
                 .userId(payment.getUserId())
                 .planId(payment.getPlanId())
                 .amount(payment.getAmount())

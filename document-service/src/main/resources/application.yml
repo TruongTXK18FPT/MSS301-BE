@@ -68,6 +68,11 @@ chunking:
       enabled: false
       interval: 100
 
+google:
+  api:
+    key: ${GOOGLE_API_KEY:AIzaSyB0jEvoo8IwoNzZLIQMTF6FLacEFp8ZB_c}
+    base-url: https://generativelanguage.googleapis.com
+
 springdoc:
   api-docs:
     path: /v3/api-docs

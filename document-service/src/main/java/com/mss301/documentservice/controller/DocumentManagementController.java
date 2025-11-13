@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.mss301.documentservice.dto.ApiResponse;
+import com.mss301.documentservice.dto.google.FileSearchStoreResponse;
 import com.mss301.documentservice.dto.response.*;
 import com.mss301.documentservice.entity.Chunk;
 import com.mss301.documentservice.entity.Document;
@@ -438,6 +439,47 @@ public class DocumentManagementController {
             log.error("Error analyzing table of contents for document: {}", documentId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Failed to analyze table of contents: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/google/file-search-stores")
+    @Operation(
+            summary = "List all Google File Search Stores",
+            description = "Retrieves all File Search Stores from Google (uploaded documents)")
+    public ResponseEntity<ApiResponse<List<FileSearchStoreResponse>>> listGoogleFileSearchStores(
+            Authentication authentication) {
+        try {
+            Long userId = getUserIdFromAuthentication(authentication);
+            log.info("User {} listing Google File Search Stores", userId);
+
+            List<FileSearchStoreResponse> stores = documentService.listGoogleFileSearchStores();
+            return ResponseEntity.ok(ApiResponse.success("Retrieved " + stores.size() + " File Search Stores", stores));
+
+        } catch (Exception e) {
+            log.error("Error listing Google File Search Stores", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to list File Search Stores: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/google/file-search-stores/{storeName}")
+    @Operation(
+            summary = "Get Google File Search Store details",
+            description = "Retrieves details of a specific File Search Store by its name")
+    public ResponseEntity<ApiResponse<FileSearchStoreResponse>> getGoogleFileSearchStore(
+            @PathVariable String storeName,
+            Authentication authentication) {
+        try {
+            Long userId = getUserIdFromAuthentication(authentication);
+            log.info("User {} getting Google File Search Store: {}", userId, storeName);
+
+            FileSearchStoreResponse store = documentService.getGoogleFileSearchStore(storeName);
+            return ResponseEntity.ok(ApiResponse.success(store));
+
+        } catch (Exception e) {
+            log.error("Error getting Google File Search Store: {}", storeName, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to get File Search Store: " + e.getMessage()));
         }
     }
 

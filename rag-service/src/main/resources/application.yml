@@ -53,6 +53,9 @@ rag:
 gemini:
   api-key: ${GEMINI_API_KEY:AIzaSyDtwnAbU30A1r_ixXtuZLZusEcmLa8tzNg}
   model: gemini-2.0-flash-exp
+  file-search:
+    api-key: ${GEMINI_FILE_SEARCH_API_KEY:AIzaSyB0jEvoo8IwoNzZLIQMTF6FLacEFp8ZB_c}
+    model: gemini-2.5-flash
 
 logging:
   level:

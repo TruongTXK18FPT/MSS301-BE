@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import com.mss301.documentservice.dto.google.FileSearchStoreResponse;
 import com.mss301.documentservice.entity.Document;
 import com.mss301.documentservice.entity.ProcessingJob;
 import com.mss301.documentservice.entity.enums.DocumentStatus;
@@ -24,4 +25,9 @@ public interface DocumentService {
     Optional<Document> getDocumentById(String documentId);
 
     void deleteDocument(String documentId);
+
+    // Google File Search Store operations
+    List<FileSearchStoreResponse> listGoogleFileSearchStores();
+
+    FileSearchStoreResponse getGoogleFileSearchStore(String storeName);
 }

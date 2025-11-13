@@ -25,6 +25,8 @@ import com.mss301.documentservice.repository.DocumentRepository;
 import com.mss301.documentservice.repository.ProcessingJobRepository;
 import com.mss301.documentservice.service.document.DocumentProcessingService;
 import com.mss301.documentservice.service.document.DocumentService;
+import com.mss301.documentservice.service.google.GoogleFileSearchService;
+import com.mss301.documentservice.dto.google.FileSearchStoreResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +41,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final ProcessingJobRepository processingJobRepository;
     private final ChunkRepository chunkRepository;
     private final DocumentProcessingService documentProcessingService;
+    private final GoogleFileSearchService googleFileSearchService;
 
     @Value("${app.upload.dir}")
     private String uploadDir;
@@ -115,6 +118,25 @@ public class DocumentServiceImpl implements DocumentService {
 
         log.info("File uploaded successfully to: {}", filePath.toAbsolutePath());
 
+        // Create Google File Search Store and upload file
+        String googleStoreName = null;
+        try {
+            // Create File Search Store with title as display name
+            String displayName = title != null ? title : originalFilename;
+            FileSearchStoreResponse storeResponse = googleFileSearchService.createFileSearchStore(displayName);
+            googleStoreName = storeResponse.getName();
+            log.info("Created Google File Search Store: {}", googleStoreName);
+
+            // Upload file to the store
+            googleFileSearchService.uploadFileToStore(googleStoreName, file);
+            log.info("File uploaded to Google File Search Store successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to upload file to Google File Search Store", e);
+            // Continue saving document even if Google upload fails
+            // The file is still saved locally
+        }
+
         return documentRepository.save(Document.builder()
                 .id(UUID.randomUUID().toString())
                 .title(title != null ? title : originalFilename)
@@ -126,6 +148,7 @@ public class DocumentServiceImpl implements DocumentService {
                 .contentType(file.getContentType())
                 .description(description)
                 .language(Language.VI)
+                .googleFileSearchStoreName(googleStoreName)
                 .build());
     }
 
@@ -184,6 +207,23 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public void deleteDocument(String documentId) {
+        // Get document to check if it has a Google File Search Store
+        Optional<Document> documentOpt = documentRepository.findById(documentId);
+        if (documentOpt.isPresent()) {
+            Document document = documentOpt.get();
+
+            // Delete Google File Search Store if exists
+            if (document.getGoogleFileSearchStoreName() != null) {
+                try {
+                    googleFileSearchService.deleteFileSearchStore(document.getGoogleFileSearchStoreName());
+                    log.info("Deleted Google File Search Store: {}", document.getGoogleFileSearchStoreName());
+                } catch (Exception e) {
+                    log.error("Failed to delete Google File Search Store: {}", document.getGoogleFileSearchStoreName(), e);
+                    // Continue with local deletion even if Google deletion fails
+                }
+            }
+        }
+
         // Xóa tất cả chunks liên quan
         chunkRepository.deleteByDocumentId(documentId);
 
@@ -196,6 +236,18 @@ public class DocumentServiceImpl implements DocumentService {
         documentRepository.deleteById(documentId);
 
         log.info("Deleted document {} and all related data", documentId);
+    }
+
+    @Override
+    public List<FileSearchStoreResponse> listGoogleFileSearchStores() {
+        log.info("Listing all Google File Search Stores");
+        return googleFileSearchService.listFileSearchStores();
+    }
+
+    @Override
+    public FileSearchStoreResponse getGoogleFileSearchStore(String storeName) {
+        log.info("Getting Google File Search Store: {}", storeName);
+        return googleFileSearchService.getFileSearchStore(storeName);
     }
 
     private void validateFile(MultipartFile file) {

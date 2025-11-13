@@ -58,9 +58,13 @@ eureka:
     eureka-service-url-poll-interval-seconds: 30
     should-enforce-registration-at-init: false
   instance:
-    preferIpAddress: true
+    # Use hostname instead of IP for Docker networking
+    preferIpAddress: false
+    hostname: auth-service
+    # Faster heartbeat for quicker service discovery
     lease-renewal-interval-in-seconds: 10
     lease-expiration-duration-in-seconds: 30
+    # Force non-secure communication
     nonSecurePortEnabled: true
     securePortEnabled: false
 

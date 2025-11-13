@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: chatbot-service-test
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password: 
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: false
+    database-platform: org.hibernate.dialect.H2Dialect
+  h2:
+    console:
+      enabled: true
+
+eureka:
+  client:
+    enabled: false
+
+gemini:
+  api-key: test-key
+  model: gemini-2.5-flash
+
+mistral:
+  api-key: test-key
+  model: mistral-large-latest
+  api-url: https://api.mistral.ai/v1/chat/completions
+
+jwt:
+  signerKey: "1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij"
+

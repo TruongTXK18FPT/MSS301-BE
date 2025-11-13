@@ -5,6 +5,7 @@ import java.util.List;
 import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,11 +34,28 @@ public class QuizController {
     private final QuizService quizService;
     private final AiQuizService aiQuizService;
 
+    private Long getUserId(Authentication authentication) {
+        try {
+            if (authentication instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken jwtAuth) {
+                Object uid = jwtAuth.getTokenAttributes().get("userId");
+                if (uid == null) {
+                    uid = jwtAuth.getTokenAttributes().get("sub");
+                }
+                if (uid != null) {
+                    return Long.parseLong(uid.toString());
+                }
+            }
+            return Long.parseLong(authentication.getName());
+        } catch (Exception e) {
+            throw new AccessDeniedException("Invalid principal");
+        }
+    }
+
     @GetMapping
     @Operation(summary = "Get quiz definition for a content item")
     public ResponseEntity<QuizResponsePayload> get(
             @PathVariable("id") Long contentItemId, Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = getUserId(authentication);
         return ResponseEntity.ok(quizService.getQuiz(contentItemId, userId));
     }
 
@@ -47,7 +65,7 @@ public class QuizController {
             @PathVariable("id") Long contentItemId,
             @Valid @RequestBody QuizRequestPayload.QuizRequest request,
             Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = getUserId(authentication);
         return ResponseEntity.ok(quizService.putQuiz(contentItemId, request, userId));
     }
 
@@ -57,7 +75,7 @@ public class QuizController {
             @PathVariable("id") Long contentItemId,
             @Valid @RequestBody GenerateQuizRequest request,
             Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = getUserId(authentication);
 
         // Get existing questions to avoid duplicates
         QuizResponsePayload existingQuiz = quizService.getQuiz(contentItemId, userId);

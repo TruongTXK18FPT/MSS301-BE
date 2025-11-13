@@ -25,6 +25,7 @@ public class QuizResponsePayload {
         private String text;
         private Integer points;
         private String type;
+        private String explanation; // Giải thích đáp án
         private List<QuizOptionDto> options;
     }
 

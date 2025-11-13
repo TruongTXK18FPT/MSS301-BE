@@ -82,12 +82,12 @@ public class PublicUrlMatcher {
                         // Actuator endpoints
                         "/actuator/**",
                         // Premium/Content/Profile public endpoints
-                        "/api/v1/premium/premiums/*",
-                        "/api/v1/content/contents/*",
-                        "/api/v1/profile/profiles/*",
-                        "/premium/premiums/*",
-                        "/content/contents/*",
-                        "/profile/profiles/*");
+                        "/api/v1/premium/premiums/**",
+                        "/api/v1/content/contents/**",
+                        "/api/v1/profile/profiles/**",
+                        "/premium/premiums/**",
+                        "/content/contents/**",
+                        "/profile/profiles/**");
 
         public boolean isPublicUrl(String path) {
                 boolean isExactMatch = PUBLIC_EXACT_PATHS.contains(path);

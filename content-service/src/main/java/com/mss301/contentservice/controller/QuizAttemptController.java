@@ -2,8 +2,8 @@ package com.mss301.contentservice.controller;
 
 import java.util.List;
 
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import com.mss301.contentservice.dto.ApiResponse;
@@ -20,10 +20,41 @@ public class QuizAttemptController {
 
     private final QuizAttemptService quizAttemptService;
 
+    private Long getUserId(Authentication authentication) {
+        try {
+            if (authentication instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken jwtAuth) {
+                Object uid = jwtAuth.getTokenAttributes().get("userId");
+                if (uid == null) {
+                    uid = jwtAuth.getTokenAttributes().get("sub");
+                }
+                if (uid != null) {
+                    return Long.parseLong(uid.toString());
+                }
+            }
+            return Long.parseLong(authentication.getName());
+        } catch (Exception e) {
+            throw new AccessDeniedException("Invalid principal: " + e.getMessage());
+        }
+    }
+
+    private String getUserName(Authentication authentication) {
+        try {
+            if (authentication instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken jwtAuth) {
+                Object name = jwtAuth.getTokenAttributes().get("name");
+                if (name != null) {
+                    return name.toString();
+                }
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     @GetMapping("/quiz/{quizId}")
     public ApiResponse<List<QuizAttemptResponse>> getAttemptsByQuiz(
             @PathVariable Long quizId,
-            @AuthenticationPrincipal Jwt jwt) {
+            Authentication authentication) {
         
         List<QuizAttemptResponse> attempts = quizAttemptService.getAttemptsByQuiz(quizId);
         return ApiResponse.success(attempts);
@@ -32,9 +63,9 @@ public class QuizAttemptController {
     @GetMapping("/quiz/{quizId}/my-attempts")
     public ApiResponse<List<QuizAttemptResponse>> getMyAttempts(
             @PathVariable Long quizId,
-            @AuthenticationPrincipal Jwt jwt) {
+            Authentication authentication) {
         
-        Long studentId = jwt.getClaim("userId");
+        Long studentId = getUserId(authentication);
         List<QuizAttemptResponse> attempts = quizAttemptService.getMyAttempts(quizId, studentId);
         return ApiResponse.success(attempts);
     }
@@ -42,10 +73,17 @@ public class QuizAttemptController {
     @PostMapping("/quiz/{quizId}/start")
     public ApiResponse<QuizAttemptResponse> startQuizAttempt(
             @PathVariable Long quizId,
-            @AuthenticationPrincipal Jwt jwt) {
+            Authentication authentication) {
         
-        Long studentId = jwt.getClaim("userId");
-        String studentName = jwt.getClaim("name");
+        Long studentId = getUserId(authentication);
+        if (studentId == null) {
+            throw new AccessDeniedException("User ID not found in authentication token");
+        }
+        
+        String studentName = getUserName(authentication);
+        if (studentName == null || studentName.trim().isEmpty()) {
+            studentName = "Student " + studentId;
+        }
         
         QuizAttemptResponse attempt = quizAttemptService.startQuizAttempt(quizId, studentId, studentName);
         return ApiResponse.success("Bắt đầu làm bài", attempt);
@@ -55,9 +93,13 @@ public class QuizAttemptController {
     public ApiResponse<QuizAttemptResponse> submitQuizAttempt(
             @PathVariable Long attemptId,
             @RequestBody SubmitQuizRequest request,
-            @AuthenticationPrincipal Jwt jwt) {
+            Authentication authentication) {
         
-        Long studentId = jwt.getClaim("userId");
+        Long studentId = getUserId(authentication);
+        if (studentId == null) {
+            throw new AccessDeniedException("User ID not found in authentication token");
+        }
+        
         QuizAttemptResponse attempt = quizAttemptService.submitQuizAttempt(attemptId, studentId, request);
         return ApiResponse.success("Nộp bài thành công", attempt);
     }
@@ -65,9 +107,13 @@ public class QuizAttemptController {
     @GetMapping("/{id}")
     public ApiResponse<QuizAttemptResponse> getAttemptById(
             @PathVariable Long id,
-            @AuthenticationPrincipal Jwt jwt) {
+            Authentication authentication) {
         
-        Long userId = jwt.getClaim("userId");
+        Long userId = getUserId(authentication);
+        if (userId == null) {
+            throw new AccessDeniedException("User ID not found in authentication token");
+        }
+        
         QuizAttemptResponse attempt = quizAttemptService.getAttemptById(id, userId);
         return ApiResponse.success(attempt);
     }

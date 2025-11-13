@@ -39,6 +39,8 @@ public final class QuizRequestPayload {
         @NotBlank
         private String type; // MULTIPLE_CHOICE, TRUE_FALSE, SHORT_ANSWER
 
+        private String explanation; // Giải thích đáp án
+
         private List<QuizOptionRequest> options;
     }
 

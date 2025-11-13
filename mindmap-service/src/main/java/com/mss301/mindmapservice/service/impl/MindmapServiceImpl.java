@@ -80,7 +80,16 @@ public class MindmapServiceImpl implements MindmapService {
         mindmap.setUserId(userId);
         mindmap.setGrade(request.getGrade());
         mindmap.setSubject(request.getSubject());
-        mindmap.setIsPublic(request.getIsPublic());
+        
+        // Set visibility properly
+        if (request.getVisibility() != null) {
+            mindmap.setVisibility(request.getVisibility());
+            mindmap.setIsPublic(request.getVisibility() == Mindmap.Visibility.PUBLIC);
+        } else {
+            mindmap.setVisibility(Mindmap.Visibility.PRIVATE);
+            mindmap.setIsPublic(request.getIsPublic() != null ? request.getIsPublic() : false);
+        }
+        
         mindmap.setIsAiGenerated(false);
         mindmap.setCreatedAt(LocalDateTime.now());
         mindmap.setUpdatedAt(LocalDateTime.now());

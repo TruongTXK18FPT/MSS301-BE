@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -40,13 +42,18 @@ public class QuizAttempt {
     @Column(precision = 5, scale = 2)
     private BigDecimal score;
 
-    @Column(columnDefinition = "jsonb")
-    private String answers; // JSON string of answers
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb", nullable = true)
+    private String answers; // JSON string of answers (null when not submitted)
 
     @PrePersist
     void onCreate() {
         if (startedAt == null) {
             startedAt = LocalDateTime.now();
+        }
+        // Ensure answers is null (not empty string) when creating new attempt
+        if (answers != null && answers.trim().isEmpty()) {
+            answers = null;
         }
     }
 }

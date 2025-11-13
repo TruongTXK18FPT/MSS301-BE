@@ -1,4 +1,4 @@
-package com.mss301.chatbotservice.config;
+package com.mss301.ragservice.config;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import jakarta.annotation.PostConstruct;
@@ -14,17 +14,17 @@ public class DotenvConfig {
         // Try to load .env from multiple locations
         Dotenv dotenv = null;
         
-        // Try chatbot-service directory first
+        // Try rag-service directory first
         try {
             dotenv = Dotenv.configure()
-                    .directory("./chatbot-service")
+                    .directory("./rag-service")
                     .ignoreIfMissing()
                     .load();
             if (dotenv != null && !dotenv.entries().isEmpty()) {
-                log.info("Loaded .env from ./chatbot-service directory");
+                log.info("Loaded .env from ./rag-service directory");
             }
         } catch (Exception e) {
-            log.debug("Could not load .env from ./chatbot-service: {}", e.getMessage());
+            log.debug("Could not load .env from ./rag-service: {}", e.getMessage());
         }
         
         // If not found, try root directory
@@ -75,3 +75,4 @@ public class DotenvConfig {
         }
     }
 }
+

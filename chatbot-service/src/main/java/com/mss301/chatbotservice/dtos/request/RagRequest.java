@@ -1,8 +1,7 @@
-package com.mss301.chatbotservice.model.dtos.request;
+package com.mss301.chatbotservice.dtos.request;
 
-
-import com.mss301.chatbotservice.enums.LLMProvider;
-import com.mss301.chatbotservice.enums.ResponseMode;
+import com.mss301.ragservice.enums.LLMProvider;
+import com.mss301.ragservice.enums.ResponseMode;
 import lombok.Builder;
 import lombok.Data;
 
@@ -16,6 +15,7 @@ public class RagRequest {
     private ResponseMode mode = ResponseMode.CHAT;
     private LLMProvider llmProvider = LLMProvider.GEMINI;
     private boolean useSemantic = true;
-    private Boolean useDocuments = false; // Control whether to retrieve documents or not
+    private Boolean useDocuments = false;
     private Integer topK = 7;
 }
+

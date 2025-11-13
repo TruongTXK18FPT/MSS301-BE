@@ -36,18 +36,39 @@ public class QuizServiceImpl implements QuizService {
     private final QuizOptionRepository quizOptionRepository;
 
     @Override
+    @Transactional
     public QuizResponsePayload getQuiz(Long contentItemId, Long userId) {
         ContentItem item = contentItemRepository
                 .findById(contentItemId)
                 .orElseThrow(() -> new RuntimeException("Content not found"));
-        if (!item.getOwnerId().equals(userId)) {
-            throw new RuntimeException("Forbidden");
-        }
+        
         if (item.getType() != Type.QUIZ) {
             throw new RuntimeException("Not a quiz");
         }
+        
+        // Allow access for:
+        // 1. Owner
+        // 2. Public content
+        // 3. Content associated with a classroom (any authenticated user can access classroom quizzes)
+        boolean hasAccess = item.getOwnerId().equals(userId) 
+                || item.getIsPublic() 
+                || item.getClassroomId() != null;
+        
+        if (!hasAccess) {
+            throw new RuntimeException("Forbidden");
+        }
+        
+        // Get quiz record (return empty if not exists yet - let PUT create it)
         Quiz quiz = quizRepository.findById(contentItemId).orElse(null);
-        if (quiz == null) return null;
+        if (quiz == null) {
+            // Return empty quiz structure if not created yet
+            return QuizResponsePayload.builder()
+                    .timeLimitSec(3600)
+                    .shuffleQuestions(false)
+                    .questions(new ArrayList<>())
+                    .build();
+        }
+        
         List<QuizQuestion> questions = quizQuestionRepository.findByQuizIdOrderByIdAsc(contentItemId);
         List<QuizQuestionDto> questionDtos = new ArrayList<>();
         for (QuizQuestion qq : questions) {
@@ -64,6 +85,7 @@ public class QuizServiceImpl implements QuizService {
                     .text(qq.getText())
                     .points(qq.getPoints())
                     .type(qq.getType())
+                    .explanation(qq.getExplanation())
                     .options(optionDtos)
                     .build());
         }
@@ -108,6 +130,7 @@ public class QuizServiceImpl implements QuizService {
                         .text(qreq.getText())
                         .points(qreq.getPoints())
                         .type(qreq.getType())
+                        .explanation(qreq.getExplanation())
                         .build();
                 question = quizQuestionRepository.save(question);
                 if (qreq.getOptions() != null) {

@@ -1,11 +1,12 @@
 package com.mss301.chatbotservice.controller;
 
-import com.mss301.chatbotservice.model.dtos.request.ChatSessionRequest;
-import com.mss301.chatbotservice.model.dtos.request.ChatbotRequest;
-import com.mss301.chatbotservice.model.dtos.response.ApiResponse;
-import com.mss301.chatbotservice.model.dtos.response.ChatResponse;
+import com.mss301.chatbotservice.dtos.request.ChatSessionRequest;
+import com.mss301.chatbotservice.dtos.request.ChatbotRequest;
+import com.mss301.chatbotservice.dtos.response.ApiResponse;
+import com.mss301.chatbotservice.dtos.response.ChatResponse;
+import com.mss301.chatbotservice.dtos.response.ChatSessionResponse;
 import com.mss301.chatbotservice.service.ChatSessionService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,11 +14,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/chatbot")
-@CrossOrigin
+@RequiredArgsConstructor
 public class ChatSessionController {
 
-    @Autowired
-    private ChatSessionService chatSessionService;
+    private final ChatSessionService chatSessionService;
 
     @PostMapping("/sessions")
     public ResponseEntity<ApiResponse<Long>> createSession(
@@ -40,6 +40,18 @@ public class ChatSessionController {
                 .code(200)
                 .message("Message sent successfully")
                 .result(response)
+                .build());
+    }
+
+    @GetMapping("/sessions")
+    public ResponseEntity<ApiResponse<List<ChatSessionResponse>>> getSessionsByUserId(
+            @RequestHeader("Authorization") String token,
+            @RequestParam("userId") Long userId) {
+        List<ChatSessionResponse> sessions = chatSessionService.getByUserId(userId);
+        return ResponseEntity.ok(ApiResponse.<List<ChatSessionResponse>>builder()
+                .code(200)
+                .message("Sessions retrieved successfully")
+                .result(sessions)
                 .build());
     }
 

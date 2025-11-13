@@ -1,4 +1,4 @@
-package com.mss301.chatbotservice.model.dtos.request;
+package com.mss301.chatbotservice.dtos.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,4 +12,6 @@ import lombok.NoArgsConstructor;
 public class ChatSessionRequest {
     private Long userId;
     private Long expertProfileId;
+    private String expertProfileCode; // Alternative to expertProfileId
 }
+

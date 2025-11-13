@@ -178,7 +178,11 @@ public class RagMindmapServiceImpl implements RagMindmapService {
         mindmap.setUserId(userId);
         mindmap.setGrade(request.getGrade().toString());
         mindmap.setSubject(request.getSubject());
+        
+        // Set visibility to CLASSROOM for RAG-generated mindmaps
+        mindmap.setVisibility(Mindmap.Visibility.CLASSROOM);
         mindmap.setIsPublic(false);
+        
         mindmap.setIsAiGenerated(true);
         mindmap.setAiProvider(request.getAiProvider().name().toLowerCase());
         mindmap.setAiModel(request.getAiModel());

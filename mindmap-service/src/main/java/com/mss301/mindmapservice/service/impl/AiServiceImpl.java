@@ -1015,7 +1015,21 @@ public class AiServiceImpl implements AiService {
         mindmap.setUserId(userId);
         mindmap.setGrade(request.getGrade());
         mindmap.setSubject(request.getSubject());
-        mindmap.setIsPublic(false);
+        
+        // Set visibility from request or default to CLASSROOM
+        if (request.getVisibility() != null) {
+            try {
+                mindmap.setVisibility(Mindmap.Visibility.valueOf(request.getVisibility()));
+                mindmap.setIsPublic(request.getVisibility().equals("PUBLIC"));
+            } catch (IllegalArgumentException e) {
+                mindmap.setVisibility(Mindmap.Visibility.CLASSROOM);
+                mindmap.setIsPublic(false);
+            }
+        } else {
+            mindmap.setVisibility(Mindmap.Visibility.CLASSROOM);
+            mindmap.setIsPublic(false);
+        }
+        
         mindmap.setIsAiGenerated(true);
         mindmap.setAiProvider("gemini");
         mindmap.setAiModel(request.getAiModel() != null ? request.getAiModel() : geminiPrimaryModel);

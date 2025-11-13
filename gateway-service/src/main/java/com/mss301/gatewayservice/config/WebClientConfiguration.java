@@ -24,8 +24,10 @@ public class WebClientConfiguration {
     }
 
     @Bean
-    public WebClient webClient(WebClient.Builder builder) {
-        return builder.baseUrl("http://auth-service") // auth-service will resolve via Eureka
+    public WebClient webClient(WebClient.Builder loadBalancedWebClientBuilder) {
+        // Use lb:// to leverage Spring Cloud LoadBalancer
+        // This will automatically resolve service name to correct host:port via Eureka
+        return loadBalancedWebClientBuilder.baseUrl("lb://auth-service")
                 .build();
     }
 
@@ -33,9 +35,12 @@ public class WebClientConfiguration {
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
 
-        // Allow specific origins instead of wildcard to avoid CORS issues
-        corsConfiguration.setAllowedOrigins(List.of(
-                "http://localhost:3000", "http://localhost:9002", "http://127.0.0.1:3000", "http://127.0.0.1:9002"));
+        // Allow specific origins for local development
+        corsConfiguration.setAllowedOriginPatterns(List.of(
+                "https://mss301.me",
+                "https://*.mss301.me",
+                "http://localhost:*",
+                "http://127.0.0.1:*"));
 
         corsConfiguration.setAllowedHeaders(List.of(
                 "Authorization",
@@ -46,7 +51,7 @@ public class WebClientConfiguration {
                 "Access-Control-Request-Method",
                 "Access-Control-Request-Headers"));
 
-        corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
 
         corsConfiguration.setAllowCredentials(true);
         corsConfiguration.setMaxAge(3600L);

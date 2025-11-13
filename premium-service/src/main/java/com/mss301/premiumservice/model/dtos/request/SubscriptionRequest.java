@@ -20,4 +20,12 @@ public class SubscriptionRequest {
 
     @NotNull
     private boolean renewal;
+
+    /**
+     * Optional: Email of beneficiary for guardian purchases
+     * If null, subscription is for current user (userId)
+     * If provided, subscription is for the beneficiary (validated against
+     * profile-service)
+     */
+    private String beneficiaryEmail;
 }

@@ -1,7 +1,6 @@
 package com.mss301.premiumservice.model.dtos.response;
 
 import com.mss301.premiumservice.constant.SubscriptionStatus;
-import com.mss301.premiumservice.model.Plan;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,7 +19,7 @@ public class SubscriptionResponse {
 
     private UserResponse user;
 
-    private Plan plan;
+    private PlanResponse plan;
 
     private LocalDateTime startDate;
 

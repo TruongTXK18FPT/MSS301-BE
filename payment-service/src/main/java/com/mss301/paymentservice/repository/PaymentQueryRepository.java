@@ -16,5 +16,7 @@ public interface PaymentQueryRepository extends MongoRepository<PaymentQuery, St
 
     PaymentQuery findByOrderId(String orderId);
 
+    PaymentQuery findByPayosOrderCode(Long orderCode);
+
     Page<PaymentQuery> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 }

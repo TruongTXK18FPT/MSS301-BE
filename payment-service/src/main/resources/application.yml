@@ -31,7 +31,7 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://localhost:27017/payment_db
+      uri: mongodb://root:root@localhost:27017/payment_db?authSource=admin
 
   jpa:
     hibernate:
@@ -41,12 +41,18 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
+        "[format_sql]": true
 
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
-  # RabbitMQ removed - payment-service uses in-memory events for CQRS pattern
-  # If needed in future, use Kafka for consistency with other services
+  # Kafka Configuration
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        "[spring.json.add.type.headers]": false
 
 jwt:
   signerKey: "1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij"
@@ -57,7 +63,29 @@ service:
   user: auth-service
   premium: premium-service
 
-# MOMO payment gateway configuration
+# PayOS payment gateway configuration
+# Default values are for local development (no profile)
+# Use --spring.profiles.active=prod for production (uses application-prod.yml)
+payment:
+  payos:
+    client-id: ${PAYOS_CLIENT_ID:dd239d22-5ff6-4113-bc74-8c71f55147fd}
+    api-key: ${PAYOS_API_KEY:9f1a0f8b-fbae-495a-b2f6-52e72ac155ca}
+    checksum-key: ${PAYOS_CHECKSUM_KEY:e53324608b59a5614972388adfc79b36b12c2ae5e141470a0d51b82ca6bebc92}
+    base-url: https://api-merchant.payos.vn
+    # Default to local URLs (for local development)
+    # Override with environment variables or use application-prod.yml for production
+    webhook-url: ${PAYOS_WEBHOOK_URL:http://localhost:8080/api/v1/payment/callback/payos}
+    return-url: ${PAYOS_RETURN_URL:http://localhost:9002/payment/success}
+    cancel-url: ${PAYOS_CANCEL_URL:http://localhost:9002/payment/cancel}
+
+# Kafka Topics
+kafka:
+  topic:
+    payment-completed: payment-completed-topic
+    subscription-request: subscription-request-topic
+    subscription-response: subscription-response-topic
+
+# MOMO payment gateway configuration (deprecated)
 momo:
   partner-code: MOMO
   access-key: F8BBA842ECF85

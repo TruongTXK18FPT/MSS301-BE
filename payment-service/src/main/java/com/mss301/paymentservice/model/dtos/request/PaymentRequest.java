@@ -1,25 +1,33 @@
 package com.mss301.paymentservice.model.dtos.request;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Payment Request DTO
+ * Used for creating new payment
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentRequest {
 
+    // Set by controller from JWT token
     private Long userId;
 
-    // subscription là đơn hàng
-//    private Long subscriptionId;
+    @NotNull(message = "Subscription ID is required")
+    private Long subscriptionId;
 
-    // plan là sản phẩm, ng dùng mua plan
+    @NotNull(message = "Plan ID is required")
     private Long planId;
-    private long amount;
 
-    // thông tin đơn hàng
+    @NotNull(message = "Amount is required")
+    private Long amount;
+
+    // Optional: Order description
     private String orderInfo;
 }

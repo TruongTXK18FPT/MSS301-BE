@@ -42,7 +42,10 @@ spring:
             locator:
               enabled: true
               lower-case-service-id: true
-              url-expression: "'http://'+serviceId"
+              # Use LoadBalancer (lb://) for service discovery
+              url-expression: "'lb://'+serviceId"
+              # Include all services from Eureka
+              include-expression: "true"
           globalcors:
             corsConfigurations:
               "[/**]":

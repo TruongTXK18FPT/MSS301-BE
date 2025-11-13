@@ -1,7 +1,7 @@
 package com.mss301.chatbotservice.controller;
 
-import com.mss301.chatbotservice.model.dtos.request.ChatRequest;
 import com.mss301.chatbotservice.model.dtos.request.ChatSessionRequest;
+import com.mss301.chatbotservice.model.dtos.request.ChatbotRequest;
 import com.mss301.chatbotservice.model.dtos.response.ApiResponse;
 import com.mss301.chatbotservice.model.dtos.response.ChatResponse;
 import com.mss301.chatbotservice.service.ChatSessionService;
@@ -34,7 +34,7 @@ public class ChatSessionController {
     @PostMapping("/sessions/{sessionId}")
     public ResponseEntity<ApiResponse<ChatResponse>> sendMessage(
             @RequestHeader("Authorization") String token,
-            @PathVariable("sessionId") Long sessionId, @RequestBody ChatRequest request) {
+            @PathVariable("sessionId") Long sessionId, @RequestBody ChatbotRequest request) {
         ChatResponse response = chatSessionService.sendMessage(request, sessionId);
         return ResponseEntity.ok(ApiResponse.<ChatResponse>builder()
                 .code(200)

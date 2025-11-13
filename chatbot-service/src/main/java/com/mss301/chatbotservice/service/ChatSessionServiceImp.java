@@ -1,24 +1,26 @@
 package com.mss301.chatbotservice.service;
 
+import com.mss301.chatbotservice.chatbot.model.AiResponse;
+import com.mss301.chatbotservice.chatbot.model.Chatbot;
+import com.mss301.chatbotservice.chatbot.model.Message;
 import com.mss301.chatbotservice.enums.ChatRole;
-import com.mss301.chatbotservice.enums.LLMProvider;
-import com.mss301.chatbotservice.enums.ResponseMode;
 import com.mss301.chatbotservice.model.ChatMessage;
 import com.mss301.chatbotservice.model.ChatSession;
 import com.mss301.chatbotservice.model.ExpertProfile;
-import com.mss301.chatbotservice.model.dtos.request.ChatRequest;
 import com.mss301.chatbotservice.model.dtos.request.ChatSessionRequest;
-import com.mss301.chatbotservice.model.dtos.request.RagRequest;
+import com.mss301.chatbotservice.model.dtos.request.ChatbotRequest;
 import com.mss301.chatbotservice.model.dtos.response.ChatResponse;
 import com.mss301.chatbotservice.model.dtos.response.ChatSessionReponse;
-import com.mss301.chatbotservice.model.dtos.response.RagResponse;
 import com.mss301.chatbotservice.repository.ChatMessageRepository;
 import com.mss301.chatbotservice.repository.ChatSessionRepository;
 import com.mss301.chatbotservice.repository.ExpertProfileRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,6 +29,12 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class ChatSessionServiceImp implements ChatSessionService {
+
+    @Value("${chat.api}")
+    private String API;
+
+    @Value("${chat.apiKey}")
+    private String TOKEN;
 
     @Autowired
     private ChatSessionRepository chatSessionRepository;
@@ -37,8 +45,11 @@ public class ChatSessionServiceImp implements ChatSessionService {
     @Autowired
     private ExpertProfileRepository expertProfileRepository;
 
+//    @Autowired
+//    private RagService ragService;
+
     @Autowired
-    private RagService ragService;
+    private RestTemplate restTemplate;
 
     @Override
     @Transactional
@@ -58,14 +69,14 @@ public class ChatSessionServiceImp implements ChatSessionService {
 
     @Override
     @Transactional
-    public ChatResponse sendMessage(ChatRequest request, Long sessionId) {
+    public ChatResponse sendMessage(ChatbotRequest chatbotRequest, Long sessionId) {
         ChatSession session = chatSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session not found"));
 
         // Lưu tin nhắn của user
         ChatMessage userMessage = ChatMessage.builder()
                 .role(ChatRole.USER)
-                .content(request.getContent())
+                .content(chatbotRequest.getMessages())
                 .createdAt(LocalDateTime.now())
                 .tokensUsed(0L)
                 .build();
@@ -76,34 +87,60 @@ public class ChatSessionServiceImp implements ChatSessionService {
         chatSessionRepository.save(session);
 
         // Tạo response từ AI (giả lập)
-        RagRequest ragRequest = RagRequest.builder()
-                .queryText(request.getContent())
-                .llmProvider(request.getProvider() != null ? request.getProvider() : LLMProvider.MISTRAL)
+        Chatbot sendMessage = new Chatbot();
+        sendMessage.setModel(session.getExpertProfileId().getPromptConfig());
+        Message message = Message.builder()
+                .role("user")
+                .content(generatePrompt(chatbotRequest.getMessages()))
                 .build();
+        sendMessage.addMessage(message);
 
         try {
-            // 3. Gọi RAG Service để lấy AI response
-            log.info("Calling RAG Service with query: {}", userMessage.getContent());
-            RagResponse ragResponse = ragService.processQuery(ragRequest);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(TOKEN);
 
-            // 4. Tạo và lưu tin nhắn AI response
-            ChatMessage aiMessage = ChatMessage.builder()
-                    .tokensUsed(Long.valueOf(ragResponse.getChunksUsed()))
-                    .createdAt(LocalDateTime.now())
-                    .content(ragResponse.getQueryText())
-                    .role(ChatRole.ASSISTANT)
-                    .build();
+            HttpEntity<Chatbot> request = new HttpEntity<>(sendMessage, headers);
 
-            ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
-            session.getChatMessages().add(savedAiMessage);
-            chatSessionRepository.save(session);
+            ResponseEntity<AiResponse> response =
+                    restTemplate.exchange(API, HttpMethod.POST, request, AiResponse.class);
 
-            log.info("AI response saved with ID: {}", savedAiMessage.getId());
+            System.out.println(response);
 
-            return convertToResponse(savedAiMessage);
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                AiResponse aiResponse = response.getBody();
+                System.out.println(aiResponse);
+
+                ChatMessage aiMessage = ChatMessage.builder()
+                        .tokensUsed(aiResponse.getUsage().getTotal_tokens())
+                        .createdAt(LocalDateTime.now())
+                        .content(aiResponse.getChoices().getFirst().getMessage().getContent())
+                        .role(ChatRole.ASSISTANT)
+                        .build();
+
+                ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
+                session.getChatMessages().add(savedAiMessage);
+                chatSessionRepository.save(session);
+
+                log.info("AI response saved with ID: {}", savedAiMessage.getId());
+
+                return convertChatMessageToResponse(savedAiMessage);
+            } else {
+                ChatMessage requestError = ChatMessage.builder()
+                        .tokensUsed(0L)
+                        .createdAt(LocalDateTime.now())
+                        .content("The AI failed to return a response. Please try a different model.")
+                        .role(ChatRole.ASSISTANT)
+                        .build();
+                ChatMessage savedErrorMessage = chatMessageRepository.save(requestError);
+                session.getChatMessages().add(savedErrorMessage);
+                chatSessionRepository.save(session);
+
+                return convertChatMessageToResponse(savedErrorMessage);
+            }
 
         } catch (Exception e) {
-            log.error("Error calling RAG Service: {}", e.getMessage(), e);
+            log.error("Error calling Service: {}", e.getMessage(), e);
 
             // Tạo error response
             ChatMessage errorMessage = ChatMessage.builder()
@@ -116,9 +153,10 @@ public class ChatSessionServiceImp implements ChatSessionService {
             session.getChatMessages().add(savedErrorMessage);
             chatSessionRepository.save(session);
 
-            return convertToResponse(savedErrorMessage);
+            return convertChatMessageToResponse(savedErrorMessage);
         }
     }
+
 
     @Override
     public List<ChatResponse> getSessionMessages(Long sessionId) {
@@ -127,7 +165,7 @@ public class ChatSessionServiceImp implements ChatSessionService {
 
         List<ChatMessage> messages = session.getChatMessages();
         return messages.stream()
-                .map(this::convertToResponse)
+                .map(this::convertChatMessageToResponse)
                 .collect(Collectors.toList());
     }
 
@@ -148,7 +186,49 @@ public class ChatSessionServiceImp implements ChatSessionService {
         chatSessionRepository.save(session);
     }
 
-    private ChatResponse convertToResponse(ChatMessage message) {
+    private String generatePrompt(String userMessage) {
+        return """
+                BẠN LÀ TRỢ LÝ TOÁN HỌC CHUYÊN NGHIỆP
+                
+                VAI TRÒ:
+                - Bạn là giáo viên toán học có kinh nghiệm, chuyên giảng dạy và giải đáp thắc mắc về toán học
+                - Bạn chỉ trả lời các câu hỏi liên quan đến toán học (đại số, hình học, giải tích, xác suất thống kê, v.v.)
+                
+                QUY TẮC XỬ LÝ:
+                
+                1. CÂU HỎI ĐÚNG CHỦ ĐỀ TOÁN HỌC:
+                   - Giải thích rõ ràng, chi tiết từng bước
+                   - Sử dụng ví dụ minh họa khi cần thiết
+                   - Trình bày công thức và lời giải một cách logic
+                   - Kiểm tra lại đáp án trước khi đưa ra
+                
+                2. CÂU HỎI NGOÀI CHỦ ĐỀ:
+                   - Trả lời: "Xin lỗi, tôi chỉ có thể hỗ trợ các câu hỏi liên quan đến toán học. Câu hỏi của bạn không thuộc lĩnh vực chuyên môn của tôi. Vui lòng đặt câu hỏi về toán học để tôi có thể giúp bạn."
+                
+                3. CÂU HỎI KHÓ/KHÔNG RÕ RÀNG:
+                   - Nếu không hiểu câu hỏi: "Tôi chưa hiểu rõ câu hỏi của bạn. Bạn có thể diễn đạt lại hoặc cung cấp thêm thông tin không?"
+                   - Nếu vượt quá khả năng: "Câu hỏi này khá phức tạp và nằm ngoài phạm vi kiến thức tôi có thể đảm bảo độ chính xác. Tôi khuyên bạn nên tham khảo thêm từ giáo viên hoặc tài liệu chuyên sâu."
+                
+                4. NGÔN TỪ KHÔNG PHÙ HỢP:
+                   - Từ chối trả lời các câu hỏi có ngôn từ thô tục, xúc phạm, phân biệt đối xử
+                   - Trả lời: "Tôi không thể phản hồi tin nhắn này do vi phạm quy tắc giao tiếp văn minh. Vui lòng đặt câu hỏi một cách lịch sự và tôn trọng."
+                
+                5. CÂU HỎI YÊU CẦU LÀM BÀI:
+                   - Không làm thay bài tập/bài kiểm tra
+                   - Hướng dẫn cách giải và gợi ý tư duy thay vì đưa đáp án trực tiếp
+                
+                NGUYÊN TẮC QUAN TRỌNG:
+                - KHÔNG bịa đặt hoặc đoán mò đáp án
+                - KHÔNG trả lời câu hỏi ngoài chủ đề toán học
+                - KHÔNG sử dụng hoặc phản hồi ngôn từ không phù hợp
+                - Luôn thừa nhận giới hạn kiến thức khi không chắc chắn
+                - Trả lời bằng tiếng Việt một cách rõ ràng, dễ hiểu
+                
+                CÂU HỎI CỦA HỌC SINH:
+                """ + userMessage;
+    }
+
+    private ChatResponse convertChatMessageToResponse(ChatMessage message) {
         return ChatResponse.builder()
                 .messageId(message.getId())
                 .role(message.getRole())
@@ -157,6 +237,7 @@ public class ChatSessionServiceImp implements ChatSessionService {
                 .createdAt(message.getCreatedAt())
                 .build();
     }
+
     private ChatSessionReponse convertToSessionResponse(ChatSession session) {
         return ChatSessionReponse.builder()
                 .id(session.getId())

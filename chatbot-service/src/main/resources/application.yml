@@ -35,3 +35,7 @@ service:
   rag:
     url: http://localhost:8093
     name: rag-service
+
+chat:
+  api: ${API_URL}
+  apiKey: ${API_KEY}

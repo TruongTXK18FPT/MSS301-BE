@@ -26,11 +26,11 @@ public class ChatMessage {
     @Enumerated(EnumType.STRING)
     private ChatRole role;
 
-    @Column(name = "content")
+    @Column(name = "content", length = 8000)
     private String content;
 
     @Column(name = "tokens_used")
-    private Long tokensUsed;
+    private long tokensUsed;
 
     @Column(name = "create_at", updatable = false)
     @CreationTimestamp()

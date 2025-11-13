@@ -38,3 +38,4 @@ document-service/uploads/
 
 # Maven generated files
 effective-pom.xml
+chatbot-service/.env

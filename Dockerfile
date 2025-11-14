@@ -19,20 +19,33 @@ COPY pom.xml ./
 
 # Copy all services (required because parent POM declares all modules)
 # If we only copy one service, Maven will fail because it can't find other modules
+# Core infrastructure services
 COPY eureka-server ./eureka-server/
 COPY gateway-service ./gateway-service/
+
+# User and authentication services
 COPY auth-service ./auth-service/
 COPY profile-service ./profile-service/
+
+# Content and document services
 COPY content-service ./content-service/
+COPY document-service ./document-service/
+
+# Mindmap and related services
 COPY mindmap-service ./mindmap-service/
+COPY classroom-service ./classroom-service/
+
+# Payment and premium services
 COPY premium-service ./premium-service/
 COPY payment-service ./payment-service/
-COPY notification-service ./notification-service/
-COPY chatbot-service ./chatbot-service/
-COPY classroom-service ./classroom-service/
-COPY document-service ./document-service/
+
+# AI and processing services - rag-service must be before chatbot-service
 COPY rag-service ./rag-service/
 COPY retrieval-service ./retrieval-service/
+COPY chatbot-service ./chatbot-service/
+
+# Other services
+COPY notification-service ./notification-service/
 COPY media-service ./media-service/
 
 # Download dependencies separately for better layer caching

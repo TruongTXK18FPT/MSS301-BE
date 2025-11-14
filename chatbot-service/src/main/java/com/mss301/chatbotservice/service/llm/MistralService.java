@@ -36,8 +36,8 @@ public class MistralService {
         
         // Validate API key
         if (apiKey == null || apiKey.trim().isEmpty()) {
-            log.error("MISTRAL_API_KEY is not set! Please set it in environment variable or .env file");
-            throw new IllegalStateException("MISTRAL_API_KEY is required but not configured. Please set MISTRAL_API_KEY environment variable or add it to .env file");
+            log.error("CHATBOT_MISTRAL_API_KEY is not set! Please set it in environment variable or .env file");
+            throw new IllegalStateException("CHATBOT_MISTRAL_API_KEY is required but not configured. Please set CHATBOT_MISTRAL_API_KEY environment variable or add it to .env file");
         }
         
         log.info("MistralService initialized with model: {}, API key length: {}", model, apiKey.length());

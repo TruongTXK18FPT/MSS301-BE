@@ -55,10 +55,10 @@ chat:
   apiKey: ${CHAT_API_KEY:}
 
 gemini:
-  api-key: ${GEMINI_API_KEY:}
-  model: ${GEMINI_MODEL:gemini-2.5-flash}
+  api-key: ${CHATBOT_GEMINI_API_KEY:}
+  model: ${CHATBOT_GEMINI_MODEL:gemini-2.5-flash}
 
 mistral:
-  api-key: ${MISTRAL_API_KEY:}
-  model: ${MISTRAL_MODEL:mistral-large-latest}
-  api-url: ${MISTRAL_API_URL:https://api.mistral.ai/v1/chat/completions}
+  api-key: ${CHATBOT_MISTRAL_API_KEY:}
+  model: ${CHATBOT_MISTRAL_MODEL:mistral-large-latest}
+  api-url: ${CHATBOT_MISTRAL_API_URL:https://api.mistral.ai/v1/chat/completions}

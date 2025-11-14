@@ -10,7 +10,7 @@ spring:
 
   ai:
     mistralai:
-      api-key: ${MISTRAL_API_KEY:4ibVZkeLmZaZ1MnIA4GF6DMQTkeiHn8f}
+      api-key: ${RAG_MISTRAL_API_KEY:4ibVZkeLmZaZ1MnIA4GF6DMQTkeiHn8f}
       chat:
         options:
           model: mistral-small-latest
@@ -51,10 +51,10 @@ rag:
   max-context-length: 4000
 
 gemini:
-  api-key: ${GEMINI_API_KEY:AIzaSyCeccru8OmyxoymHlblUrvqJx5-tzM5dhg}
+  api-key: ${RAG_GEMINI_API_KEY:AIzaSyCeccru8OmyxoymHlblUrvqJx5-tzM5dhg}
   model: gemini-2.5-flash
   file-search:
-    api-key: ${GEMINI_FILE_SEARCH_API_KEY:AIzaSyB0jEvoo8IwoNzZLIQMTF6FLacEFp8ZB_c}
+    api-key: ${RAG_GEMINI_FILE_SEARCH_API_KEY:AIzaSyB0jEvoo8IwoNzZLIQMTF6FLacEFp8ZB_c}
     model: gemini-2.5-flash
 
 logging:
@@ -72,5 +72,5 @@ springdoc:
     enabled: true
 
 fptai:
-  api-key: ${FPTAI_API_KEY:peZ3IXt25wVqC2eRLZKJlgG927wtUAOJ}
+  api-key: ${RAG_FPTAI_API_KEY:peZ3IXt25wVqC2eRLZKJlgG927wtUAOJ}
   url: https://api.fpt.ai/hmi/tts/v5

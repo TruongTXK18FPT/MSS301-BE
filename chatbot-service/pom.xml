@@ -14,6 +14,17 @@
     <description>chatbot-service</description>
 
     <dependencies>
+    <dependency>
+        <groupId>com.MSS301</groupId>
+        <artifactId>rag-service</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <exclusions>
+            <exclusion>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-web</artifactId>
+            </exclusion>
+        </exclusions>
+    </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -84,4 +95,13 @@
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>

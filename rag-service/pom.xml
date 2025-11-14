@@ -82,12 +82,23 @@
     </dependencyManagement>
 
     <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
+    <plugins>
+        <!-- Thêm plugin này nếu chưa có -->
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <version>3.3.0</version>
+        </plugin>
+        
+        <!-- Cập nhật spring-boot-maven-plugin nếu đã có, nếu chưa thì thêm mới -->
+        <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+            <configuration>
+                <classifier>exec</classifier>
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
 
 </project>

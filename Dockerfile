@@ -42,7 +42,6 @@ COPY payment-service ./payment-service/
 # AI and processing services - rag-service must be before chatbot-service
 COPY rag-service ./rag-service/
 COPY retrieval-service ./retrieval-service/
-COPY chatbot-service ./chatbot-service/
 
 # Other services
 COPY notification-service ./notification-service/
@@ -52,36 +51,10 @@ COPY media-service ./media-service/
 # This layer will be cached unless pom.xml changes
 RUN mvn dependency:go-offline -pl ${SERVICE_NAME} -am || true
 
-# Special handling for services that depend on other modules
-RUN if [ "${SERVICE_NAME}" = "chatbot-service" ]; then \
-        echo "==========================================="; \
-        echo "Building rag-service dependency first..."; \
-        echo "==========================================="; \
-        # Step 1: Install rag-service with all its dependencies
-        echo "[1/3] Installing rag-service..."; \
-        mvn clean install -pl rag-service -DskipTests -T 1 || { echo "❌ Failed to install rag-service"; exit 1; }; \
-        # Verify installation \
-        echo "Verifying rag-service installation..."; \
-        if [ -f ~/.m2/repository/com/MSS301/rag-service/0.0.1-SNAPSHOT/rag-service-0.0.1-SNAPSHOT.jar ]; then \
-            echo "✓ rag-service JAR found in local repository"; \
-            ls -lh ~/.m2/repository/com/MSS301/rag-service/0.0.1-SNAPSHOT/; \
-        else \
-            echo "❌ Error: rag-service JAR not found in expected location"; \
-            find ~/.m2/repository -name "*rag-service*" -type f 2>/dev/null || echo "No rag-service files found"; \
-            exit 1; \
-        fi; \
-    fi
-
 # Build the target service
-RUN if [ "${SERVICE_NAME}" = "chatbot-service" ]; then \
-        echo "Building ${SERVICE_NAME} with installed rag-service..."; \
-        mvn clean package -pl ${SERVICE_NAME} -DskipTests -T 1 && \
-        mvn spring-boot:repackage -pl ${SERVICE_NAME} -DskipTests -T 1; \
-    else \
-        echo "Building ${SERVICE_NAME} with dependencies..."; \
-        mvn clean install -pl ${SERVICE_NAME} -am -DskipTests -T 1 && \
-        mvn spring-boot:repackage -pl ${SERVICE_NAME} -DskipTests -T 1; \
-    fi
+RUN echo "Building ${SERVICE_NAME} with dependencies..." && \
+    mvn clean install -pl ${SERVICE_NAME} -am -DskipTests -T 1 && \
+    mvn spring-boot:repackage -pl ${SERVICE_NAME} -DskipTests -T 1
 
 # Runtime stage - use distroless for smaller image
 FROM eclipse-temurin:21-jre-alpine

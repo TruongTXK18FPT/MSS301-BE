@@ -71,7 +71,7 @@ public class DotenvConfig {
                 System.setProperty(key, value);
             });
         } else {
-            log.warn("No .env file found. Please set environment variables GEMINI_API_KEY and MISTRAL_API_KEY");
+            log.warn("No .env file found. Please set environment variables RAG_GEMINI_API_KEY and RAG_MISTRAL_API_KEY");
         }
     }
 }

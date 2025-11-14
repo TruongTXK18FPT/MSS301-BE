@@ -3,6 +3,7 @@ package com.mss301.documentservice.service.google.impl;
 import com.mss301.documentservice.client.GoogleFileSearchClient;
 import com.mss301.documentservice.dto.google.*;
 import com.mss301.documentservice.service.google.GoogleFileSearchService;
+import feign.RetryableException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.net.HttpURLConnection;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.util.Collections;
@@ -172,6 +174,17 @@ public class GoogleFileSearchServiceImpl implements GoogleFileSearchService {
             }
             return Collections.emptyList();
         } catch (Exception e) {
+            // Xử lý timeout và network errors gracefully
+            String errorMessage = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+            if (errorMessage.contains("timeout") || errorMessage.contains("connect timed out") || 
+                errorMessage.contains("socket timeout") || e instanceof SocketTimeoutException ||
+                e instanceof RetryableException) {
+                log.warn("Timeout or network error when listing File Search Stores. " +
+                        "This may be due to network issues or Google API being unavailable. " +
+                        "Returning empty list to allow graceful degradation. Error: {}", e.getMessage());
+                return Collections.emptyList();
+            }
+            // Các lỗi khác vẫn throw để caller biết
             log.error("Error listing File Search Stores", e);
             throw new RuntimeException("Failed to list File Search Stores: " + e.getMessage(), e);
         }

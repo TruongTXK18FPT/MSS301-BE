@@ -39,14 +39,14 @@ jwt:
 # AI Configuration
 ai:
   mistral:
-    api-key: ${MISTRAL_API_KEY:OYzJvGt3V4IA458SbOMGraxpBkwZyANg}
+    api-key: ${MINDMAP_MISTRAL_API_KEY:OYzJvGt3V4IA458SbOMGraxpBkwZyANg}
     base-url: "https://api.mistral.ai/v1"
     model: "mistral-large-latest"
     timeout: 30000
     max-tokens: 40000
   
   gemini:
-    api-key: ${GEMINI_API_KEY:AIzaSyDtwnAbU30A1r_ixXtuZLZusEcmLa8tzNg}
+    api-key: ${MINDMAP_GEMINI_API_KEY:AIzaSyDtwnAbU30A1r_ixXtuZLZusEcmLa8tzNg}
     base-url: "https://generativelanguage.googleapis.com/v1beta"
     models:
       primary: "gemini-2.5-flash"

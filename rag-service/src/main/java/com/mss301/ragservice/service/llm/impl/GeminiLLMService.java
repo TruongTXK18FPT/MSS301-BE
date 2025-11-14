@@ -43,7 +43,7 @@ public class GeminiLLMService implements LLMService {
     public void validateConfiguration() {
         // Validate API key after Spring injection
         if (apiKey == null || apiKey.isBlank()) {
-            log.error("Gemini API key is not set! Please set GEMINI_API_KEY environment variable or gemini.api-key property.");
+            log.error("Gemini API key is not set! Please set RAG_GEMINI_API_KEY environment variable or gemini.api-key property.");
             throw new IllegalStateException("Gemini API key is not configured");
         }
         

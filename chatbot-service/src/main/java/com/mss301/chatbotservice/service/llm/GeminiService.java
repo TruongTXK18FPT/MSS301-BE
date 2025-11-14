@@ -33,8 +33,8 @@ public class GeminiService {
         
         // Validate API key
         if (apiKey == null || apiKey.trim().isEmpty()) {
-            log.error("GEMINI_API_KEY is not set! Please set it in environment variable or .env file");
-            throw new IllegalStateException("GEMINI_API_KEY is required but not configured. Please set GEMINI_API_KEY environment variable or add it to .env file");
+            log.error("CHATBOT_GEMINI_API_KEY is not set! Please set it in environment variable or .env file");
+            throw new IllegalStateException("CHATBOT_GEMINI_API_KEY is required but not configured. Please set CHATBOT_GEMINI_API_KEY environment variable or add it to .env file");
         }
         
         log.info("GeminiService initialized with model: {}, API key length: {}", model, apiKey.length());
@@ -45,7 +45,7 @@ public class GeminiService {
         
         // Double-check API key before making request
         if (apiKey == null || apiKey.trim().isEmpty()) {
-            throw new ChatbotServiceException("GEMINI_API_KEY is not configured");
+            throw new ChatbotServiceException("CHATBOT_GEMINI_API_KEY is not configured");
         }
 
         try {

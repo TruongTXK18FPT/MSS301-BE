@@ -14,6 +14,19 @@ spring:
   elasticsearch:
     uris: ${ELASTICSEARCH_URIS:http://elasticsearch:9200}
 
+# Embedding API Configuration
+embedding:
+  client:
+    url: ${EMBEDDING_CLIENT_URL:https://aiportalapi.stu-platform.live/jpe/v1}
+    api-key: ${EMBEDDING_CLIENT_API_KEY:sk-Z64PdmBB55a3eXZuLcM2zQ}
+    model: text-embedding-3-small
+
+# Google API Configuration (for File Search)
+google:
+  api:
+    key: ${GOOGLE_API_KEY:AIzaSyB0jEvoo8IwoNzZLIQMTF6FLacEFp8ZB_c}
+    base-url: https://generativelanguage.googleapis.com
+
 eureka:
   client:
     serviceUrl:

@@ -80,5 +80,10 @@ springdoc:
     path: /swagger-ui.html
     enabled: true
 
+management:
+  health:
+    elasticsearch:
+      enabled: false  # Disable Elasticsearch health check to avoid NoSuchMethodError
+
 server:
   port: 8091

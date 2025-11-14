@@ -21,6 +21,25 @@ spring:
         format_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+  cloud:
+    stream:
+      bindings:
+        sendNotification-out-0:
+          destination: notification-delivery
+        sendUserCreated-out-0:
+          destination: user-created-topic
+        userCreated-out-0:
+          destination: user-created-topic
+        teacherRegistration-out-0:
+          destination: teacher-registration-topic
+        teacherApproval-out-0:
+          destination: teacher-approval-topic
+        passwordResetOtpDelivery-out-0:
+          destination: password-reset-otp-topic
+      kafka:
+        binder:
+          brokers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
     producer:
@@ -36,10 +55,12 @@ spring:
         spring.json.trusted.packages: "*"
 
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${MAIL_USERNAME:skillverseexe@gmail.com}
-    password: ${MAIL_PASSWORD:fgbxgyghiglzdcou}
+    host: ${MAIL_HOST:smtp-relay.brevo.com}
+    port: ${MAIL_PORT:2525}
+    username: ${MAIL_USERNAME:9b93a1001@smtp-brevo.com}
+    password: ${MAIL_PASSWORD:xsmtpsib-7ab86da2663bd29ae78b9b8ef3b26f2497fd43983c52a0dc1b0f45471489ecb1-ISnAdDB9VXdJ1ET0}
+    from: ${MAIL_FROM:no-reply@mss301.me}
+    from-name: ${MAIL_FROM_NAME:MSS301-MathMind}
     properties:
       mail:
         smtp:

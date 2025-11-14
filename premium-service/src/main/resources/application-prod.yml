@@ -18,8 +18,20 @@ spring:
     show-sql: false
     properties:
       hibernate:
-        format_sql: false
+        "[format_sql]": false
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # Kafka Consumer Configuration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+    consumer:
+      group-id: premium-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        "[spring.json.trusted.packages]": "*"
+        "[spring.json.type.mapping]": PaymentCompletedEvent:com.mss301.premiumservice.listener.PaymentCompletedEvent
 
 eureka:
   client:
@@ -33,6 +45,9 @@ eureka:
     hostname: premium-service
     nonSecurePortEnabled: true
     securePortEnabled: false
+
+jwt:
+  signerKey: ${JWT_SIGNER_KEY:1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij}
 
 management:
   endpoints:

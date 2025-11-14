@@ -11,10 +11,12 @@ spring:
     username: postgres
     password: 12345
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: skillverseexe@gmail.com
-    password: fgbxgyghiglzdcou
+    host: smtp-relay.brevo.com
+    port: 2525
+    username: 9b93a1001@smtp-brevo.com
+    password: xsmtpsib-7ab86da2663bd29ae78b9b8ef3b26f2497fd43983c52a0dc1b0f45471489ecb1-ISnAdDB9VXdJ1ET0
+    from: no-reply@mss301.me
+    from-name: MSS301-MathMind
     properties:
       mail:
         smtp:

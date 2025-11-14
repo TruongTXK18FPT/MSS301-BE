@@ -1,32 +1,31 @@
 package com.mss301.paymentservice.event;
 
-import com.mss301.paymentservice.constant.Status;
-import lombok.Getter;
-import org.springframework.context.ApplicationEvent;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
-@Getter
-public class PaymentCompletedEvent extends ApplicationEvent {
+/**
+ * Kafka event for payment completion
+ * Consumed by premium-service to activate subscriptions
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class PaymentCompletedEvent implements Serializable {
 
-    private final String orderId;
-    private final Long planId;
-    private final Long userId;
-    private final Long amount;
-    private final Status status;
-    private final String momoTransId;
-    private final LocalDateTime completedAt;
+    private static final long serialVersionUID = 1L;
 
-    public PaymentCompletedEvent(Object source, String orderId,
-                                  Long userId, Long planId, Long amount, Status status,
-                                  String momoTransId, LocalDateTime completedAt) {
-        super(source);
-        this.orderId = orderId;
-        this.userId = userId;
-        this.planId = planId;
-        this.amount = amount;
-        this.status = status;
-        this.momoTransId = momoTransId;
-        this.completedAt = completedAt;
-    }
+    private String orderId;
+    private Long subscriptionId;
+    private Long userId;
+    private Long planId;
+    private Long amount;
+    private String payosPaymentLinkId;
+    private String payosTransactionRef;
+    private LocalDateTime completedAt;
 }

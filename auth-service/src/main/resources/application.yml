@@ -24,7 +24,7 @@ spring:
     password: 12345
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     show-sql: true
 
   cloud:
@@ -40,6 +40,8 @@ spring:
           destination: teacher-registration-topic
         teacherApproval-out-0:
           destination: teacher-approval-topic
+        passwordResetOtpDelivery-out-0:
+          destination: password-reset-otp-topic
       kafka:
         binder:
           brokers: localhost:9092

@@ -26,7 +26,7 @@ public class PlanResponse {
 
     private int billingCycle;
 
-    private long priceCents;
+    private long price; // Price in VND (not cents)
 
     private Currency currency;
 

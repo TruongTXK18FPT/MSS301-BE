@@ -2,16 +2,10 @@ package com.mss301.paymentservice.event;
 
 import com.mss301.paymentservice.model.PaymentCommand;
 import com.mss301.paymentservice.model.PaymentQuery;
-import com.mss301.paymentservice.model.dtos.response.ApiResponse;
-import com.mss301.paymentservice.model.dtos.response.SubscriptionResponse;
-import com.mss301.paymentservice.model.dtos.response.UserResponse;
 import com.mss301.paymentservice.repository.PaymentQueryRepository;
-import com.mss301.paymentservice.service.SubscriptionService;
-import com.mss301.paymentservice.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
-import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
@@ -50,7 +44,15 @@ public class PaymentEventHandler {
 
             if (existing != null) {
                 existing.setStatus(command.getStatus());
-                existing.setMomoTransId(command.getMomoTransId());
+                existing.setPayosOrderCode(command.getPayosOrderCode());
+                existing.setPayosPaymentLinkId(command.getPayosPaymentLinkId());
+                existing.setPayosTransactionRef(command.getPayosTransactionRef());
+                existing.setBankCode(command.getBankCode());
+                existing.setBankName(command.getBankName());
+                existing.setAccountNumber(command.getAccountNumber());
+                existing.setCounterAccountName(command.getCounterAccountName());
+                existing.setCounterAccountNumber(command.getCounterAccountNumber());
+                existing.setTransactionDatetime(command.getTransactionDatetime());
                 existing.setUpdatedAt(command.getUpdatedAt());
 
                 queryRepository.save(existing);
@@ -64,19 +66,26 @@ public class PaymentEventHandler {
     }
 
     private PaymentQuery convertToQuery(PaymentCommand command) {
-
-        return new PaymentQuery(
-                command.getOrderId(),
-                command.getUserId(),
-                command.getAmount(),
-                command.getPlanId(),
-                command.getOrderInfo(),
-                command.getMomoRequestId(),
-                command.getMomoTransId(),
-                command.getPaymentUrl(),
-                command.getCreatedAt(),
-                command.getUpdatedAt(),
-                command.getStatus()
-        );
+        return PaymentQuery.builder()
+                .orderId(command.getOrderId())
+                .userId(command.getUserId())
+                .subscriptionId(command.getSubscriptionId())
+                .planId(command.getPlanId())
+                .amount(command.getAmount())
+                .orderInfo(command.getOrderInfo())
+                .payosOrderCode(command.getPayosOrderCode())
+                .payosPaymentLinkId(command.getPayosPaymentLinkId())
+                .payosTransactionRef(command.getPayosTransactionRef())
+                .paymentUrl(command.getPaymentUrl())
+                .bankCode(command.getBankCode())
+                .bankName(command.getBankName())
+                .accountNumber(command.getAccountNumber())
+                .counterAccountName(command.getCounterAccountName())
+                .counterAccountNumber(command.getCounterAccountNumber())
+                .transactionDatetime(command.getTransactionDatetime())
+                .createdAt(command.getCreatedAt())
+                .updatedAt(command.getUpdatedAt())
+                .status(command.getStatus())
+                .build();
     }
 }

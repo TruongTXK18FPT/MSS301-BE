@@ -39,7 +39,7 @@ public class Plan {
     private int billingCycle; // month
 
     @Column(name = "price_cents", nullable = false)
-    private long priceCents;
+    private long price; // Price in VND (not cents)
 
     @Enumerated(EnumType.STRING)
     @Column(name = "currency", nullable = false, length = 10)
@@ -47,6 +47,7 @@ public class Plan {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
+    @Builder.Default
     private PlanStatus status = PlanStatus.ACTIVE;
 
     @Column(name = "created_at", nullable = false)
@@ -57,12 +58,8 @@ public class Plan {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    @JoinTable(
-            name = "plan_entitlements",
-            joinColumns = @JoinColumn(name = "plan_id"),
-            inverseJoinColumns = @JoinColumn(name = "entitlement_id")
-    )
+    @ManyToMany(cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    @JoinTable(name = "plan_entitlements", joinColumns = @JoinColumn(name = "plan_id"), inverseJoinColumns = @JoinColumn(name = "entitlement_id"))
     private List<Entitlement> entitlements;
 
 }

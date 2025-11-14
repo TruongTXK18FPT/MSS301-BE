@@ -27,12 +27,19 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String sender;
 
+    @Value("${spring.mail.from:${spring.mail.username}}")
+    private String mailFrom;
+
+    @Value("${spring.mail.from-name:MSS301}")
+    private String mailFromName;
+
     public void sendEmail(EmailRequest email) {
         try {
             MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(sender);
+            // Use custom sender with name if configured
+            helper.setFrom(mailFrom, mailFromName);
             helper.setTo(email.getTo());
             helper.setSubject(email.getSubject());
             Context context = new Context();

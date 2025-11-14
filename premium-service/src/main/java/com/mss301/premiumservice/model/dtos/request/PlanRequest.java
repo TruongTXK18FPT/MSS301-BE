@@ -33,7 +33,7 @@ public class PlanRequest {
 
     @NotNull
     @Size(min = 1)
-    private long priceCents;
+    private long price; // Price in VND (not cents)
 
     @NotNull
     private Currency currency;

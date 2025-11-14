@@ -186,6 +186,13 @@ public class GeminiFileSearchService {
             if (responseCode >= 400) {
                 log.error("HTTP Error {}: {}", responseCode, result);
 
+                // Xử lý riêng cho 404 - Store không tồn tại
+                if (responseCode == 404) {
+                    String userFriendlyMessage = "File Search Store không tồn tại trên Google. " +
+                        "Store có thể đã bị xóa. Vui lòng upload lại document để tạo store mới.";
+                    throw new IOException("HTTP Error 404: " + userFriendlyMessage);
+                }
+
                 // Xử lý riêng cho 429 quota error
                 if (responseCode == 429) {
                     String userFriendlyMessage = "Đã vượt quá giới hạn API Gemini. " +

@@ -165,17 +165,42 @@ public class ChatSessionServiceImp implements ChatSessionService {
                     : com.mss301.ragservice.enums.ResponseMode.CHAT;
                 
                 // Tạo RAG request
+                // Ưu tiên fileStoreName nếu có (cho Google File Search)
+                // Nếu không có fileStoreName, sử dụng documentId (cho RAG truyền thống)
+                String fileStoreName = chatbotRequest.getFileStoreName();
+                boolean hasFileStore = (fileStoreName != null && !fileStoreName.isBlank());
+                
+                // Log chi tiết để debug
+                log.info("=== RAG Request Debug ===");
+                log.info("ChatbotRequest - fileStoreName: '{}', documentId: '{}'", 
+                    fileStoreName, chatbotRequest.getDocumentId());
+                log.info("hasFileStore: {}", hasFileStore);
+                
+                // Luôn giữ documentId để fallback nếu fileStoreName không tồn tại
+                String documentId = chatbotRequest.getDocumentId() != null ? chatbotRequest.getDocumentId() : "";
+                
+                // Nếu có fileStoreName, không cần useDocuments vì file-search tự xử lý
+                boolean useDocuments = hasFileStore ? false : true;
+                
+                log.info("Creating RAG Request - hasFileStore: {}, fileStoreName: '{}', documentId: '{}', useDocuments: {}", 
+                    hasFileStore, fileStoreName, documentId, useDocuments);
+                
                 RagRequest ragRequest = RagRequest.builder()
-                        .documentId(chatbotRequest.getDocumentId() != null ? chatbotRequest.getDocumentId() : "")
+                        .documentId(documentId)
                         .chapterId(chatbotRequest.getChapterId() != null ? chatbotRequest.getChapterId() : "")
                         .lessonId(chatbotRequest.getLessonId() != null ? chatbotRequest.getLessonId() : "")
+                        .fileStoreName(fileStoreName)
                         .queryText(userInput)
                         .mode(responseMode)
                         .llmProvider(ragLlmProvider)
                         .useSemantic(true)
-                        .useDocuments(true) // Luôn sử dụng documents khi dùng RAG
+                        .useDocuments(useDocuments) // Chỉ dùng retrieval service nếu không có fileStoreName
                         .topK(7)
                         .build();
+                
+                log.info("RAG Request created - fileStoreName: {}, documentId: {}, chapterId: {}, lessonId: {}, useDocuments: {}", 
+                    ragRequest.getFileStoreName(), ragRequest.getDocumentId(), 
+                    ragRequest.getChapterId(), ragRequest.getLessonId(), ragRequest.getUseDocuments());
                 
                 // Gọi RAG service
                 RagResponse ragResponse = ragService.processQuery(ragRequest);

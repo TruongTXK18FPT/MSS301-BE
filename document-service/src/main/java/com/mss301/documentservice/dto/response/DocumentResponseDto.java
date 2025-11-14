@@ -21,6 +21,7 @@ public class DocumentResponseDto {
     private String language;
     private Integer totalPages;
     private String description;
+    private String googleFileSearchStoreName; // Google File Search Store name (cho RAG)
 
     // Processing job info (if available)
     private ProcessingJobDto processingJob;
@@ -50,6 +51,7 @@ public class DocumentResponseDto {
         dto.setLanguage(document.getLanguage().toString());
         dto.setTotalPages(document.getTotalPages());
         dto.setDescription(document.getDescription());
+        dto.setGoogleFileSearchStoreName(document.getGoogleFileSearchStoreName());
         return dto;
     }
 

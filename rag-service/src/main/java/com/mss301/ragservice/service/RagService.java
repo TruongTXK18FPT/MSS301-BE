@@ -29,16 +29,52 @@ public class RagService {
     private final LLMServiceFactory llmServiceFactory;
     private final ResponseStrategyFactory strategyFactory;
     private final DocumentContextService contextService;
+    private final GeminiFileSearchService fileSearchService;
 
     public RagResponse processQuery(RagRequest request) {
         log.info(
-                "Processing RAG query - Mode: {}, Provider: {}, Query: '{}', UseDocuments: {}",
+                "Processing RAG query - Mode: {}, Provider: {}, Query: '{}', UseDocuments: {}, FileStoreName: {}",
                 request.getMode(),
                 request.getLlmProvider(),
                 request.getQueryText(),
-                request.getUseDocuments());
+                request.getUseDocuments(),
+                request.getFileStoreName());
 
         try {
+            // Kiểm tra nếu có fileStoreName, sử dụng Google File Search
+            if (request.getFileStoreName() != null && !request.getFileStoreName().isBlank()) {
+                log.info("Using Google File Search with store: {}", request.getFileStoreName());
+                try {
+                    return processFileSearchQuery(request);
+                } catch (RagServiceException e) {
+                    // Nếu file search store không tồn tại (404), trả về thông báo rõ ràng
+                    String errorMsg = e.getMessage() != null ? e.getMessage() : "";
+                    if (errorMsg.contains("404") || errorMsg.contains("không tồn tại") || 
+                        errorMsg.contains("does not exist") || errorMsg.contains("not found")) {
+                        log.warn("File Search Store '{}' không tồn tại trên Google. Store có thể đã bị xóa.", 
+                            request.getFileStoreName());
+                        
+                        // Trả về response với thông báo rõ ràng thay vì fallback
+                        java.util.Map<String, Object> errorContent = new java.util.HashMap<>();
+                        errorContent.put("answer", 
+                            "Xin lỗi, tài liệu này không còn khả dụng trên Google File Search. " +
+                            "Store có thể đã bị xóa. Vui lòng upload lại document để sử dụng tính năng chat theo tài liệu.");
+                        errorContent.put("sources", List.of());
+                        
+                        return new RagResponse(
+                            request.getMode(),
+                            request.getLlmProvider(),
+                            request.getQueryText(),
+                            errorContent,
+                            LocalDateTime.now(),
+                            0);
+                    } else {
+                        // Các lỗi khác, throw lại
+                        throw e;
+                    }
+                }
+            }
+
             // Only retrieve documents if explicitly requested
             RetrievalResponse retrievalResponse = null;
             String context = "";
@@ -136,5 +172,59 @@ public class RagService {
 
         log.info("Retrieved {} results from retrieval service", response.getTotalResults());
         return response;
+    }
+
+    /**
+     * Xử lý query với Google File Search
+     */
+    private RagResponse processFileSearchQuery(RagRequest request) {
+        try {
+            log.info("Processing file search query for store: {}", request.getFileStoreName());
+            
+            // Gọi Gemini File Search Service
+            com.mss301.ragservice.dto.response.FileSearchQueryResponse fileSearchResponse = 
+                fileSearchService.queryWithFileSearch(request.getFileStoreName(), request.getQueryText());
+            
+            // Format response để phù hợp với RAG response format
+            // Tạo một map chứa answer và sources (rỗng vì file-search không trả về sources chi tiết)
+            java.util.Map<String, Object> formattedContent = new java.util.HashMap<>();
+            formattedContent.put("answer", fileSearchResponse.getAnswer());
+            formattedContent.put("sources", List.of()); // File search không có sources chi tiết như retrieval
+            
+            // Tạo empty retrieval response
+            RetrievalResponse retrievalResponse = new RetrievalResponse();
+            retrievalResponse.setResults(List.of());
+            retrievalResponse.setTotalResults(0);
+            
+            RagResponse response = new RagResponse(
+                    request.getMode(),
+                    request.getLlmProvider(),
+                    request.getQueryText(),
+                    formattedContent,
+                    LocalDateTime.now(),
+                    0);
+            
+            log.info("File search query processed successfully");
+            return response;
+            
+        } catch (Exception e) {
+            log.error("Error processing file search query for store: {}", request.getFileStoreName(), e);
+            
+            // Nếu store không tồn tại (404) hoặc lỗi tương tự
+            String errorMessage = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+            if (errorMessage.contains("404") || errorMessage.contains("not found") || 
+                errorMessage.contains("does not exist") || errorMessage.contains("không tồn tại")) {
+                log.warn("File Search Store '{}' does not exist on Google. Store may have been deleted. " +
+                        "Consider removing googleFileSearchStoreName from document.", request.getFileStoreName());
+                
+                // Throw exception với message rõ ràng
+                throw new RagServiceException(
+                    "HTTP Error 404: File Search Store không tồn tại trên Google. " +
+                    "Store có thể đã bị xóa. Vui lòng upload lại document để tạo store mới.", e);
+            }
+            
+            // Các lỗi khác, throw như bình thường
+            throw new RagServiceException("Failed to process file search query: " + e.getMessage(), e);
+        }
     }
 }

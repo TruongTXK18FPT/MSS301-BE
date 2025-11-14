@@ -10,6 +10,7 @@ public class RagRequest {
     private String documentId;
     private String chapterId;
     private String lessonId;
+    private String fileStoreName; // Google File Search Store name (cho file-search)
     private String queryText;
     private ResponseMode mode;
     private LLMProvider llmProvider;

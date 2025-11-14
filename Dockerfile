@@ -39,6 +39,15 @@ COPY media-service ./media-service/
 # This layer will be cached unless pom.xml changes
 RUN mvn dependency:go-offline -pl ${SERVICE_NAME} -am || true
 
+# Special handling for chatbot-service: build rag-service first
+# chatbot-service depends on rag-service, so we need to build and install rag-service first
+# This ensures rag-service classes are available in local Maven repository before chatbot-service compiles
+RUN if [ "${SERVICE_NAME}" = "chatbot-service" ]; then \
+        echo "Building rag-service dependency first..."; \
+        mvn clean install -pl rag-service -DskipTests -T 1; \
+        echo "✓ rag-service installed to local repository"; \
+    fi
+
 # Build only the specified service
 # Use single thread to reduce memory usage on 8GB RAM server
 # -am (also-make) builds dependencies first (e.g., rag-service before chatbot-service)

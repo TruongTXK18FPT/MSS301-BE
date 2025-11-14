@@ -39,20 +39,59 @@ COPY media-service ./media-service/
 # This layer will be cached unless pom.xml changes
 RUN mvn dependency:go-offline -pl ${SERVICE_NAME} -am || true
 
-# Special handling for chatbot-service: build rag-service first
-# chatbot-service depends on rag-service, so we need to build and install rag-service first
-# This ensures rag-service classes are available in local Maven repository before chatbot-service compiles
+# Special handling for services that depend on other modules (e.g., chatbot-service depends on rag-service)
+# Build and install all module dependencies first to ensure they're in local Maven repository
+# This is critical for inter-module dependencies
+# CRITICAL: rag-service needs to be built as a regular JAR (not executable) for use as dependency
 RUN if [ "${SERVICE_NAME}" = "chatbot-service" ]; then \
+        echo "==========================================="; \
         echo "Building rag-service dependency first..."; \
-        mvn clean install -pl rag-service -DskipTests -T 1; \
-        echo "✓ rag-service installed to local repository"; \
+        echo "==========================================="; \
+        # Step 1: Compile rag-service \
+        echo "[1/3] Compiling rag-service..."; \
+        mvn compile -pl rag-service -DskipTests -T 1; \
+        # Step 2: Package as regular JAR (skip spring-boot repackage) \
+        echo "[2/3] Packaging rag-service as dependency JAR..."; \
+        mvn jar:jar -pl rag-service -DskipTests -T 1 || \
+        mvn package -pl rag-service -DskipTests -T 1 -Dspring-boot.repackage.skip=true; \
+        # Step 3: Install to local Maven repository \
+        echo "[3/3] Installing rag-service to local repository..."; \
+        mvn install:install-file \
+            -Dfile=rag-service/target/rag-service-0.0.1-SNAPSHOT.jar \
+            -DgroupId=com.MSS301 \
+            -DartifactId=rag-service \
+            -Dversion=0.0.1-SNAPSHOT \
+            -Dpackaging=jar \
+            -DpomFile=rag-service/pom.xml || \
+        (echo "Fallback: Using standard install without repackage..." && \
+         mvn install -pl rag-service -DskipTests -T 1 -Dspring-boot.repackage.skip=true); \
+        # Verify installation \
+        echo "Verifying rag-service installation..."; \
+        if [ -f ~/.m2/repository/com/MSS301/rag-service/0.0.1-SNAPSHOT/rag-service-0.0.1-SNAPSHOT.jar ]; then \
+            echo "✓ rag-service JAR found in local repository"; \
+            ls -lh ~/.m2/repository/com/MSS301/rag-service/0.0.1-SNAPSHOT/rag-service-0.0.1-SNAPSHOT.jar; \
+        else \
+            echo "⚠ Warning: rag-service JAR not found, checking directory..."; \
+            ls -la ~/.m2/repository/com/MSS301/rag-service/0.0.1-SNAPSHOT/ 2>/dev/null || \
+            find ~/.m2/repository -name "*rag-service*" -type f 2>/dev/null | head -3 || echo "Not found"; \
+        fi; \
+        echo "✓ rag-service installation completed"; \
     fi
 
 # Build only the specified service
 # Use single thread to reduce memory usage on 8GB RAM server
-# -am (also-make) builds dependencies first (e.g., rag-service before chatbot-service)
-# This ensures rag-service is built and installed before chatbot-service compiles
-RUN mvn clean install -pl ${SERVICE_NAME} -am -DskipTests -T 1 spring-boot:repackage
+# For chatbot-service: Don't use -am to avoid rebuilding rag-service (already installed above)
+# For other services: Use -am to build dependencies
+RUN if [ "${SERVICE_NAME}" = "chatbot-service" ]; then \
+        echo "Building chatbot-service (rag-service already installed)..."; \
+        mvn compile -pl ${SERVICE_NAME} -DskipTests -T 1 && \
+        mvn package -pl ${SERVICE_NAME} -DskipTests -T 1 && \
+        mvn spring-boot:repackage -pl ${SERVICE_NAME} -DskipTests -T 1; \
+    else \
+        echo "Building ${SERVICE_NAME} with dependencies..."; \
+        mvn install -pl ${SERVICE_NAME} -am -DskipTests -T 1 && \
+        mvn spring-boot:repackage -pl ${SERVICE_NAME} -DskipTests -T 1; \
+    fi
 
 # Runtime stage - use distroless for smaller image
 FROM eclipse-temurin:21-jre-alpine

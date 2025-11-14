@@ -51,10 +51,9 @@ COPY media-service ./media-service/
 # This layer will be cached unless pom.xml changes
 RUN mvn dependency:go-offline -pl ${SERVICE_NAME} -am || true
 
-# Build the target service
+# Build the target service (package + repackage in one Maven invocation)
 RUN echo "Building ${SERVICE_NAME} with dependencies..." && \
-    mvn clean install -pl ${SERVICE_NAME} -am -DskipTests -T 1 && \
-    mvn spring-boot:repackage -pl ${SERVICE_NAME} -DskipTests -T 1
+    mvn clean package spring-boot:repackage -pl ${SERVICE_NAME} -am -DskipTests -T 1
 
 # Runtime stage - use distroless for smaller image
 FROM eclipse-temurin:21-jre-alpine

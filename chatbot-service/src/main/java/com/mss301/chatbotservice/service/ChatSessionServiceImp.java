@@ -17,6 +17,7 @@ import com.mss301.chatbotservice.dtos.request.TtsRequest;
 import com.mss301.chatbotservice.dtos.response.RagResponse;
 import com.mss301.chatbotservice.dtos.response.TtsResponse;
 import com.mss301.chatbotservice.enums.LLMProvider;
+import com.mss301.chatbotservice.enums.ResponseMode;
 import com.mss301.chatbotservice.service.llm.GeminiService;
 import com.mss301.chatbotservice.service.llm.MistralService;
 import lombok.RequiredArgsConstructor;
@@ -48,52 +49,54 @@ public class ChatSessionServiceImp implements ChatSessionService {
     @Transactional
     public Long createSession(ChatSessionRequest chatSessionRequest) {
         ExpertProfile expertProfile = null;
-        
+
         // Log all available expert profiles for debugging
         List<ExpertProfile> allProfiles = expertProfileRepository.findAll();
-        log.info("Available expert profiles in database: {}", 
+        log.info("Available expert profiles in database: {}",
                 allProfiles.stream()
                         .map(p -> String.format("ID=%d, Code=%s, Name=%s", p.getId(), p.getCode(), p.getName()))
                         .collect(java.util.stream.Collectors.joining(", ")));
-        
+
         // Try to find by code first (more reliable)
         if (chatSessionRequest.getExpertProfileCode() != null && !chatSessionRequest.getExpertProfileCode().isBlank()) {
             expertProfile = expertProfileRepository.findByCode(chatSessionRequest.getExpertProfileCode())
                     .orElse(null);
             if (expertProfile == null) {
-                log.warn("Expert profile not found by code: {}. Available codes: {}", 
+                log.warn("Expert profile not found by code: {}. Available codes: {}",
                         chatSessionRequest.getExpertProfileCode(),
-                        allProfiles.stream().map(ExpertProfile::getCode).collect(java.util.stream.Collectors.joining(", ")));
+                        allProfiles.stream().map(ExpertProfile::getCode)
+                                .collect(java.util.stream.Collectors.joining(", ")));
             }
         }
-        
+
         // Fallback to ID if code not found or not provided
         if (expertProfile == null && chatSessionRequest.getExpertProfileId() != null) {
             expertProfile = expertProfileRepository.findById(chatSessionRequest.getExpertProfileId())
                     .orElse(null);
             if (expertProfile == null) {
-                log.warn("Expert profile not found by ID: {}. Available IDs: {}", 
+                log.warn("Expert profile not found by ID: {}. Available IDs: {}",
                         chatSessionRequest.getExpertProfileId(),
-                        allProfiles.stream().map(p -> p.getId().toString()).collect(java.util.stream.Collectors.joining(", ")));
+                        allProfiles.stream().map(p -> p.getId().toString())
+                                .collect(java.util.stream.Collectors.joining(", ")));
             }
         }
-        
+
         if (expertProfile == null) {
-            log.error("Expert profile not found. Request: expertProfileId={}, expertProfileCode={}", 
+            log.error("Expert profile not found. Request: expertProfileId={}, expertProfileCode={}",
                     chatSessionRequest.getExpertProfileId(), chatSessionRequest.getExpertProfileCode());
-            log.error("Available expert profiles: {}", 
+            log.error("Available expert profiles: {}",
                     allProfiles.stream()
                             .map(p -> String.format("ID=%d, Code=%s", p.getId(), p.getCode()))
                             .collect(java.util.stream.Collectors.joining(", ")));
             throw new ChatbotServiceException(
-                    String.format("Expert profile not found. ID: %s, Code: %s. Available profiles: %s", 
-                            chatSessionRequest.getExpertProfileId(), 
+                    String.format("Expert profile not found. ID: %s, Code: %s. Available profiles: %s",
+                            chatSessionRequest.getExpertProfileId(),
                             chatSessionRequest.getExpertProfileCode(),
                             allProfiles.stream()
                                     .map(p -> String.format("ID=%d, Code=%s", p.getId(), p.getCode()))
                                     .collect(java.util.stream.Collectors.joining(", "))));
         }
-        
+
         if (!Boolean.TRUE.equals(expertProfile.getActive())) {
             log.warn("Attempted to create session with inactive expert profile: {}", expertProfile.getCode());
             throw new ChatbotServiceException("Expert profile is not active");
@@ -106,7 +109,7 @@ public class ChatSessionServiceImp implements ChatSessionService {
         session.setStatus(true);
 
         ChatSession savedSession = chatSessionRepository.save(session);
-        log.info("Created new chat session with ID: {} for user: {} with expert profile: {} (ID: {})", 
+        log.info("Created new chat session with ID: {} for user: {} with expert profile: {} (ID: {})",
                 savedSession.getId(), chatSessionRequest.getUserId(), expertProfile.getCode(), expertProfile.getId());
         return savedSession.getId();
     }
@@ -155,36 +158,38 @@ public class ChatSessionServiceImp implements ChatSessionService {
             // Kiểm tra nếu expert profile sử dụng RAG
             if (Boolean.TRUE.equals(expertProfile.getUseRag())) {
                 log.info("Using RAG service for expert profile: {}", expertProfile.getName());
-                
-                // Chuyển đổi LLMProvider từ chatbot-service sang rag-service
-                com.mss301.ragservice.enums.LLMProvider ragLlmProvider = convertToRagLLMProvider(expertProfile.getLlmProvider());
-                
-                // Xác định ResponseMode
-                com.mss301.ragservice.enums.ResponseMode responseMode = Boolean.TRUE.equals(chatbotRequest.getUseVoiceChat()) 
-                    ? com.mss301.ragservice.enums.ResponseMode.VOICECHAT 
-                    : com.mss301.ragservice.enums.ResponseMode.CHAT;
-                
+
+                // Chuyển đổi LLMProvider từ expert profile sang request (cùng enum nên dùng
+                // trực tiếp)
+                LLMProvider ragLlmProvider = expertProfile.getLlmProvider();
+
+                // Xác định ResponseMode dựa trên việc bật voice chat
+                ResponseMode responseMode = Boolean.TRUE.equals(chatbotRequest.getUseVoiceChat())
+                        ? ResponseMode.VOICECHAT
+                        : ResponseMode.CHAT;
+
                 // Tạo RAG request
                 // Ưu tiên fileStoreName nếu có (cho Google File Search)
                 // Nếu không có fileStoreName, sử dụng documentId (cho RAG truyền thống)
                 String fileStoreName = chatbotRequest.getFileStoreName();
                 boolean hasFileStore = (fileStoreName != null && !fileStoreName.isBlank());
-                
+
                 // Log chi tiết để debug
                 log.info("=== RAG Request Debug ===");
-                log.info("ChatbotRequest - fileStoreName: '{}', documentId: '{}'", 
-                    fileStoreName, chatbotRequest.getDocumentId());
+                log.info("ChatbotRequest - fileStoreName: '{}', documentId: '{}'",
+                        fileStoreName, chatbotRequest.getDocumentId());
                 log.info("hasFileStore: {}", hasFileStore);
-                
+
                 // Luôn giữ documentId để fallback nếu fileStoreName không tồn tại
                 String documentId = chatbotRequest.getDocumentId() != null ? chatbotRequest.getDocumentId() : "";
-                
+
                 // Nếu có fileStoreName, không cần useDocuments vì file-search tự xử lý
                 boolean useDocuments = hasFileStore ? false : true;
-                
-                log.info("Creating RAG Request - hasFileStore: {}, fileStoreName: '{}', documentId: '{}', useDocuments: {}", 
-                    hasFileStore, fileStoreName, documentId, useDocuments);
-                
+
+                log.info(
+                        "Creating RAG Request - hasFileStore: {}, fileStoreName: '{}', documentId: '{}', useDocuments: {}",
+                        hasFileStore, fileStoreName, documentId, useDocuments);
+
                 RagRequest ragRequest = RagRequest.builder()
                         .documentId(documentId)
                         .chapterId(chatbotRequest.getChapterId() != null ? chatbotRequest.getChapterId() : "")
@@ -197,20 +202,21 @@ public class ChatSessionServiceImp implements ChatSessionService {
                         .useDocuments(useDocuments) // Chỉ dùng retrieval service nếu không có fileStoreName
                         .topK(7)
                         .build();
-                
-                log.info("RAG Request created - fileStoreName: {}, documentId: {}, chapterId: {}, lessonId: {}, useDocuments: {}", 
-                    ragRequest.getFileStoreName(), ragRequest.getDocumentId(), 
-                    ragRequest.getChapterId(), ragRequest.getLessonId(), ragRequest.getUseDocuments());
-                
+
+                log.info(
+                        "RAG Request created - fileStoreName: {}, documentId: {}, chapterId: {}, lessonId: {}, useDocuments: {}",
+                        ragRequest.getFileStoreName(), ragRequest.getDocumentId(),
+                        ragRequest.getChapterId(), ragRequest.getLessonId(), ragRequest.getUseDocuments());
+
                 // Gọi RAG service
                 RagResponse ragResponse = ragService.processQuery(ragRequest);
-                
+
                 // Parse response từ RAG
                 if (ragResponse.getContent() instanceof Map) {
                     @SuppressWarnings("unchecked")
                     Map<String, Object> contentMap = (Map<String, Object>) ragResponse.getContent();
                     aiResponse = (String) contentMap.get("answer");
-                    
+
                     // Extract sources
                     @SuppressWarnings("unchecked")
                     List<Map<String, Object>> sourcesList = (List<Map<String, Object>>) contentMap.get("sources");
@@ -224,26 +230,31 @@ public class ChatSessionServiceImp implements ChatSessionService {
                                     .lessonId((String) sourceMap.get("lessonId"))
                                     .chapterTitle((String) sourceMap.get("chapterTitle"))
                                     .lessonTitle((String) sourceMap.get("lessonTitle"))
-                                    .pageNumber(sourceMap.get("pageNumber") != null ? ((Number) sourceMap.get("pageNumber")).longValue() : null)
+                                    .pageNumber(sourceMap.get("pageNumber") != null
+                                            ? ((Number) sourceMap.get("pageNumber")).longValue()
+                                            : null)
                                     .build();
                             sources.add(source);
                         }
                     }
                 } else {
-                    aiResponse = ragResponse.getContent() != null ? ragResponse.getContent().toString() : "Không thể xử lý phản hồi từ RAG service";
+                    aiResponse = ragResponse.getContent() != null ? ragResponse.getContent().toString()
+                            : "Không thể xử lý phản hồi từ RAG service";
                 }
-                
+
                 tokensUsed = Math.max(1, aiResponse.length() / 4);
                 log.info("RAG response received. Answer length: {}, Sources: {}", aiResponse.length(), sources.size());
             } else {
                 // Sử dụng LLM trực tiếp như cũ
                 String prompt = generatePrompt(expertProfile.getPromptConfig(), userInput, gradeLevel);
-                log.info("Using expert profile: {} with LLM provider: {}", expertProfile.getName(), expertProfile.getLlmProvider());
+                log.info("Using expert profile: {} with LLM provider: {}", expertProfile.getName(),
+                        expertProfile.getLlmProvider());
 
                 switch (expertProfile.getLlmProvider()) {
                     case GEMINI -> aiResponse = geminiService.generateResponse(prompt);
                     case MISTRAL -> aiResponse = mistralService.generateResponse(prompt);
-                    default -> throw new ChatbotServiceException("Unsupported LLM provider: " + expertProfile.getLlmProvider());
+                    default -> throw new ChatbotServiceException(
+                            "Unsupported LLM provider: " + expertProfile.getLlmProvider());
                 }
 
                 tokensUsed = Math.max(1, aiResponse.length() / 4);
@@ -252,13 +263,13 @@ public class ChatSessionServiceImp implements ChatSessionService {
             // Nếu sử dụng voice chat, gọi TTS service
             if (Boolean.TRUE.equals(chatbotRequest.getUseVoiceChat())) {
                 try {
-                    com.mss301.ragservice.enums.ResponseMode ttsMode = Boolean.TRUE.equals(expertProfile.getUseRag()) 
-                        ? com.mss301.ragservice.enums.ResponseMode.VOICECHAT 
-                        : com.mss301.ragservice.enums.ResponseMode.CHAT;
-                    
+                    ResponseMode ttsMode = Boolean.TRUE.equals(expertProfile.getUseRag())
+                            ? ResponseMode.VOICECHAT
+                            : ResponseMode.CHAT;
+
                     TtsRequest ttsRequest = new TtsRequest(aiResponse, ttsMode);
                     TtsResponse ttsResponse = ttsService.speak(ttsRequest);
-                    
+
                     if (ttsResponse.isSuccess() && ttsResponse.getAudioUrl() != null) {
                         audioUrl = ttsResponse.getAudioUrl();
                         log.info("TTS audio generated successfully. URL: {}", audioUrl);
@@ -272,16 +283,16 @@ public class ChatSessionServiceImp implements ChatSessionService {
             }
 
             // Lưu tin nhắn AI
-                ChatMessage aiMessage = ChatMessage.builder()
+            ChatMessage aiMessage = ChatMessage.builder()
                     .tokensUsed(tokensUsed)
-                        .createdAt(LocalDateTime.now())
+                    .createdAt(LocalDateTime.now())
                     .content(aiResponse)
-                        .role(ChatRole.ASSISTANT)
-                        .build();
+                    .role(ChatRole.ASSISTANT)
+                    .build();
 
-                ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
-                session.getChatMessages().add(savedAiMessage);
-                chatSessionRepository.save(session);
+            ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
+            session.getChatMessages().add(savedAiMessage);
+            chatSessionRepository.save(session);
 
             log.info("AI response saved with ID: {}, tokens used: {}", savedAiMessage.getId(), tokensUsed);
 
@@ -289,7 +300,7 @@ public class ChatSessionServiceImp implements ChatSessionService {
             ChatResponse response = convertChatMessageToResponse(savedAiMessage);
             response.setAudioUrl(audioUrl);
             response.setSources(sources.isEmpty() ? null : sources);
-            
+
             return response;
 
         } catch (Exception e) {
@@ -370,13 +381,5 @@ public class ChatSessionServiceImp implements ChatSessionService {
                 .createTime(session.getCreateTime())
                 .updateTime(session.getUpdateTime())
                 .build();
-    }
-    
-    private com.mss301.ragservice.enums.LLMProvider convertToRagLLMProvider(LLMProvider chatbotProvider) {
-        return switch (chatbotProvider) {
-            case GEMINI -> com.mss301.ragservice.enums.LLMProvider.GEMINI;
-            case MISTRAL -> com.mss301.ragservice.enums.LLMProvider.MISTRAL;
-            default -> com.mss301.ragservice.enums.LLMProvider.GEMINI; // Default fallback
-        };
     }
 }

@@ -41,7 +41,9 @@ RUN mvn dependency:go-offline -pl ${SERVICE_NAME} -am || true
 
 # Build only the specified service
 # Use single thread to reduce memory usage on 8GB RAM server
-RUN mvn clean package -pl ${SERVICE_NAME} -am -DskipTests -T 1 spring-boot:repackage
+# -am (also-make) builds dependencies first (e.g., rag-service before chatbot-service)
+# This ensures rag-service is built and installed before chatbot-service compiles
+RUN mvn clean install -pl ${SERVICE_NAME} -am -DskipTests -T 1 spring-boot:repackage
 
 # Runtime stage - use distroless for smaller image
 FROM eclipse-temurin:21-jre-alpine

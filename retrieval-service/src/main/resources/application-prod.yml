@@ -9,6 +9,13 @@ spring:
   elasticsearch:
     uris: ${ELASTICSEARCH_URIS:http://elasticsearch:9200}
 
+# Embedding API Configuration
+embedding:
+  client:
+    url: ${EMBEDDING_CLIENT_URL:https://aiportalapi.stu-platform.live/jpe/v1}
+    api-key: ${EMBEDDING_CLIENT_API_KEY:sk-Z64PdmBB55a3eXZuLcM2zQ}
+    model: text-embedding-3-small
+
 eureka:
   client:
     serviceUrl:
@@ -21,14 +28,6 @@ eureka:
     hostname: retrieval-service
     nonSecurePortEnabled: true
     securePortEnabled: false
-
-# FPT AI API Configuration
-fptai:
-  api-key: ${FPTAI_API_KEY:peZ3IXt25wVqC2eRLZKJlgG927wtUAOJ}
-
-# Embedding API Configuration
-embedding:
-  api-key: ${EMBEDDING_API_KEY:sk-Z64PdmBB55a3eXZuLcM2zQ}
 
 management:
   endpoints:

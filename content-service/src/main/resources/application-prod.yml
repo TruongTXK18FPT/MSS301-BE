@@ -34,6 +34,16 @@ eureka:
     nonSecurePortEnabled: true
     securePortEnabled: false
 
+# Gemini AI Configuration
+gemini:
+  apiKey: ${GEMINI_API_KEY:AIzaSyComgm3rKMvMYtc7wXmODfEYkOXogzG6uA}
+  model: ${GEMINI_MODEL:gemini-2.5-flash}
+  maxOutputTokens: ${GEMINI_MAX_OUTPUT_TOKENS:10000}
+  temperature: ${GEMINI_TEMPERATURE:0.8}
+
+jwt:
+  signerKey: ${JWT_SECRET:1TjXchw5FloESb63Kc+DFhTARvpWL4jUGCwfGWxuG5SIf/1y/LgJxHnMqaF6A/ij}
+
 management:
   endpoints:
     web:
